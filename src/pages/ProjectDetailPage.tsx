@@ -281,8 +281,8 @@ export function ProjectDetailPage() {
     return { nodes: layouted, edges: es };
   }, [project, summary]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
 
   useEffect(() => {
     if (activeTab === 'topology' && flowData.nodes.length > 0) {
@@ -650,7 +650,7 @@ function OverviewTab({
     },
   ];
 
-  const healthBreakdown = summary
+  const healthBreakdown: Record<string, { score: number; max_score: number; weight: number; }> = summary
     ? {
         'App Performance':  { score: Math.round((summary.overall_score ?? 0) * 0.4), max_score: 40, weight: 0.40 },
         'Infrastructure':   { score: Math.round((summary.overall_score ?? 0) * 0.2), max_score: 20, weight: 0.20 },
@@ -824,7 +824,7 @@ function OverviewTab({
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
                             <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
-                              style={{ background: `${row.color}15`, border: `1px solid ${row.color}35`, color: row.color }}>
+                              style={{ background: `${row.color || '#30D158'}15`, border: `1px solid ${row.color || '#30D158'}35`, color: row.color || undefined }}>
                               {(row.name || '?').slice(0, 2).toUpperCase()}
                             </div>
                             <span className="font-semibold text-[var(--text-primary)]">{row.name}</span>

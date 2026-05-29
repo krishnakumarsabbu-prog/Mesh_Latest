@@ -11,6 +11,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   itsm: 'ITSM',
   database: 'Database',
   messaging: 'Messaging',
+  cloud: 'Cloud & Containers',
+  infrastructure: 'Infrastructure',
   custom: 'Custom',
 };
 
@@ -32,30 +34,36 @@ export function CatalogConnectorCard({
   onDelete,
 }: CatalogConnectorCardProps) {
   const tags = entry.tags ? entry.tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
+  const color = entry.color || '#2563EB';
 
   return (
     <div
       className={cn(
-        'glass-card rounded-2xl p-5 flex flex-col gap-4 transition-all duration-200',
-        'hover:shadow-card-hover hover:-translate-y-0.5',
+        'rounded-2xl p-5 flex flex-col gap-4 transition-all duration-200',
+        'hover:shadow-lg hover:-translate-y-0.5',
         !entry.is_enabled && 'opacity-60 grayscale-[30%]',
       )}
+      style={{
+        background: 'var(--app-surface)',
+        border: '1px solid var(--app-border)',
+        boxShadow: 'var(--shadow-sm)',
+      }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <CatalogConnectorIcon icon={entry.icon} color={entry.color || '#2563EB'} size="lg" />
+          <CatalogConnectorIcon icon={entry.icon} color={color} size="lg" />
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-sm font-bold text-neutral-900 truncate">{entry.name}</h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)] truncate">{entry.name}</h3>
               {entry.is_system && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-500 border border-neutral-200">
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--app-bg-muted)] text-[var(--text-secondary)] border border-[var(--app-border)]">
                   <Lock className="w-2.5 h-2.5" />
                   System
                 </span>
               )}
             </div>
             {entry.vendor && (
-              <p className="text-xs text-neutral-400 mt-0.5">{entry.vendor}{entry.version ? ` · v${entry.version}` : ''}</p>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">{entry.vendor}{entry.version ? ` · v${entry.version}` : ''}</p>
             )}
           </div>
         </div>
@@ -67,54 +75,50 @@ export function CatalogConnectorCard({
       </div>
 
       {entry.description && (
-        <p className="text-xs text-neutral-500 leading-relaxed line-clamp-2">{entry.description}</p>
+        <p className="text-xs text-[var(--text-secondary)] leading-relaxed line-clamp-2">{entry.description}</p>
       )}
 
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 uppercase tracking-wide border border-neutral-200">
+        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide border"
+          style={{ background: `${color}12`, color: color, borderColor: `${color}30` }}>
           {CATEGORY_LABELS[entry.category] || entry.category}
         </span>
         {tags.slice(0, 3).map((tag) => (
-          <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-50 text-neutral-400 border border-neutral-100">
+          <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--app-surface-hover)] text-[var(--text-secondary)] border border-[var(--app-border)]">
             {tag}
           </span>
         ))}
         {tags.length > 3 && (
-          <span className="text-[10px] text-neutral-400">+{tags.length - 3}</span>
+          <span className="text-[10px] text-[var(--text-muted)]">+{tags.length - 3}</span>
         )}
       </div>
 
-      <div className="flex items-center justify-between pt-1 border-t border-neutral-100">
+      <div className="flex items-center justify-between pt-1 border-t border-[var(--app-border)]">
         <div className="flex items-center gap-1">
           {canManage && (
             <>
               <button
-                onClick={() => onToggle(entry)}
-                className={cn(
-                  'p-1.5 rounded-lg transition-all text-xs flex items-center gap-1',
-                  entry.is_enabled
-                    ? 'text-neutral-400 hover:text-amber-500 hover:bg-amber-50'
-                    : 'text-neutral-400 hover:text-success hover:bg-success-50'
-                )}
+                onClick={(e) => { e.stopPropagation(); onToggle(entry); }}
+                className="p-1.5 rounded-lg transition-all text-xs flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--app-surface-hover)]"
                 title={entry.is_enabled ? 'Disable connector' : 'Enable connector'}
               >
                 {entry.is_enabled ? (
-                  <ToggleRight className="w-4 h-4 text-primary-500" />
+                  <ToggleRight className="w-4 h-4" style={{ color }} />
                 ) : (
                   <ToggleLeft className="w-4 h-4" />
                 )}
               </button>
               <button
-                onClick={() => onEdit(entry)}
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-primary-500 hover:bg-primary-50 transition-all"
+                onClick={(e) => { e.stopPropagation(); onEdit(entry); }}
+                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--app-surface-hover)] transition-all"
                 title="Edit connector"
               >
                 <Settings2 className="w-3.5 h-3.5" />
               </button>
               {!entry.is_system && (
                 <button
-                  onClick={() => onDelete(entry)}
-                  className="p-1.5 rounded-lg text-neutral-400 hover:text-danger-500 hover:bg-danger-50 transition-all"
+                  onClick={(e) => { e.stopPropagation(); onDelete(entry); }}
+                  className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-red-500 hover:bg-[var(--app-surface-hover)] transition-all"
                   title="Delete connector"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -123,8 +127,8 @@ export function CatalogConnectorCard({
             </>
           )}
           <button
-            onClick={() => onTest(entry)}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-success hover:bg-success-50 transition-all"
+            onClick={(e) => { e.stopPropagation(); onTest(entry); }}
+            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-emerald-500 hover:bg-[var(--app-surface-hover)] transition-all"
             title="Test connector"
           >
             <FlaskConical className="w-3.5 h-3.5" />
@@ -136,7 +140,7 @@ export function CatalogConnectorCard({
               href={entry.docs_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-primary-500 hover:bg-primary-50 transition-all"
+              className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--app-surface-hover)] transition-all"
               title="View documentation"
               onClick={(e) => e.stopPropagation()}
             >

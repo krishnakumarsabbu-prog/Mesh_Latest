@@ -55,20 +55,20 @@ export function ConnectorDetailPanel({
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Fixed header */}
-      <div className="flex-shrink-0 flex items-start justify-between gap-3 p-5 pb-0 border-b border-neutral-100 bg-white">
+      <div className="flex-shrink-0 flex items-start justify-between gap-3 p-5 pb-0 border-b border-[var(--app-border)] bg-[var(--app-surface)]">
         <div className="flex items-center gap-3 min-w-0 pb-4">
           <CatalogConnectorIcon icon={entry.icon} color={entry.color || '#2563EB'} size="lg" />
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-base font-bold text-neutral-900 truncate">{entry.name}</h3>
+              <h3 className="text-base font-bold text-[var(--text-primary)] truncate">{entry.name}</h3>
               {entry.is_system && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-500 border border-neutral-200 flex-shrink-0">
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--app-bg-muted)] text-[var(--text-secondary)] border border-[var(--app-border)] flex-shrink-0">
                   <Lock className="w-2.5 h-2.5" />System
                 </span>
               )}
             </div>
             {entry.vendor && (
-              <p className="text-xs text-neutral-400 mt-0.5">
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">
                 {entry.vendor}{entry.version ? ` · v${entry.version}` : ''}
               </p>
             )}
@@ -80,7 +80,7 @@ export function ConnectorDetailPanel({
           </Badge>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-all"
+            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--app-surface-hover)] transition-all"
             title="Close panel"
           >
             <X className="w-4 h-4" />
@@ -89,7 +89,7 @@ export function ConnectorDetailPanel({
       </div>
 
       {/* Tab bar */}
-      <div className="flex-shrink-0 flex items-center gap-1 px-5 pt-0 border-b border-neutral-100 bg-white">
+      <div className="flex-shrink-0 flex items-center gap-1 px-5 pt-0 border-b border-[var(--app-border)] bg-[var(--app-surface)]">
         <TabButton active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} icon={<Info className="w-3.5 h-3.5" />}>
           Overview
         </TabButton>
@@ -119,7 +119,7 @@ export function ConnectorDetailPanel({
       </div>
 
       {/* Fixed footer with action buttons - always visible */}
-      <div className="flex-shrink-0 border-t border-neutral-100 bg-white px-5 py-3">
+      <div className="flex-shrink-0 border-t border-[var(--app-border)] bg-[var(--app-surface)] px-5 py-3">
         <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
@@ -143,7 +143,7 @@ export function ConnectorDetailPanel({
                 size="sm"
                 variant="secondary"
                 onClick={() => onToggle(entry)}
-                icon={entry.is_enabled ? <ToggleRight className="w-3.5 h-3.5 text-primary-500" /> : <ToggleLeft className="w-3.5 h-3.5" />}
+                icon={entry.is_enabled ? <ToggleRight className="w-3.5 h-3.5 text-[var(--primary-color)]" /> : <ToggleLeft className="w-3.5 h-3.5" />}
               >
                 {entry.is_enabled ? 'Disable' : 'Enable'}
               </Button>
@@ -164,7 +164,7 @@ export function ConnectorDetailPanel({
               href={entry.docs_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="ml-auto flex items-center gap-1 text-xs text-primary-500 hover:text-primary-600 transition-colors"
+              className="ml-auto flex items-center gap-1 text-xs text-[var(--primary-color)] hover:text-[var(--primary-color)] transition-colors font-semibold"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               Docs
@@ -192,8 +192,8 @@ function TabButton({
       onClick={onClick}
       className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold border-b-2 transition-all ${
         active
-          ? 'text-primary-600 border-primary-500 bg-primary-50/50'
-          : 'text-neutral-500 border-transparent hover:text-neutral-700 hover:bg-neutral-50'
+          ? 'text-[var(--primary-color)] border-[var(--primary-color)] bg-[var(--app-surface-active)]'
+          : 'text-[var(--text-secondary)] border-transparent hover:text-[var(--text-primary)] hover:bg-[var(--app-surface-hover)]'
       }`}
     >
       {icon}
@@ -218,16 +218,16 @@ function OverviewTab({
   onEdit: (entry: ConnectorCatalogEntry) => void;
   onTest: (entry: ConnectorCatalogEntry) => void;
   onDelete: (entry: ConnectorCatalogEntry) => void;
-}) {
+ }) {
   return (
     <div className="space-y-5">
       {entry.description && (
-        <p className="text-sm text-neutral-600 leading-relaxed">{entry.description}</p>
+        <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{entry.description}</p>
       )}
 
       <div className="space-y-2">
-        <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Details</p>
-        <div className="bg-neutral-50 rounded-xl border border-neutral-100 divide-y divide-neutral-100">
+        <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Details</p>
+        <div className="bg-[var(--app-bg-muted)] rounded-xl border border-[var(--app-border)] divide-y divide-[var(--app-border)]">
           <DetailRow label="Slug" value={entry.slug} mono />
           <DetailRow label="Category" value={CATEGORY_LABELS[entry.category] || entry.category} />
           {entry.vendor && <DetailRow label="Vendor" value={entry.vendor} />}
@@ -239,10 +239,10 @@ function OverviewTab({
 
       {tags.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Tags</p>
+          <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Tags</p>
           <div className="flex flex-wrap gap-1.5">
             {tags.map((tag) => (
-              <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 border border-neutral-100">
+              <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-[var(--app-surface-hover)] text-[var(--text-secondary)] border border-[var(--app-border)]">
                 {tag}
               </span>
             ))}
@@ -252,17 +252,17 @@ function OverviewTab({
 
       {entry.config_schema && (
         <div className="space-y-2">
-          <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Config Schema Fields</p>
-          <div className="bg-neutral-50 rounded-xl border border-neutral-100 divide-y divide-neutral-100">
+          <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Config Schema Fields</p>
+          <div className="bg-[var(--app-bg-muted)] rounded-xl border border-[var(--app-border)] divide-y divide-[var(--app-border)]">
             {Object.entries(
               (entry.config_schema as { properties?: Record<string, { title?: string; type?: string; secret?: boolean }> }).properties || {}
             ).map(([key, val]) => (
               <div key={key} className="flex items-center justify-between px-3 py-2">
-                <span className="text-xs font-mono text-neutral-600">{key}</span>
+                <span className="text-xs font-mono text-[var(--text-secondary)]">{key}</span>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-neutral-400">{val.type || 'string'}</span>
+                  <span className="text-xs text-[var(--text-muted)]">{val.type || 'string'}</span>
                   {val.secret && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100">
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/12 text-amber-500 border border-amber-500/30">
                       secret
                     </span>
                   )}
@@ -274,8 +274,8 @@ function OverviewTab({
       )}
 
       {!!entry.test_definition?.description && (
-        <div className="p-3 rounded-xl bg-primary-50 border border-primary-100">
-          <p className="text-xs text-primary-700 font-medium">
+        <div className="p-3 rounded-xl bg-[var(--app-surface-active)] border border-[var(--app-border)]">
+          <p className="text-xs text-[var(--text-primary)] font-medium">
             Test: {String(entry.test_definition.description)}
           </p>
         </div>
@@ -287,8 +287,8 @@ function OverviewTab({
 function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-center justify-between px-3 py-2">
-      <span className="text-xs text-neutral-400 font-medium">{label}</span>
-      <span className={`text-xs font-semibold text-neutral-700 ${mono ? 'font-mono' : ''}`}>{value}</span>
+      <span className="text-xs text-[var(--text-secondary)] font-medium">{label}</span>
+      <span className={`text-xs font-semibold text-[var(--text-primary)] ${mono ? 'font-mono' : ''}`}>{value}</span>
     </div>
   );
 }

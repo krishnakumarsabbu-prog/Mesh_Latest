@@ -57,7 +57,7 @@ function layoutGraph(rawNodes: any[], rawEdges: any[]) {
 function MiniComponentGraph({ component, projects, team }: {
   component: Component; projects: Project[]; team: Team | undefined;
 }) {
-  const W = 260; const H = 100;
+  const W = 260; const H = 72;
   const color = component.color || '#64D2FF';
 
   const nodes = useMemo(() => {
@@ -72,7 +72,7 @@ function MiniComponentGraph({ component, projects, team }: {
     }
     const pCount = synthProjects.length;
     synthProjects.forEach((p, i) => {
-      const y = pCount === 1 ? H / 2 : 15 + (i * (H - 30)) / Math.max(pCount - 1, 1);
+      const y = pCount === 1 ? H / 2 : 12 + (i * (H - 24)) / Math.max(pCount - 1, 1);
       all.push({ id: `p${i}`, type: 'project', label: (p.name as string).slice(0, 8), x: team ? 218 : 140, y });
     });
     return all;
@@ -102,29 +102,38 @@ function MiniComponentGraph({ component, projects, team }: {
   return (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
       <defs>
+        <filter id={`blur-${component.id}`} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.2" result="blur" />
+        </filter>
         {nodes.map(n => (
-          <radialGradient key={`cgrad-${n.id}`} id={`cgrad-${n.id}`} cx="50%" cy="35%" r="65%">
-            <stop offset="0%" stopColor={nodeColor[n.type]} stopOpacity="0.9" />
-            <stop offset="100%" stopColor={nodeColor[n.type]} stopOpacity="0.3" />
+          <radialGradient key={`cgrad-${n.id}`} id={`cgrad-${n.id}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={nodeColor[n.type]} stopOpacity="1.0" />
+            <stop offset="100%" stopColor={nodeColor[n.type]} stopOpacity="0.7" />
           </radialGradient>
         ))}
       </defs>
       {edges.map((e: any) => (
-        <line key={e.key} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
-          stroke={color} strokeOpacity="0.2" strokeWidth="1" strokeDasharray="3 3" />
+        <g key={e.key}>
+          <line x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
+            stroke={color} strokeOpacity="0.22" strokeWidth="3"
+            filter={`url(#blur-${component.id})`} />
+          <line x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
+            stroke={color} strokeOpacity="0.65" strokeWidth="1.2" strokeDasharray="3 3" />
+        </g>
       ))}
       {nodes.map(n => {
-        const r = n.type === 'component' ? 12 : 8;
+        const r = n.type === 'component' ? 11 : 8.5;
         const nc = nodeColor[n.type];
         const iconPath = NODE_ICONS[n.type] || NODE_ICONS.component;
-        const iconScale = n.type === 'component' ? 0.9 : 0.65;
+        const iconScale = n.type === 'component' ? 0.85 : 0.65;
         return (
           <g key={n.id}>
-            <circle cx={n.x} cy={n.y} r={r + 6} fill={nc} fillOpacity="0.06" />
-            <circle cx={n.x} cy={n.y} r={r + 3} fill="none" stroke={nc} strokeOpacity="0.22" strokeWidth="0.5" />
+            <circle cx={n.x} cy={n.y} r={r + 5} fill={nc} fillOpacity="0.22" filter={`url(#blur-${component.id})`} />
+            <circle cx={n.x} cy={n.y} r={r + 1.5} fill="none" stroke={nc} strokeOpacity="0.65" strokeWidth="1" />
+            <circle cx={n.x} cy={n.y} r={r} fill="var(--app-surface)" />
             <circle cx={n.x} cy={n.y} r={r} fill={`url(#cgrad-${n.id})`} />
             <g transform={`translate(${n.x - 6 * iconScale},${n.y - 6 * iconScale}) scale(${iconScale})`}>
-              <path d={iconPath} fill="rgba(255,255,255,0.9)" />
+              <path d={iconPath} fill="white" opacity="0.95" />
             </g>
           </g>
         );
@@ -358,23 +367,23 @@ function ComponentCard({ component, team, lob, projects, canCreate, onEdit, onDe
         </div>
 
         {/* Stats strip */}
-        <div className="flex items-stretch mb-4 rounded-xl overflow-hidden" style={{ border: '1px solid var(--app-border)' }}>
+        <div className="flex items-stretch mb-3 py-1">
           {[
             { label: 'Projects', value: projectCount },
             { label: 'Team', value: team?.member_count || 0 },
             { label: 'LOB', value: lob?.project_count || 0 },
           ].map(({ label, value }, i) => (
-            <div key={label} className="flex-1 flex flex-col items-center justify-center py-3"
-              style={{ borderRight: i < 2 ? '1px solid var(--app-border)' : 'none', background: 'var(--app-bg-muted)' }}>
+            <div key={label} className="flex-1 flex flex-col items-center justify-center"
+              style={{ borderRight: i < 2 ? '1px solid var(--app-border)' : 'none' }}>
               <span className="text-xl font-bold text-[var(--text-primary)] leading-none">{value}</span>
-              <span className="text-[9px] font-semibold uppercase tracking-wider mt-1" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+              <span className="text-[10px] font-semibold mt-1" style={{ color: 'var(--text-secondary)' }}>{label}</span>
             </div>
           ))}
         </div>
 
         {/* Mini graph */}
-        <div className="rounded-xl overflow-hidden mb-4 flex items-center justify-center"
-          style={{ background: 'var(--app-bg-subtle)', border: '1px solid var(--app-border)', height: 100 }}>
+        <div className="overflow-hidden -mt-2.5 mb-3 relative flex items-center justify-center"
+          style={{ height: 72 }}>
           <MiniComponentGraph component={component} projects={projects} team={team} />
         </div>
 

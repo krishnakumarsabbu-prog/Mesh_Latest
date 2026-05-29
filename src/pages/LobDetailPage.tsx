@@ -86,7 +86,7 @@ const FLOW_NODE_TYPES = { flowNode: FlowNode };
 function MiniNetGraph({ team, projects, components, color }: {
   team: Team; projects: Project[]; components: Component[]; color: string;
 }) {
-  const W = 260; const H = 100;
+  const W = 260; const H = 72;
 
   const nodes = useMemo(() => {
     const teamProjects = projects.filter((p) => p.team_id === team.id).slice(0, 4);
@@ -105,14 +105,14 @@ function MiniNetGraph({ team, projects, components, color }: {
     // Project nodes
     const pCount = synthProjects.length;
     synthProjects.forEach((p, i) => {
-      const y = pCount === 1 ? H / 2 : 16 + (i * (H - 32)) / Math.max(pCount - 1, 1);
+      const y = pCount === 1 ? H / 2 : 12 + (i * (H - 24)) / Math.max(pCount - 1, 1);
       all.push({ id: `p${i}`, type: 'project', label: p.name, x: 120, y });
     });
     
     // Component nodes
     const cCount = synthComponents.length;
     synthComponents.forEach((c, i) => {
-      const y = cCount === 1 ? H / 2 : 16 + (i * (H - 32)) / Math.max(cCount - 1, 1);
+      const y = cCount === 1 ? H / 2 : 12 + (i * (H - 24)) / Math.max(cCount - 1, 1);
       all.push({ id: `c${i}`, type: 'component', label: c.name, x: 220, y });
     });
     return all;
@@ -147,33 +147,43 @@ function MiniNetGraph({ team, projects, components, color }: {
   return (
     <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
       <defs>
+        <filter id={`blur-${team.id}`} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.2" result="blur" />
+        </filter>
         {nodes.map(n => (
-          <radialGradient key={`grad-${n.id}`} id={`grad-${team.id}-${n.id}`} cx="50%" cy="35%" r="65%">
-            <stop offset="0%" stopColor={nodeColor[n.type]} stopOpacity="0.9" />
-            <stop offset="100%" stopColor={nodeColor[n.type]} stopOpacity="0.25" />
+          <radialGradient key={`grad-${n.id}`} id={`grad-${team.id}-${n.id}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={nodeColor[n.type]} stopOpacity="1.0" />
+            <stop offset="100%" stopColor={nodeColor[n.type]} stopOpacity="0.7" />
           </radialGradient>
         ))}
       </defs>
       {edges.map(e => (
-        <line
-          key={e.key}
-          x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
-          stroke={color} strokeOpacity="0.2" strokeWidth="0.8"
-          strokeDasharray="2 2"
-        />
+        <g key={e.key}>
+          <line
+            x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
+            stroke={color} strokeOpacity="0.22" strokeWidth="3"
+            filter={`url(#blur-${team.id})`}
+          />
+          <line
+            x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
+            stroke={color} strokeOpacity="0.65" strokeWidth="1.2"
+            strokeDasharray="2 2"
+          />
+        </g>
       ))}
       {nodes.map(n => {
-        const r = n.type === 'team' ? 10 : 7;
+        const r = n.type === 'team' ? 11 : 8.5;
         const nc = nodeColor[n.type];
         const iconPath = NODE_ICONS[n.type] || NODE_ICONS.component;
-        const iconScale = n.type === 'team' ? 0.75 : 0.55;
+        const iconScale = n.type === 'team' ? 0.85 : 0.65;
         return (
           <g key={n.id}>
-            <circle cx={n.x} cy={n.y} r={r + 5} fill={nc} fillOpacity="0.05" />
-            <circle cx={n.x} cy={n.y} r={r + 2} fill="none" stroke={nc} strokeOpacity="0.2" strokeWidth="0.5" />
+            <circle cx={n.x} cy={n.y} r={r + 5} fill={nc} fillOpacity="0.22" filter={`url(#blur-${team.id})`} />
+            <circle cx={n.x} cy={n.y} r={r + 1.5} fill="none" stroke={nc} strokeOpacity="0.65" strokeWidth="1" />
+            <circle cx={n.x} cy={n.y} r={r} fill="var(--app-surface)" />
             <circle cx={n.x} cy={n.y} r={r} fill={`url(#grad-${team.id}-${n.id})`} />
             <g transform={`translate(${n.x - 6 * iconScale},${n.y - 6 * iconScale}) scale(${iconScale})`}>
-              <path d={iconPath} fill="rgba(255,255,255,0.9)" />
+              <path d={iconPath} fill="white" opacity="0.95" />
             </g>
           </g>
         );
@@ -313,8 +323,8 @@ export function LobDetailPage() {
     return { nodes: layouted, edges: es };
   }, [lob, teams, projects, components]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
 
   useEffect(() => {
     if (activeTab === 'topology' && flowData.nodes.length > 0) {
@@ -632,26 +642,25 @@ export function LobDetailPage() {
                       </div>
 
                       {/* Stats grid */}
-                      <div className="flex items-stretch mb-4 rounded-xl overflow-hidden" style={{ border: '1px solid var(--app-border)' }}>
+                      <div className="flex items-stretch mb-3 py-1">
                         {[
                           { label: 'Projects', value: tProjectCount },
                           { label: 'Components', value: tComponentCount },
                           { label: 'Members', value: team.member_count || 3 },
                         ].map(({ label, value }, idx) => (
-                          <div key={label} className="flex-1 flex flex-col items-center justify-center py-2.5"
+                          <div key={label} className="flex-1 flex flex-col items-center justify-center"
                             style={{
                               borderRight: idx < 2 ? '1px solid var(--app-border)' : 'none',
-                              background: 'var(--app-bg)',
                             }}>
                             <span className="text-[16px] font-black text-[var(--text-primary)] leading-none">{value}</span>
-                            <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mt-1">{label}</span>
+                            <span className="text-[10px] font-bold text-[var(--text-secondary)] mt-1">{label}</span>
                           </div>
                         ))}
                       </div>
 
                       {/* Mini constellation topology SVG graph */}
-                      <div className="rounded-xl overflow-hidden mb-4 flex items-center justify-center relative group"
-                        style={{ background: 'var(--app-bg-subtle)', border: '1px solid var(--app-border)', height: 92 }}>
+                      <div className="overflow-hidden -mt-2.5 mb-3 relative flex items-center justify-center group"
+                        style={{ height: 72 }}>
                         <MiniNetGraph team={team} projects={projects} components={components} color={tColor} />
                         
                         <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity duration-300">

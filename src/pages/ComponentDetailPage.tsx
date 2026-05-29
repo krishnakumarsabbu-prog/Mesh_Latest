@@ -274,8 +274,8 @@ export function ComponentDetailPage() {
     return { nodes: layouted, edges: es };
   }, [component, projects]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
 
   useEffect(() => {
     if (activeTab === 'topology' && flowData.nodes.length > 0) {

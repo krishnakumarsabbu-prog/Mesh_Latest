@@ -71,7 +71,7 @@ const NODE_ICONS: Record<string, string> = {
 function MiniNetGraph({ lob, teams, projects, components }: {
   lob: LobFull; teams: any[]; projects: any[]; components: any[];
 }) {
-  const W = 260; const H = 100;
+  const W = 260; const H = 72;
   const color = (lob.color as string) || '#0A84FF';
 
   // Build positioned nodes from real data
@@ -87,14 +87,13 @@ function MiniNetGraph({ lob, teams, projects, components }: {
 
     // Teams — upper-left cluster
     if (lobTeams.length === 0) {
-      // Synthesize 2 team nodes from counts
       const tc = (lob.team_count as number) ?? 1;
       for (let i = 0; i < Math.min(tc, 3); i++) {
-        all.push({ id: `t-synth-${i}`, x: 70 + i * 8, y: 20 + i * 28, type: 'team', color: '#30D158', label: `Team ${i + 1}` });
+        all.push({ id: `t-synth-${i}`, x: 70 + i * 8, y: 15 + i * 18, type: 'team', color: '#30D158', label: `Team ${i + 1}` });
       }
     } else {
       lobTeams.forEach((t, i) => {
-        all.push({ id: `team-${t.id}`, x: 68 + i * 6, y: 15 + i * 30, type: 'team', color: t.color || '#30D158', label: t.name });
+        all.push({ id: `team-${t.id}`, x: 68 + i * 6, y: 12 + i * 22, type: 'team', color: t.color || '#30D158', label: t.name });
       });
     }
 
@@ -102,11 +101,11 @@ function MiniNetGraph({ lob, teams, projects, components }: {
     if (lobProjects.length === 0) {
       const pc = (lob.project_count as number) ?? 1;
       for (let i = 0; i < Math.min(pc, 4); i++) {
-        all.push({ id: `p-synth-${i}`, x: 130 + (i % 2) * 18, y: 18 + i * 22, type: 'project', color: '#64D2FF', label: `Project ${i + 1}` });
+        all.push({ id: `p-synth-${i}`, x: 130 + (i % 2) * 18, y: 12 + i * 15, type: 'project', color: '#64D2FF', label: `Project ${i + 1}` });
       }
     } else {
       lobProjects.forEach((p, i) => {
-        all.push({ id: `proj-${p.id}`, x: 132 + (i % 2) * 20, y: 16 + i * 20, type: 'project', color: '#64D2FF', label: p.name });
+        all.push({ id: `proj-${p.id}`, x: 132 + (i % 2) * 20, y: 10 + i * 16, type: 'project', color: '#64D2FF', label: p.name });
       });
     }
 
@@ -114,11 +113,11 @@ function MiniNetGraph({ lob, teams, projects, components }: {
     if (lobComps.length === 0) {
       const cc = (lob.component_count as number) ?? 1;
       for (let i = 0; i < Math.min(cc, 3); i++) {
-        all.push({ id: `c-synth-${i}`, x: 210 + i * 5, y: 22 + i * 28, type: 'component', color: '#FF9F0A', label: `Comp ${i + 1}` });
+        all.push({ id: `c-synth-${i}`, x: 210 + i * 5, y: 16 + i * 18, type: 'component', color: '#FF9F0A', label: `Comp ${i + 1}` });
       }
     } else {
       lobComps.forEach((c, i) => {
-        all.push({ id: `comp-${c.id}`, x: 210 + i * 4, y: 20 + i * 30, type: 'component', color: '#FF9F0A', label: c.name });
+        all.push({ id: `comp-${c.id}`, x: 210 + i * 4, y: 14 + i * 22, type: 'component', color: '#FF9F0A', label: c.name });
       });
     }
 
@@ -164,18 +163,18 @@ function MiniNetGraph({ lob, teams, projects, components }: {
     });
   }, [nodes]);
 
-  const R = 9; // icon node radius
+  const R = 9.5; // icon node radius
 
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
       <defs>
         <filter id={`blur-${lob.id}`} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2.5" result="blur" />
+          <feGaussianBlur stdDeviation="2.2" result="blur" />
         </filter>
         {nodes.map((n) => (
           <radialGradient key={`rg-${n.id}`} id={`rg-${lob.id}-${n.id}`} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={n.color} stopOpacity={0.9} />
-            <stop offset="100%" stopColor={n.color} stopOpacity={0.25} />
+            <stop offset="0%" stopColor={n.color} stopOpacity={1.0} />
+            <stop offset="100%" stopColor={n.color} stopOpacity={0.7} />
           </radialGradient>
         ))}
       </defs>
@@ -186,31 +185,44 @@ function MiniNetGraph({ lob, teams, projects, components }: {
         if (!a || !b) return null;
         const isDashed = a.type === 'project' && b.type === 'component';
         return (
-          <line key={i}
-            x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-            stroke={b.color}
-            strokeWidth={0.8}
-            strokeOpacity={0.28}
-            strokeDasharray={isDashed ? '3,3' : undefined}
-          />
+          <g key={i}>
+            {/* Glowing neon edge trail behind */}
+            <line
+              x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+              stroke={b.color}
+              strokeWidth={3}
+              strokeOpacity={0.24}
+              filter={`url(#blur-${lob.id})`}
+            />
+            {/* Main high-contrast edge line */}
+            <line
+              x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+              stroke={b.color}
+              strokeWidth={1.2}
+              strokeOpacity={0.65}
+              strokeDasharray={isDashed ? '3,3' : undefined}
+            />
+          </g>
         );
       })}
 
       {/* Nodes */}
       {nodes.map((n) => {
-        const iconSize = 7;
+        const iconSize = 7.5;
         const iconOffset = iconSize / 2;
         return (
           <g key={n.id}>
             {/* Outer glow ring */}
-            <circle cx={n.x} cy={n.y} r={R + 5} fill={n.color} opacity={0.07} filter={`url(#blur-${lob.id})`} />
+            <circle cx={n.x} cy={n.y} r={R + 5} fill={n.color} opacity={0.22} filter={`url(#blur-${lob.id})`} />
             {/* Outer ring */}
-            <circle cx={n.x} cy={n.y} r={R + 1.5} fill="none" stroke={n.color} strokeWidth={0.7} strokeOpacity={0.35} />
-            {/* Main filled circle */}
+            <circle cx={n.x} cy={n.y} r={R + 1.5} fill="none" stroke={n.color} strokeWidth={1} strokeOpacity={0.65} />
+            {/* Mask circle underneath node to cleanly separate lines */}
+            <circle cx={n.x} cy={n.y} r={R} fill="var(--app-surface)" />
+            {/* Main filled gradient circle */}
             <circle cx={n.x} cy={n.y} r={R} fill={`url(#rg-${lob.id}-${n.id})`} />
             {/* Icon inside */}
             <g transform={`translate(${n.x - iconOffset - 1}, ${n.y - iconOffset - 1}) scale(${iconSize / 12})`}>
-              <path d={NODE_ICONS[n.type] || NODE_ICONS.lob} fill="white" opacity={0.9} />
+              <path d={NODE_ICONS[n.type] || NODE_ICONS.lob} fill="white" opacity={0.95} />
             </g>
           </g>
         );
@@ -526,7 +538,7 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
               {/* Eye icon — top right, visible on hover */}
               <button
                 onClick={(e) => { e.stopPropagation(); setShowGraph(true); }}
-                className="w-6 h-6 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                className="w-6 h-6 rounded-lg flex items-center justify-center transition-all"
                 style={{ background: 'var(--app-bg-muted)', color: 'var(--text-secondary)' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = `${color}28`; e.currentTarget.style.color = color; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--app-bg-muted)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
@@ -540,7 +552,7 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
                 <div className="relative" ref={menuRef}>
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowMenu((v) => !v); }}
-                    className="w-6 h-6 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:bg-[var(--app-surface-hover)]"
+                    className="w-6 h-6 rounded-lg flex items-center justify-center transition-all hover:bg-[var(--app-surface-hover)]"
                     style={{ color: 'var(--text-secondary)' }}
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
@@ -558,7 +570,7 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
                         {[
                           { label: 'Edit', icon: Pencil, c: '#0A84FF', action: onEdit },
                           { label: 'Manage Admins', icon: ShieldCheck, c: '#FF9F0A', action: onManageAdmins },
-                          { label: 'Delete', icon: Trash2, c: '#FF453A', action: (e: React.MouseEvent) => { e.stopPropagation(); action(e); } },
+                          { label: 'Delete', icon: Trash2, c: '#FF453A', action: onDelete },
                         ].map(({ label, icon: Icon, c, action }) => (
                           <button key={label} onClick={(e) => { e.stopPropagation(); setShowMenu(false); action(e); }}
                             className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium hover:bg-[var(--app-surface-hover)] transition-all text-left"
@@ -575,32 +587,31 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
           </div>
 
           {/* Stats: Teams | Projects | Components — large numbers with dividers */}
-          <div className="flex items-stretch mb-3 rounded-xl overflow-hidden" style={{ border: '1px solid var(--app-border)' }}>
+          <div className="flex items-stretch mb-3 py-1">
             {[
               { label: 'Teams', value: teamCount },
               { label: 'Projects', value: (lob.project_count as number) ?? 0 },
               { label: 'Components', value: componentCount },
             ].map(({ label, value }, i) => (
-              <div key={label} className="flex-1 flex flex-col items-center justify-center py-3"
+              <div key={label} className="flex-1 flex flex-col items-center justify-center"
                 style={{
                   borderRight: i < 2 ? '1px solid var(--app-border)' : 'none',
-                  background: 'var(--app-bg-muted)',
                 }}>
                 <span className="text-xl font-bold text-[var(--text-primary)] leading-none">{value}</span>
-                <span className="text-[9px] font-semibold uppercase tracking-wider mt-1" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+                <span className="text-[10px] font-semibold mt-1" style={{ color: 'var(--text-secondary)' }}>{label}</span>
               </div>
             ))}
           </div>
 
           {/* Mini network graph — icon nodes + mesh lines */}
           <div
-            className="rounded-xl overflow-hidden mb-3 relative"
-            style={{ background: 'var(--app-bg-subtle)', border: '1px solid var(--app-border)', height: 88 }}
+            className="overflow-hidden -mt-2.5 mb-3 relative flex items-center justify-center"
+            style={{ height: 72 }}
           >
             <MiniNetGraph lob={lob} teams={teams} projects={projects} components={components} />
             {/* Eye hint overlay on hover */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-              style={{ background: 'rgba(0,0,0,0.12)', borderRadius: 12 }}>
+              style={{ background: 'rgba(0,0,0,0.06)', borderRadius: 12 }}>
               <div className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-full shadow-sm"
                 style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', color }}>
                 <Eye className="w-3 h-3" /> Expand graph
@@ -609,7 +620,7 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
           </div>
 
           {/* Health bar */}
-          <div className="mb-2">
+          <div className="mb-2.5">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>Health</span>
               <span className="text-[10px] font-bold" style={{ color: healthColor }}>{healthPct.toFixed(1)}%</span>

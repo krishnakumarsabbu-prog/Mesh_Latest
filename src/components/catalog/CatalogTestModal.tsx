@@ -187,24 +187,25 @@ export function CatalogTestModal({ open, onClose, entry }: CatalogTestModalProps
           </Button>
         </>
       }
-    >
-      <div className="space-y-4">
+    >      <div className="space-y-4">
         {/* Connector info */}
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-100">
+        <div className="flex items-center gap-3 p-3 rounded-xl border"
+          style={{ background: 'var(--app-bg-muted)', borderColor: 'var(--app-border)' }}>
           <CatalogConnectorIcon icon={entry.icon} color={entry.color || '#2563EB'} size="sm" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-neutral-900">{entry.name}</p>
-            {entry.vendor && <p className="text-xs text-neutral-400">{entry.vendor}</p>}
+            <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{entry.name}</p>
+            {entry.vendor && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{entry.vendor}</p>}
           </div>
           {entry.test_definition?.description !== undefined && (
-            <p className="ml-auto text-xs text-neutral-400 max-w-[50%] text-right truncate">
+            <p className="ml-auto text-xs max-w-[50%] text-right truncate" style={{ color: 'var(--text-muted)' }}>
               {String(entry.test_definition.description as string)}
             </p>
           )}
         </div>
 
         {hasSaved && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-50 border border-green-100 text-xs text-green-700">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+            style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.20)', color: '#22c55e' }}>
             <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
             Connection details are saved locally. They will be pre-filled when you reopen this modal.
           </div>
@@ -275,8 +276,9 @@ export function CatalogTestModal({ open, onClose, entry }: CatalogTestModalProps
           )}
 
           {authType === 'oauth2_client_credentials' && (
-            <div className="space-y-3 p-3 bg-neutral-50 rounded-xl border border-neutral-100">
-              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">OAuth2 Client Credentials</p>
+            <div className="space-y-3 p-3 rounded-xl border"
+              style={{ background: 'var(--app-bg-muted)', borderColor: 'var(--app-border)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>OAuth2 Client Credentials</p>
               <Input
                 label="Token URL"
                 placeholder="https://auth.example.com/oauth/token"
@@ -298,7 +300,7 @@ export function CatalogTestModal({ open, onClose, entry }: CatalogTestModalProps
                   type="password"
                 />
               </div>
-              <p className="text-xs text-neutral-400">
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                 A token will be fetched first using the client credentials flow, then used to call the endpoint URL.
               </p>
             </div>
@@ -309,27 +311,30 @@ export function CatalogTestModal({ open, onClose, entry }: CatalogTestModalProps
         <button
           type="button"
           onClick={() => setShowAdvanced((v) => !v)}
-          className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+          className="flex items-center gap-1.5 text-xs transition-colors"
+          style={{ color: 'var(--text-muted)' }}
         >
           {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           {showAdvanced ? 'Hide' : 'Show'} advanced options
         </button>
 
         {showAdvanced && (
-          <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-xs text-neutral-500 space-y-1">
-            <p className="font-semibold text-neutral-600">Proxy & SSL</p>
+          <div className="p-3 rounded-xl border text-xs space-y-1"
+            style={{ background: 'var(--app-bg-muted)', borderColor: 'var(--app-border)', color: 'var(--text-secondary)' }}>
+            <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>Proxy &amp; SSL</p>
             <p>Proxy and SSL settings are taken from the platform-level proxy configuration in Settings. Configure them there to apply to all connector tests.</p>
           </div>
         )}
 
         {/* Loading */}
         {testing && (
-          <div className="flex items-center gap-3 p-4 rounded-xl border border-neutral-100 bg-neutral-50">
-            <Loader className="w-5 h-5 animate-spin text-primary-500 flex-shrink-0" />
+          <div className="flex items-center gap-3 p-4 rounded-xl border"
+            style={{ borderColor: 'var(--app-border)', background: 'var(--app-bg-muted)' }}>
+            <Loader className="w-5 h-5 animate-spin flex-shrink-0" style={{ color: 'var(--accent)' }} />
             <div>
-              <p className="text-sm font-medium text-neutral-700">Testing connection...</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Testing connection...</p>
               {authType !== 'none' && (
-                <p className="text-xs text-neutral-400 mt-0.5">Authenticating with {AUTH_TYPES.find(a => a.value === authType)?.label}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Authenticating with {AUTH_TYPES.find(a => a.value === authType)?.label}</p>
               )}
             </div>
           </div>
@@ -338,39 +343,39 @@ export function CatalogTestModal({ open, onClose, entry }: CatalogTestModalProps
         {/* Result */}
         {result && !testing && (
           <div
-            className={`p-4 rounded-xl border ${
-              result.success
-                ? 'bg-green-50 border-green-100'
-                : 'bg-red-50 border-red-100'
-            }`}
+            className="p-4 rounded-xl border"
+            style={{
+              background: result.success ? 'rgba(34,197,94,0.06)' : 'rgba(239,68,68,0.06)',
+              borderColor: result.success ? 'rgba(34,197,94,0.20)' : 'rgba(239,68,68,0.20)',
+            }}
           >
             <div className="flex items-center gap-2 mb-2">
               {result.success ? (
-                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                <CheckCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#22c55e' }} />
               ) : (
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#ef4444' }} />
               )}
-              <span className={`text-sm font-semibold ${result.success ? 'text-green-700' : 'text-red-600'}`}>
+              <span className="text-sm font-semibold" style={{ color: result.success ? '#22c55e' : '#ef4444' }}>
                 {result.success ? 'Connection successful' : 'Connection failed'}
               </span>
             </div>
             <div className="space-y-1 ml-7">
               {result.status_code !== undefined && (
-                <p className="text-xs text-neutral-600">HTTP {result.status_code}</p>
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>HTTP {result.status_code}</p>
               )}
               {result.response_time_ms !== undefined && (
-                <p className="text-xs text-neutral-600 flex items-center gap-1">
+                <p className="text-xs flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
                   <Clock className="w-3 h-3" />
                   {Math.round(result.response_time_ms)}ms response time
                 </p>
               )}
               {(result.details as Record<string, unknown>)?.authenticated !== undefined && (
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                   Auth: {(result.details as Record<string, unknown>).authenticated ? 'credentials sent' : 'no credentials'}
                 </p>
               )}
               {result.error && (
-                <p className="text-xs text-red-500 mt-1">{result.error}</p>
+                <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{result.error}</p>
               )}
             </div>
           </div>
