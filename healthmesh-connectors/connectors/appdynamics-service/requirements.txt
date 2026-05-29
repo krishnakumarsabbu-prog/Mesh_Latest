@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+sqlalchemy
+aiosqlite
+pydantic
+apscheduler
+pandas
+openpyxl
+python-multipart
