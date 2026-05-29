@@ -152,37 +152,36 @@ function SyncResultPanel({ result, pcName }: { result: SyncResultData; pcName: s
         {hasMetrics && (
           <button
             onClick={() => setShowMetrics(v => !v)}
-            className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-lg transition-all"
-            style={{ color: 'var(--text-muted)', background: 'var(--app-bg-muted)' }}
+            className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-slate-300"
           >
-            <TrendingUp className="w-3 h-3" />
+            <TrendingUp className="w-3 h-3 text-cyan-400" />
             {result.metrics!.length} metrics
-            <ChevronRight className={cn('w-3 h-3 transition-transform', showMetrics && 'rotate-90')} />
+            <ChevronRight className={cn('w-3 h-3 transition-transform text-slate-500', showMetrics && 'rotate-90')} />
           </button>
         )}
       </div>
       {result.message && (
         <div className="px-3 pb-2">
-          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{result.message}</p>
+          <p className="text-xs text-slate-400">{result.message}</p>
         </div>
       )}
       {result.error && (
         <div className="px-3 pb-2">
-          <p className="text-xs font-mono" style={{ color: '#FF453A' }}>{result.error}</p>
+          <p className="text-xs font-mono text-red-400">{result.error}</p>
         </div>
       )}
       {showMetrics && hasMetrics && (
-        <div className="border-t px-3 py-2 space-y-1" style={{ borderColor: 'var(--app-border)' }}>
-          <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+        <div className="border-t px-3 py-2 space-y-1 border-white/5">
+          <p className="text-xs font-bold uppercase tracking-wider mb-2 text-slate-500">
             Collected Metrics ({result.metrics!.length})
           </p>
           <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
             {result.metrics!.map((m, i) => (
-              <div key={i} className="flex items-center justify-between px-2 py-1.5 rounded-lg" style={{ background: 'var(--app-surface-raised)' }}>
-                <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{m.name.split('.').pop()}</span>
-                <span className="text-xs font-mono font-semibold ml-2 flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
+              <div key={i} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-950/40 border border-white/5">
+                <span className="text-xs truncate text-slate-400 font-semibold">{m.name.split('.').pop()}</span>
+                <span className="text-xs font-mono font-bold ml-2 flex-shrink-0 text-white">
                   {typeof m.value === 'number' ? m.value.toFixed(m.value % 1 === 0 ? 0 : 2) : m.value}
-                  {m.unit && <span className="ml-0.5 opacity-60 text-[10px]">{m.unit}</span>}
+                  {m.unit && <span className="ml-0.5 opacity-60 text-[10px] text-slate-500">{m.unit}</span>}
                 </span>
               </div>
             ))}
@@ -460,15 +459,15 @@ export function ProjectConnectorsTab({ projectId, canManage }: Props) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-neutral-900">Project Connectors</h3>
-          <div className="flex items-center gap-2 mt-0.5 text-xs text-neutral-400">
+          <h3 className="text-sm font-bold text-white tracking-tight">Project Connectors</h3>
+          <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
             <span>{connectors.length} connector{connectors.length !== 1 ? 's' : ''}</span>
             {Object.keys(agentStatuses).length > 0 && (
               <>
                 <span>·</span>
-                <span className="text-green-600 font-medium">{healthyCnt} healthy</span>
-                {degradedCnt > 0 && <><span>·</span><span className="text-amber-500 font-medium">{degradedCnt} degraded</span></>}
-                {downCnt > 0 && <><span>·</span><span className="text-red-500 font-medium">{downCnt} down</span></>}
+                <span className="text-emerald-400 font-bold">{healthyCnt} healthy</span>
+                {degradedCnt > 0 && <><span>·</span><span className="text-amber-400 font-bold">{degradedCnt} degraded</span></>}
+                {downCnt > 0 && <><span>·</span><span className="text-red-400 font-bold">{downCnt} down</span></>}
               </>
             )}
           </div>
@@ -860,18 +859,20 @@ function ConnectorRow({
   return (
     <div className={cn(
       'rounded-2xl border transition-all',
-      pc.is_enabled ? 'bg-white border-neutral-100 hover:border-neutral-200' : 'bg-neutral-50 border-neutral-100 opacity-60',
+      pc.is_enabled
+        ? 'bg-slate-900/60 border-white/5 hover:border-white/10 hover:shadow-[0_0_15px_rgba(255,255,255,0.02)]'
+        : 'bg-slate-950/40 border-white/5 opacity-50',
     )}>
       <div className="flex items-center gap-3 p-3">
         <ConnectorIcon color={catalog?.color} name={catalog?.name || pc.name} />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-neutral-900 truncate">{pc.name}</span>
+            <span className="text-sm font-bold text-white truncate">{pc.name}</span>
             <ConnectorStatusBadge status={pc.status} />
             {hasAgentStatus && <AgentStatusIndicator agentStatus={agentStatus} />}
             {!pc.is_enabled && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-400">Disabled</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-slate-400">Disabled</span>
             )}
             {isSyncing && (
               <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(0,229,153,0.1)', color: '#00E599' }}>
@@ -880,13 +881,13 @@ function ConnectorRow({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 mt-0.5 text-xs text-neutral-400">
-            {catalog && <span className="capitalize">{CATEGORY_LABELS[catalog.category] || catalog.category}</span>}
+          <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
+            {catalog && <span className="capitalize font-semibold">{CATEGORY_LABELS[catalog.category] || catalog.category}</span>}
             {catalog?.vendor && <><span>·</span><span>{catalog.vendor}</span></>}
             {agentStatus?.last_sync_at && (
               <>
                 <span>·</span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 text-slate-500">
                   <Clock className="w-2.5 h-2.5" />
                   Synced {formatRelativeTime(agentStatus.last_sync_at)}
                 </span>
@@ -896,27 +897,27 @@ function ConnectorRow({
               <>
                 <span>·</span>
                 <span className={cn(
-                  'font-medium',
-                  agentStatus.uptime_percentage >= 90 ? 'text-green-600' : agentStatus.uptime_percentage >= 70 ? 'text-amber-500' : 'text-red-500'
+                  'font-bold',
+                  agentStatus.uptime_percentage >= 90 ? 'text-emerald-400' : agentStatus.uptime_percentage >= 70 ? 'text-amber-400' : 'text-red-400'
                 )}>{agentStatus.uptime_percentage}% uptime</span>
                 <span>·</span>
-                <span>{agentStatus.total_executions} runs</span>
+                <span className="text-slate-500">{agentStatus.total_executions} runs</span>
               </>
             )}
             {!hasAgentStatus && pc.last_test_at && (
               <>
                 <span>·</span>
-                <span>Tested {new Date(pc.last_test_at).toLocaleDateString()}</span>
+                <span className="text-slate-500">Tested {new Date(pc.last_test_at).toLocaleDateString()}</span>
               </>
             )}
           </div>
           {agentStatus?.last_error && agentStatus.health_status !== 'healthy' && (
-            <p className="text-xs mt-0.5 truncate max-w-sm" style={{ color: '#FF453A' }}>
+            <p className="text-xs mt-0.5 truncate max-w-sm text-red-400">
               {agentStatus.last_error}
             </p>
           )}
           {!agentStatus && pc.last_test_error && pc.status === 'error' && (
-            <p className="text-xs mt-0.5 truncate" style={{ color: '#FF453A' }}>{pc.last_test_error}</p>
+            <p className="text-xs mt-0.5 truncate text-red-400">{pc.last_test_error}</p>
           )}
         </div>
 
@@ -925,7 +926,7 @@ function ConnectorRow({
             <button
               onClick={() => onPriority(pc, 'up')}
               disabled={idx === 0}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               title="Increase priority"
             >
               <ChevronUp className="w-3.5 h-3.5" />
@@ -933,7 +934,7 @@ function ConnectorRow({
             <button
               onClick={() => onPriority(pc, 'down')}
               disabled={idx === total - 1}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               title="Decrease priority"
             >
               <ChevronDown className="w-3.5 h-3.5" />
@@ -945,7 +946,7 @@ function ConnectorRow({
                 'p-1.5 rounded-lg transition-all',
                 isSyncing
                   ? 'text-[#00E599] bg-[rgba(0,229,153,0.1)] cursor-not-allowed'
-                  : 'text-neutral-400 hover:text-green-600 hover:bg-green-50'
+                  : 'text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10'
               )}
               title="Run health sync"
             >
@@ -955,38 +956,38 @@ function ConnectorRow({
             </button>
             <button
               onClick={() => onLogs(pc)}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 transition-all"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all"
               title="View execution logs"
             >
               <List className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onToggle(pc)}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 transition-all"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all"
               title={pc.is_enabled ? 'Disable' : 'Enable'}
             >
               {pc.is_enabled
-                ? <ToggleRight className="w-4 h-4 text-green-500" />
+                ? <ToggleRight className="w-4 h-4 text-emerald-400" />
                 : <ToggleLeft className="w-4 h-4" />
               }
             </button>
             <button
               onClick={() => onMetrics(pc)}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all"
               title="Select metrics"
             >
               <BarChart2 className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onConfigure(pc)}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-primary-500 hover:bg-primary-50 transition-all"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
               title="Configure"
             >
               <Settings className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onRemove(pc)}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-danger-500 hover:bg-danger-50 transition-all"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
               title="Remove"
             >
               <Trash2 className="w-3.5 h-3.5" />

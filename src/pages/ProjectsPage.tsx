@@ -206,28 +206,28 @@ function ProjectGraphPopup({ project, components, lob, team, onClose }: {
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center"
-        style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}
         onClick={onClose}
       >
         <motion.div
           initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.92, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-          className="relative rounded-2xl overflow-hidden w-[90vw] max-w-4xl"
+          className="relative rounded-2xl overflow-hidden w-full max-w-4xl shadow-xl"
           style={{
-            background: 'rgba(8,14,28,0.98)', border: '1px solid rgba(255,255,255,0.1)',
-            boxShadow: `0 0 80px ${project.color}30, 0 40px 80px rgba(0,0,0,0.8)`,
+            background: 'var(--app-surface)', border: '1px solid var(--app-border)',
+            boxShadow: `0 0 80px ${project.color}15, var(--shadow-sm)`,
           }}
           onClick={e => e.stopPropagation()}
         >
-          <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--app-border)' }}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: project.color + '20', border: `1px solid ${project.color}40` }}>
                 <FolderOpen className="w-5 h-5" style={{ color: project.color }} />
               </div>
               <div>
-                <p className="text-[15px] font-bold text-white">{project.name}</p>
-                <p className="text-[11px]" style={{ color: '#566F8A' }}>{lob?.name || 'Unknown LOB'} {team ? `· ${team.name}` : ''}</p>
+                <p className="text-[15px] font-bold text-[var(--text-primary)]">{project.name}</p>
+                <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{lob?.name || 'Unknown LOB'} {team ? `· ${team.name}` : ''}</p>
               </div>
             </div>
             <div className="flex items-center gap-5">
@@ -239,11 +239,11 @@ function ProjectGraphPopup({ project, components, lob, team, onClose }: {
                 ].map(({ label, val, color }) => (
                   <div key={label} className="text-center">
                     <p className="text-[18px] font-bold" style={{ color }}>{val}</p>
-                    <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: '#566F8A' }}>{label}</p>
+                    <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{label}</p>
                   </div>
                 ))}
               </div>
-              <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ background: 'rgba(255,255,255,0.07)', color: '#566F8A' }}>
+              <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{ background: 'var(--app-bg-muted)', color: 'var(--text-secondary)' }}>
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -251,15 +251,15 @@ function ProjectGraphPopup({ project, components, lob, team, onClose }: {
           <div style={{ height: 420 }}>
             <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
               nodeTypes={projNodeTypes} fitView style={{ background: 'transparent' }}>
-              <Background color="rgba(255,255,255,0.03)" gap={24} />
-              <Controls style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }} />
+              <Background color="var(--app-border)" gap={24} />
+              <Controls style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)' }} />
             </ReactFlow>
           </div>
-          <div className="px-6 py-3 flex items-center gap-6" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="px-6 py-3 flex items-center gap-6" style={{ borderTop: '1px solid var(--app-border)' }}>
             {[{ color: '#0A84FF', label: 'Team' }, { color: project.color, label: 'Project' }, { color: '#64D2FF', label: 'Components' }].map(({ color, label }) => (
               <div key={label} className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
-                <span className="text-[11px] font-medium" style={{ color: '#566F8A' }}>{label}</span>
+                <span className="text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</span>
               </div>
             ))}
           </div>
@@ -290,20 +290,20 @@ function ProjectCard({ project, lob, team, components, canCreate, onEdit, onDele
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ y: -3 }}
       transition={{ duration: 0.25 }}
-      className="relative rounded-2xl cursor-pointer group overflow-hidden"
+      className="relative rounded-2xl cursor-pointer group overflow-hidden shadow-sm"
       style={{
-        background: 'rgba(12,18,36,0.97)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: '0 4px 32px rgba(0,0,0,0.4)',
+        background: 'var(--app-surface)',
+        border: '1px solid var(--app-border)',
+        boxShadow: 'var(--shadow-sm)',
         transition: 'box-shadow 0.3s, border-color 0.3s',
       }}
       onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 48px rgba(0,0,0,0.5), 0 0 24px ${color}18`;
+        (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 48px rgba(0,0,0,0.08), 0 0 24px ${color}18`;
         (e.currentTarget as HTMLElement).style.borderColor = `${color}35`;
       }}
       onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 32px rgba(0,0,0,0.4)';
-        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)';
+        (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-sm)';
+        (e.currentTarget as HTMLElement).style.borderColor = 'var(--app-border)';
       }}
       onClick={() => onNavigate(project.id)}
     >
@@ -319,8 +319,8 @@ function ProjectCard({ project, lob, team, components, canCreate, onEdit, onDele
               <FolderOpen className="w-5 h-5" style={{ color }} />
             </div>
             <div className="min-w-0">
-              <p className="text-[14px] font-bold text-white leading-tight truncate max-w-[120px]">{project.name}</p>
-              <p className="text-[11px] mt-0.5 truncate" style={{ color: '#566F8A' }}>
+              <p className="text-[14px] font-bold text-[var(--text-primary)] leading-tight truncate max-w-[120px]">{project.name}</p>
+              <p className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
                 {lob?.name || 'N/A'}{team ? ` · ${team.name}` : ''}
               </p>
             </div>
@@ -328,18 +328,18 @@ function ProjectCard({ project, lob, team, components, canCreate, onEdit, onDele
           <div className="flex items-center gap-1 flex-shrink-0">
             <button onClick={e => { e.stopPropagation(); onView(project); }}
               className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
-              style={{ background: 'rgba(255,255,255,0.06)', color: '#566F8A' }}
+              style={{ background: 'var(--app-bg-muted)', color: 'var(--text-secondary)' }}
               onMouseEnter={e => { e.currentTarget.style.background = color + '25'; (e.currentTarget as HTMLElement).style.color = color; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = '#566F8A'; }}>
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--app-bg-muted)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}>
               <Eye className="w-3.5 h-3.5" />
             </button>
             {canCreate && (
               <div className="relative">
                 <button onClick={e => { e.stopPropagation(); setMenuOpen(m => !m); }}
                   className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
-                  style={{ background: 'rgba(255,255,255,0.06)', color: '#566F8A' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}>
+                  style={{ background: 'var(--app-bg-muted)', color: 'var(--text-secondary)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-surface-hover)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--app-bg-muted)'; }}>
                   <MoreVertical className="w-3.5 h-3.5" />
                 </button>
                 <AnimatePresence>
@@ -347,20 +347,16 @@ function ProjectCard({ project, lob, team, components, canCreate, onEdit, onDele
                     <motion.div
                       initial={{ opacity: 0, scale: 0.9, y: -6 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: -6 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-8 z-30 rounded-xl overflow-hidden w-36"
-                      style={{ background: 'rgba(16,24,44,0.98)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 16px 40px rgba(0,0,0,0.6)' }}
+                      className="absolute right-0 top-8 z-30 rounded-xl overflow-hidden w-36 shadow-lg"
+                      style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', boxShadow: 'var(--shadow-sm)' }}
                       onClick={e => e.stopPropagation()}>
                       <button onClick={() => { setMenuOpen(false); onEdit(project); }}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] text-white transition-colors"
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = ''; }}>
+                        className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] text-[var(--text-primary)] transition-colors hover:bg-[var(--app-surface-hover)]">
                         <Pencil className="w-3.5 h-3.5" style={{ color: '#64D2FF' }} /> Edit
                       </button>
                       <button onClick={() => { setMenuOpen(false); onDelete(project); }}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] transition-colors"
-                        style={{ color: '#FF453A' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,69,58,0.08)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = ''; }}>
+                        className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] transition-colors hover:bg-[var(--app-surface-hover)]"
+                        style={{ color: '#FF453A' }}>
                         <Trash2 className="w-3.5 h-3.5" /> Delete
                       </button>
                     </motion.div>
@@ -384,34 +380,34 @@ function ProjectCard({ project, lob, team, components, canCreate, onEdit, onDele
         </div>
 
         {/* Stats strip */}
-        <div className="flex items-stretch mb-3 rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="flex items-stretch mb-3 rounded-xl overflow-hidden" style={{ border: '1px solid var(--app-border)' }}>
           {[
             { label: 'Connectors', value: project.connector_count },
             { label: 'Healthy', value: project.healthy_count },
             { label: 'Members', value: project.member_count },
           ].map(({ label, value }, i) => (
             <div key={label} className="flex-1 flex flex-col items-center justify-center py-2.5"
-              style={{ borderRight: i < 2 ? '1px solid rgba(255,255,255,0.07)' : 'none', background: 'rgba(255,255,255,0.03)' }}>
-              <span className="text-lg font-bold text-white leading-none">{value}</span>
-              <span className="text-[9px] font-semibold uppercase tracking-wider mt-1" style={{ color: '#566F8A' }}>{label}</span>
+              style={{ borderRight: i < 2 ? '1px solid var(--app-border)' : 'none', background: 'var(--app-bg-muted)' }}>
+              <span className="text-lg font-bold text-[var(--text-primary)] leading-none">{value}</span>
+              <span className="text-[9px] font-semibold uppercase tracking-wider mt-1" style={{ color: 'var(--text-secondary)' }}>{label}</span>
             </div>
           ))}
         </div>
 
         {/* Mini graph */}
         <div className="rounded-xl overflow-hidden mb-3 flex items-center justify-center"
-          style={{ background: 'rgba(6,10,24,0.9)', border: '1px solid rgba(255,255,255,0.06)', height: 100 }}>
+          style={{ background: 'var(--app-bg-subtle)', border: '1px solid var(--app-border)', height: 100 }}>
           <MiniProjectGraph project={project} components={components} />
         </div>
 
         {/* Health bar */}
         {total > 0 && (
           <div className="mb-3">
-            <div className="flex justify-between text-[10px] mb-1" style={{ color: '#566F8A' }}>
+            <div className="flex justify-between text-[10px] mb-1" style={{ color: 'var(--text-secondary)' }}>
               <span>Health</span>
               <span className="font-bold" style={{ color: pct >= 90 ? '#30D158' : pct >= 70 ? '#FF9F0A' : '#FF453A' }}>{pct}%</span>
             </div>
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--app-bg-muted)' }}>
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${pct}%` }}
@@ -423,8 +419,8 @@ function ProjectCard({ project, lob, team, components, canCreate, onEdit, onDele
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex items-center gap-3 text-[10px]" style={{ color: '#566F8A' }}>
+        <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--app-border)' }}>
+          <div className="flex items-center gap-3 text-[10px]" style={{ color: 'var(--text-secondary)' }}>
             {project.healthy_count > 0 && (
               <span className="flex items-center gap-1" style={{ color: '#30D158' }}>
                 <CheckCircle className="w-3 h-3" /> {project.healthy_count}
@@ -441,7 +437,7 @@ function ProjectCard({ project, lob, team, components, canCreate, onEdit, onDele
               </span>
             )}
           </div>
-          <ChevronRight className="w-4 h-4" style={{ color: '#566F8A' }} />
+          <ChevronRight className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
         </div>
       </div>
     </motion.div>
@@ -458,54 +454,54 @@ function ProjectListRow({ project, lob, canCreate, onEdit, onDelete, onNavigate 
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-      className="flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all cursor-pointer group"
-      style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.07)' }}
+      className="flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all cursor-pointer group shadow-sm"
+      style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
       onClick={() => onNavigate(project.id)}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${color}35`; (e.currentTarget as HTMLElement).style.boxShadow = `0 0 20px ${color}12`; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.07)'; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--app-border)'; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}
     >
       <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: color + '18', border: `1px solid ${color}30` }}>
         <FolderOpen className="w-4 h-4" style={{ color }} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-white truncate">{project.name}</p>
+          <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{project.name}</p>
           <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full capitalize flex-shrink-0"
             style={{ background: (STATUS_COLORS[project.status] || '#566F8A') + '18', color: STATUS_COLORS[project.status] || '#566F8A' }}>
             {project.status}
           </span>
         </div>
-        <p className="text-xs truncate" style={{ color: '#566F8A' }}>
+        <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
           {lob?.name || 'N/A'} · {project.environment}
         </p>
       </div>
       <div className="hidden md:flex items-center gap-2 w-32">
-        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--app-bg-muted)' }}>
           <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 90 ? '#30D158' : pct >= 70 ? '#FF9F0A' : '#FF453A' }} />
         </div>
         <span className="text-[11px] w-8 text-right font-bold" style={{ color: pct >= 90 ? '#30D158' : pct >= 70 ? '#FF9F0A' : '#FF453A' }}>{pct}%</span>
       </div>
-      <div className="hidden md:flex items-center gap-3 text-[11px]" style={{ color: '#566F8A' }}>
+      <div className="hidden md:flex items-center gap-3 text-[11px]" style={{ color: 'var(--text-secondary)' }}>
         <span className="flex items-center gap-1"><Plug className="w-3 h-3" />{project.connector_count}</span>
         <span className="flex items-center gap-1"><Users className="w-3 h-3" />{project.member_count}</span>
       </div>
       {canCreate && (
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={e => { e.stopPropagation(); onEdit(project); }}
-            className="p-1.5 rounded-lg transition-all" style={{ color: '#566F8A' }}
+            className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
             onMouseEnter={e => { e.currentTarget.style.color = '#64D2FF'; e.currentTarget.style.background = 'rgba(100,210,255,0.1)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#566F8A'; e.currentTarget.style.background = ''; }}>
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
             <Pencil className="w-3.5 h-3.5" />
           </button>
           <button onClick={e => { e.stopPropagation(); onDelete(project); }}
-            className="p-1.5 rounded-lg transition-all" style={{ color: '#566F8A' }}
+            className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
             onMouseEnter={e => { e.currentTarget.style.color = '#FF453A'; e.currentTarget.style.background = 'rgba(255,69,58,0.1)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#566F8A'; e.currentTarget.style.background = ''; }}>
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
-      <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: '#566F8A' }} />
+      <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--text-secondary)' }} />
     </motion.div>
   );
 }
@@ -689,17 +685,17 @@ export function ProjectsPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-black text-white tracking-tight">Projects</h1>
-            <p className="text-sm mt-1" style={{ color: '#566F8A' }}>
+            <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">Projects</h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
               {filtered.length} of {projects.length} project{projects.length !== 1 ? 's' : ''}{lobIdFilter ? ` in ${getLobById(lobIdFilter)?.name}` : ''}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={fetchAll}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-medium transition-all"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#99AABB' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; }}>
+              style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: 'var(--text-secondary)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--app-surface-hover)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--app-bg-muted)'; }}>
               <RefreshCw className="w-4 h-4" /> Refresh
             </button>
             {canCreate && (
@@ -719,17 +715,17 @@ export function ProjectsPage() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         {statCards.map(({ label, value, color, icon: Icon, sub }, idx) => (
           <motion.div key={label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.07 }}
-            className="relative rounded-2xl p-4 overflow-hidden"
-            style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.07)', boxShadow: '0 4px 24px rgba(0,0,0,0.3)' }}>
+            className="relative rounded-2xl p-4 overflow-hidden shadow-sm"
+            style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', boxShadow: 'var(--shadow-sm)' }}>
             <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none"
               style={{ background: `radial-gradient(ellipse, ${color}12 0%, transparent 70%)`, transform: 'translate(20%, -20%)' }} />
             <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3"
               style={{ background: color + '18', border: `1px solid ${color}30` }}>
               <Icon className="w-4 h-4" style={{ color }} />
             </div>
-            <p className="text-2xl font-black text-white leading-none">{value}</p>
+            <p className="text-2xl font-black text-[var(--text-primary)] leading-none">{value}</p>
             <p className="text-[11px] font-semibold mt-1" style={{ color }}>{label}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: '#566F8A' }}>{sub}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{sub}</p>
           </motion.div>
         ))}
       </div>
@@ -737,15 +733,15 @@ export function ProjectsPage() {
       {/* Filters row */}
       <div className="flex flex-wrap gap-3 items-center mb-6">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#566F8A' }} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
           <input type="text" placeholder="Search projects..." value={search}
             onChange={e => setFilter('search', e.target.value)}
             className="pl-9 pr-8 py-2 text-[13px] rounded-xl outline-none transition-all w-52"
-            style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+            style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: 'var(--text-primary)' }}
             onFocus={e => { e.currentTarget.style.borderColor = '#30D158'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(48,209,88,0.12)'; }}
-            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.boxShadow = ''; }} />
+            onBlur={e => { e.currentTarget.style.borderColor = 'var(--app-border)'; e.currentTarget.style.boxShadow = ''; }} />
           {search && (
-            <button onClick={() => setFilter('search', '')} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: '#566F8A' }}>
+            <button onClick={() => setFilter('search', '')} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
               <X className="w-3.5 h-3.5" />
             </button>
           )}
@@ -754,7 +750,7 @@ export function ProjectsPage() {
         {!lobIdFilter && (
           <select value={lobFilter} onChange={e => setFilter('lob', e.target.value)}
             className="appearance-none pl-3 pr-7 py-2 text-[13px] rounded-xl outline-none cursor-pointer"
-            style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.1)', color: lobFilter ? 'white' : '#566F8A' }}>
+            style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: lobFilter ? 'var(--text-primary)' : 'var(--text-muted)' }}>
             <option value="">All LOBs</option>
             {lobs.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
@@ -762,7 +758,7 @@ export function ProjectsPage() {
 
         <select value={teamFilter} onChange={e => setFilter('team', e.target.value)}
           className="appearance-none pl-3 pr-7 py-2 text-[13px] rounded-xl outline-none cursor-pointer"
-          style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.1)', color: teamFilter ? 'white' : '#566F8A' }}>
+          style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: teamFilter ? 'var(--text-primary)' : 'var(--text-muted)' }}>
           <option value="">All Teams</option>
           {(lobFilter ? teams.filter(t => t.lob_id === lobFilter) : teams).map(t => (
             <option key={t.id} value={t.id}>{t.name}</option>
@@ -771,14 +767,14 @@ export function ProjectsPage() {
 
         <select value={statusFilter} onChange={e => setFilter('status', e.target.value)}
           className="appearance-none pl-3 pr-7 py-2 text-[13px] rounded-xl outline-none cursor-pointer"
-          style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.1)', color: statusFilter ? 'white' : '#566F8A' }}>
+          style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: statusFilter ? 'var(--text-primary)' : 'var(--text-muted)' }}>
           <option value="">All Statuses</option>
           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
         </select>
 
         <select value={envFilter} onChange={e => setFilter('env', e.target.value)}
           className="appearance-none pl-3 pr-7 py-2 text-[13px] rounded-xl outline-none cursor-pointer"
-          style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.1)', color: envFilter ? 'white' : '#566F8A' }}>
+          style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: envFilter ? 'var(--text-primary)' : 'var(--text-muted)' }}>
           <option value="">All Envs</option>
           {ENV_OPTIONS.map(e => <option key={e} value={e}>{e.charAt(0).toUpperCase() + e.slice(1)}</option>)}
         </select>
@@ -786,22 +782,22 @@ export function ProjectsPage() {
         {hasFilters && (
           <button onClick={clearFilters}
             className="flex items-center gap-1 text-[12px] px-2 py-1.5 rounded-lg transition-all"
-            style={{ color: '#566F8A' }}
+            style={{ color: 'var(--text-muted)' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#FF453A'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,69,58,0.08)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#566F8A'; (e.currentTarget as HTMLElement).style.background = ''; }}>
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.background = ''; }}>
             <X className="w-3 h-3" /> Clear
           </button>
         )}
 
         {/* View toggle */}
         <div className="ml-auto flex items-center gap-1 rounded-xl p-1"
-          style={{ border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(12,18,36,0.97)' }}>
+          style={{ border: '1px solid var(--app-border)', background: 'var(--app-bg-muted)' }}>
           {(['card', 'list', 'table'] as ViewMode[]).map((m) => {
             const Icon = m === 'card' ? LayoutGrid : m === 'list' ? List : TableIcon;
             return (
               <button key={m} onClick={() => setViewMode(m)}
                 className="p-1.5 rounded-lg transition-all"
-                style={viewMode === m ? { background: '#30D158', color: '#fff' } : { color: '#566F8A' }}>
+                style={viewMode === m ? { background: '#30D158', color: '#fff' } : { color: 'var(--text-secondary)' }}>
                 <Icon className="w-3.5 h-3.5" />
               </button>
             );
@@ -822,7 +818,7 @@ export function ProjectsPage() {
         )
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl p-12 text-center"
-          style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          style={{ background: 'var(--app-bg-subtle)', border: '1px solid var(--app-border)' }}>
           <EmptyState icon={FolderOpen}
             title={hasFilters ? 'No matching projects' : 'No Projects'}
             description={hasFilters ? 'Try adjusting your filters.' : 'Create your first project to start adding connectors.'}
@@ -870,22 +866,22 @@ export function ProjectsPage() {
         </div>
       ) : (
         /* Table view */
-        <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.03)' }}>
+                <tr style={{ borderBottom: '1px solid var(--app-border)', background: 'var(--app-bg-muted)' }}>
                   {(['name', 'LOB / Team', 'status', 'environment', 'connector_count', 'health', 'member_count'] as any[]).map((col, i) => (
                     <th key={i} className="text-left px-4 py-3">
                       {['name', 'status', 'connector_count', 'member_count'].includes(col) ? (
                         <button onClick={() => handleSort(col as SortField)}
                           className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider transition-colors"
-                          style={{ color: sortField === col ? '#30D158' : '#566F8A' }}>
+                          style={{ color: sortField === col ? '#30D158' : 'var(--text-secondary)' }}>
                           {col === 'connector_count' ? 'Connectors' : col === 'member_count' ? 'Members' : col.charAt(0).toUpperCase() + col.slice(1)}
                           <ArrowUpDown className="w-3 h-3" />
                         </button>
                       ) : (
-                        <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#566F8A' }}>{col}</span>
+                        <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{col}</span>
                       )}
                     </th>
                   ))}
@@ -900,9 +896,9 @@ export function ProjectsPage() {
                   return (
                     <tr key={proj.id}
                       className={cn('cursor-pointer transition-all group', idx !== filtered.length - 1 && 'border-b')}
-                      style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+                      style={{ borderColor: 'var(--app-border)' }}
                       onClick={() => navigate(`/projects/${proj.id}`)}
-                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.025)'}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--app-surface-hover)'}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
@@ -910,14 +906,14 @@ export function ProjectsPage() {
                             <FolderOpen className="w-3.5 h-3.5" style={{ color }} />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-white">{proj.name}</p>
-                            <p className="text-[10px] font-mono" style={{ color: '#566F8A' }}>{proj.slug}</p>
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">{proj.name}</p>
+                            <p className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{proj.slug}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-sm text-white">{getLobById(proj.lob_id)?.name || 'N/A'}</p>
-                        {proj.team_name && <p className="text-[11px]" style={{ color: '#566F8A' }}>{proj.team_name}</p>}
+                        <p className="text-sm text-[var(--text-primary)]">{getLobById(proj.lob_id)?.name || 'N/A'}</p>
+                        {proj.team_name && <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{proj.team_name}</p>}
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-[11px] font-medium px-2 py-0.5 rounded-full capitalize"
@@ -931,29 +927,29 @@ export function ProjectsPage() {
                           {proj.environment}
                         </span>
                       </td>
-                      <td className="px-4 py-3"><span className="text-sm text-white">{proj.connector_count}</span></td>
+                      <td className="px-4 py-3"><span className="text-sm text-[var(--text-primary)]">{proj.connector_count}</span></td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2 w-24">
-                          <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                          <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--app-bg-muted)' }}>
                             <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 90 ? '#30D158' : pct >= 70 ? '#FF9F0A' : '#FF453A' }} />
                           </div>
                           <span className="text-[11px] w-8 text-right font-bold" style={{ color: pct >= 90 ? '#30D158' : pct >= 70 ? '#FF9F0A' : '#FF453A' }}>{pct}%</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3"><span className="text-sm text-white">{proj.member_count}</span></td>
+                      <td className="px-4 py-3"><span className="text-sm text-[var(--text-primary)]">{proj.member_count}</span></td>
                       <td className="px-4 py-3 text-right">
                         {canCreate && (
                           <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={e => { e.stopPropagation(); openEdit(proj); }}
-                              className="p-1.5 rounded-lg transition-all" style={{ color: '#566F8A' }}
+                              className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
                               onMouseEnter={e => { e.currentTarget.style.color = '#64D2FF'; e.currentTarget.style.background = 'rgba(100,210,255,0.1)'; }}
-                              onMouseLeave={e => { e.currentTarget.style.color = '#566F8A'; e.currentTarget.style.background = ''; }}>
+                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button onClick={e => { e.stopPropagation(); setDeleteTarget(proj); }}
-                              className="p-1.5 rounded-lg transition-all" style={{ color: '#566F8A' }}
+                              className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
                               onMouseEnter={e => { e.currentTarget.style.color = '#FF453A'; e.currentTarget.style.background = 'rgba(255,69,58,0.1)'; }}
-                              onMouseLeave={e => { e.currentTarget.style.color = '#566F8A'; e.currentTarget.style.background = ''; }}>
+                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -970,9 +966,9 @@ export function ProjectsPage() {
 
       {/* Bottom analytics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-10">
-        <div className="md:col-span-2 rounded-2xl p-5" style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <p className="text-[13px] font-bold text-white mb-1">Health Trend</p>
-          <p className="text-[11px] mb-4" style={{ color: '#566F8A' }}>System health score over last 24h</p>
+        <div className="md:col-span-2 rounded-2xl p-5 shadow-sm" style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}>
+          <p className="text-[13px] font-bold text-[var(--text-primary)] mb-1">Health Trend</p>
+          <p className="text-[11px] mb-4" style={{ color: 'var(--text-muted)' }}>System health score over last 24h</p>
           <ResponsiveContainer width="100%" height={160}>
             <AreaChart data={trendData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
               <defs>
@@ -981,24 +977,24 @@ export function ProjectsPage() {
                   <stop offset="95%" stopColor="#30D158" stopOpacity="0.02" />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="time" tick={{ fill: '#566F8A', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#566F8A', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 100]} />
-              <RechartTooltip contentStyle={{ background: 'rgba(16,24,44,0.98)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', fontSize: 12 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" />
+              <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 100]} />
+              <RechartTooltip contentStyle={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 12 }} />
               <Area type="monotone" dataKey="score" stroke="#30D158" strokeWidth={2} fill="url(#projTrendGrad)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="rounded-2xl p-5" style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <p className="text-[13px] font-bold text-white mb-1">Status Distribution</p>
-          <p className="text-[11px] mb-4" style={{ color: '#566F8A' }}>Projects by status</p>
+        <div className="rounded-2xl p-5 shadow-sm" style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}>
+          <p className="text-[13px] font-bold text-[var(--text-primary)] mb-1">Status Distribution</p>
+          <p className="text-[11px] mb-4" style={{ color: 'var(--text-muted)' }}>Projects by status</p>
           <ResponsiveContainer width="100%" height={120}>
             <PieChart>
               <Pie data={statusDist} dataKey="value" innerRadius={30} outerRadius={55} paddingAngle={3}>
                 {statusDist.map((entry, i) => <Cell key={i} fill={entry.color} opacity={0.9} />)}
               </Pie>
-              <RechartTooltip contentStyle={{ background: 'rgba(16,24,44,0.98)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', fontSize: 12 }} />
+              <RechartTooltip contentStyle={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 12 }} />
             </PieChart>
           </ResponsiveContainer>
           <div className="space-y-1.5 mt-2">
@@ -1006,9 +1002,9 @@ export function ProjectsPage() {
               <div key={name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-                  <span className="text-[11px]" style={{ color: '#99AABB' }}>{name}</span>
+                  <span className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{name}</span>
                 </div>
-                <span className="text-[11px] font-bold text-white">{value}</span>
+                <span className="text-[11px] font-bold text-[var(--text-primary)]">{value}</span>
               </div>
             ))}
           </div>

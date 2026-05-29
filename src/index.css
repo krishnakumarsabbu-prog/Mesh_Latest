@@ -10,9 +10,9 @@
     --page-padding: 24px;
 
     /* ── Harness Enterprise DevOps Light Theme (default) ── */
-    --app-bg:              #F4F5F7;
-    --app-bg-subtle:       #EAECEF;
-    --app-bg-muted:        #E2E6EA;
+    --app-bg:              #FFFFFF;
+    --app-bg-subtle:       #F8F9FA;
+    --app-bg-muted:        #F1F3F5;
     --app-surface:         #FFFFFF;
     --app-surface-raised:  #FFFFFF;
     --app-surface-hover:   #F8F9FB;
@@ -483,9 +483,9 @@
   /* Deprecated aliases kept for backward compat */
   .theme-harness {
     /* same as root defaults but reassert them */
-    --app-bg:              #F4F5F7;
-    --app-bg-subtle:       #EAECEF;
-    --app-bg-muted:        #E2E6EA;
+    --app-bg:              #FFFFFF;
+    --app-bg-subtle:       #F8F9FA;
+    --app-bg-muted:        #F1F3F5;
     --app-surface:         #FFFFFF;
     --app-surface-raised:  #FFFFFF;
     --app-surface-hover:   #F8F9FB;

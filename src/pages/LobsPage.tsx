@@ -413,11 +413,11 @@ function StatCard({ label, value, icon: Icon, color, trendData }: {
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl p-4 relative overflow-hidden flex items-center gap-3"
+      className="rounded-2xl p-4 relative overflow-hidden flex items-center gap-3 shadow-sm"
       style={{
-        background: 'linear-gradient(135deg, rgba(15,22,40,0.9), rgba(20,30,55,0.9))',
-        border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+        background: 'var(--app-surface)',
+        border: '1px solid var(--app-border)',
+        boxShadow: 'var(--shadow-sm)',
       }}
     >
       <div className="absolute inset-0 opacity-[0.06] pointer-events-none" style={{ background: `radial-gradient(circle at top right, ${color}, transparent 65%)` }} />
@@ -425,8 +425,8 @@ function StatCard({ label, value, icon: Icon, color, trendData }: {
         <Icon className="w-5 h-5" style={{ color }} />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-xl font-bold text-white leading-none">{value}</div>
-        <div className="text-xs mt-0.5 font-medium truncate" style={{ color: '#566F8A' }}>{label}</div>
+        <div className="text-xl font-bold text-[var(--text-primary)] leading-none">{value}</div>
+        <div className="text-xs mt-0.5 font-medium truncate" style={{ color: 'var(--text-muted)' }}>{label}</div>
       </div>
       {trendData && trendData.length > 0 && (
         <div className="w-16 h-9 flex-shrink-0">
@@ -488,12 +488,12 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
         initial={{ opacity: 0, y: 28 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.04, type: 'spring', stiffness: 240, damping: 22 }}
-        whileHover={{ y: -4, boxShadow: `0 16px 48px rgba(0,0,0,0.55), 0 0 0 1px ${color}35` }}
-        className="group relative rounded-2xl cursor-pointer overflow-hidden"
+        whileHover={{ y: -4, boxShadow: `0 16px 48px rgba(0,0,0,0.1), 0 0 0 1px ${color}35` }}
+        className="group relative rounded-2xl cursor-pointer overflow-hidden shadow-sm"
         style={{
-          background: 'linear-gradient(160deg, rgba(12,18,36,0.97), rgba(16,24,48,0.97))',
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+          background: 'var(--app-surface)',
+          border: '1px solid var(--app-border)',
+          boxShadow: 'var(--shadow-sm)',
           transition: 'box-shadow 0.25s ease, transform 0.25s ease',
         }}
         onClick={onNavigate}
@@ -510,8 +510,8 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
                 <Building2 className="w-4.5 h-4.5" style={{ color }} />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-bold text-white truncate leading-tight">{lob.name}</h3>
-                <p className="text-[10px] font-mono" style={{ color: '#566F8A' }}>{lob.slug}</p>
+                <h3 className="text-sm font-bold text-[var(--text-primary)] truncate leading-tight">{lob.name}</h3>
+                <p className="text-[10px] font-mono text-[var(--text-secondary)]">{lob.slug}</p>
               </div>
             </div>
 
@@ -527,9 +527,9 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
               <button
                 onClick={(e) => { e.stopPropagation(); setShowGraph(true); }}
                 className="w-6 h-6 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
-                style={{ background: 'rgba(255,255,255,0.08)', color: '#8097B0' }}
+                style={{ background: 'var(--app-bg-muted)', color: 'var(--text-secondary)' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = `${color}28`; e.currentTarget.style.color = color; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#8097B0'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--app-bg-muted)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                 title="View hierarchy graph"
               >
                 <Eye className="w-3.5 h-3.5" />
@@ -540,8 +540,8 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
                 <div className="relative" ref={menuRef}>
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowMenu((v) => !v); }}
-                    className="w-6 h-6 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:bg-white/10"
-                    style={{ color: '#566F8A' }}
+                    className="w-6 h-6 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:bg-[var(--app-surface-hover)]"
+                    style={{ color: 'var(--text-secondary)' }}
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
                   </button>
@@ -553,15 +553,15 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
                         exit={{ opacity: 0, scale: 0.88, y: -6 }}
                         transition={{ duration: 0.1 }}
                         className="absolute right-0 top-7 w-40 rounded-xl overflow-hidden z-30 shadow-2xl"
-                        style={{ background: 'rgba(12,18,36,0.98)', border: '1px solid rgba(255,255,255,0.1)' }}
+                        style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
                       >
                         {[
                           { label: 'Edit', icon: Pencil, c: '#0A84FF', action: onEdit },
                           { label: 'Manage Admins', icon: ShieldCheck, c: '#FF9F0A', action: onManageAdmins },
-                          { label: 'Delete', icon: Trash2, c: '#FF453A', action: (e: React.MouseEvent) => { e.stopPropagation(); onDelete(e); } },
+                          { label: 'Delete', icon: Trash2, c: '#FF453A', action: (e: React.MouseEvent) => { e.stopPropagation(); action(e); } },
                         ].map(({ label, icon: Icon, c, action }) => (
                           <button key={label} onClick={(e) => { e.stopPropagation(); setShowMenu(false); action(e); }}
-                            className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium hover:bg-white/5 transition-all text-left"
+                            className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium hover:bg-[var(--app-surface-hover)] transition-all text-left"
                             style={{ color: c }}>
                             <Icon className="w-3.5 h-3.5" />{label}
                           </button>
@@ -575,7 +575,7 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
           </div>
 
           {/* Stats: Teams | Projects | Components — large numbers with dividers */}
-          <div className="flex items-stretch mb-3 rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+          <div className="flex items-stretch mb-3 rounded-xl overflow-hidden" style={{ border: '1px solid var(--app-border)' }}>
             {[
               { label: 'Teams', value: teamCount },
               { label: 'Projects', value: (lob.project_count as number) ?? 0 },
@@ -583,11 +583,11 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
             ].map(({ label, value }, i) => (
               <div key={label} className="flex-1 flex flex-col items-center justify-center py-3"
                 style={{
-                  borderRight: i < 2 ? '1px solid rgba(255,255,255,0.07)' : 'none',
-                  background: 'rgba(255,255,255,0.03)',
+                  borderRight: i < 2 ? '1px solid var(--app-border)' : 'none',
+                  background: 'var(--app-bg-muted)',
                 }}>
-                <span className="text-xl font-bold text-white leading-none">{value}</span>
-                <span className="text-[9px] font-semibold uppercase tracking-wider mt-1" style={{ color: '#566F8A' }}>{label}</span>
+                <span className="text-xl font-bold text-[var(--text-primary)] leading-none">{value}</span>
+                <span className="text-[9px] font-semibold uppercase tracking-wider mt-1" style={{ color: 'var(--text-secondary)' }}>{label}</span>
               </div>
             ))}
           </div>
@@ -595,14 +595,14 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
           {/* Mini network graph — icon nodes + mesh lines */}
           <div
             className="rounded-xl overflow-hidden mb-3 relative"
-            style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', height: 88 }}
+            style={{ background: 'var(--app-bg-subtle)', border: '1px solid var(--app-border)', height: 88 }}
           >
             <MiniNetGraph lob={lob} teams={teams} projects={projects} components={components} />
             {/* Eye hint overlay on hover */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-              style={{ background: 'rgba(0,0,0,0.22)', borderRadius: 12 }}>
-              <div className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-full"
-                style={{ background: `${color}22`, border: `1px solid ${color}40`, color }}>
+              style={{ background: 'rgba(0,0,0,0.12)', borderRadius: 12 }}>
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-full shadow-sm"
+                style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', color }}>
                 <Eye className="w-3 h-3" /> Expand graph
               </div>
             </div>
@@ -611,10 +611,10 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
           {/* Health bar */}
           <div className="mb-2">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-medium" style={{ color: '#566F8A' }}>Health</span>
+              <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>Health</span>
               <span className="text-[10px] font-bold" style={{ color: healthColor }}>{healthPct.toFixed(1)}%</span>
             </div>
-            <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+            <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'var(--app-border)' }}>
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${healthPct}%` }}
@@ -626,8 +626,8 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            <span className="text-[9px]" style={{ color: '#3D5066' }}>Updated {2 + index}m ago</span>
+          <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid var(--app-border)' }}>
+            <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>Updated {2 + index}m ago</span>
             <motion.span
               className="flex items-center gap-1 text-[10px] font-semibold"
               style={{ color }}
@@ -914,41 +914,41 @@ export function LobsPage() {
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: '#566F8A' }} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
           <input type="text" placeholder="Search LOBs..." value={search} onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-8 py-2.5 text-sm rounded-xl outline-none transition-all"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)' }}
+            style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: 'var(--text-primary)' }}
             onFocus={(e) => { e.currentTarget.style.borderColor = '#0A84FF'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(10,132,255,0.15)'; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.boxShadow = ''; }} />
-          {search && <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: '#566F8A' }}><X className="w-3.5 h-3.5" /></button>}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--app-border)'; e.currentTarget.style.boxShadow = ''; }} />
+          {search && <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}><X className="w-3.5 h-3.5" /></button>}
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium" style={{ color: '#566F8A' }}>Sort by:</span>
+          <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Sort by:</span>
           <button onClick={() => toggleSort('name')}
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
             style={sortKey === 'name'
               ? { background: 'rgba(10,132,255,0.15)', color: '#0A84FF', border: '1px solid rgba(10,132,255,0.3)' }
-              : { background: 'rgba(255,255,255,0.05)', color: '#8097B0', border: '1px solid rgba(255,255,255,0.08)' }}>
+              : { background: 'var(--app-bg-muted)', color: 'var(--text-secondary)', border: '1px solid var(--app-border)' }}>
             Name {sortKey === 'name' && <ArrowUpDown className="w-3 h-3" />}
           </button>
 
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}
             className="px-2.5 py-1.5 rounded-lg text-xs font-medium outline-none cursor-pointer appearance-none"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#8097B0' }}>
+            style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: 'var(--text-secondary)' }}>
             <option value="All Status">All Status</option>
             <option value="Active">Active</option>
             <option value="Inactive">Inactive</option>
           </select>
         </div>
 
-        <div className="flex rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)' }}>
+        <div className="flex rounded-xl overflow-hidden" style={{ border: '1px solid var(--app-border)', background: 'var(--app-bg-muted)' }}>
           <button onClick={() => setViewMode('grid')} className="p-2 transition-all"
-            style={viewMode === 'grid' ? { background: '#0A84FF', color: '#fff' } : { color: '#566F8A' }}>
+            style={viewMode === 'grid' ? { background: '#0A84FF', color: '#fff' } : { color: 'var(--text-muted)' }}>
             <LayoutGrid className="w-4 h-4" />
           </button>
           <button onClick={() => setViewMode('table')} className="p-2 transition-all"
-            style={viewMode === 'table' ? { background: '#0A84FF', color: '#fff' } : { color: '#566F8A' }}>
+            style={viewMode === 'table' ? { background: '#0A84FF', color: '#fff' } : { color: 'var(--text-muted)' }}>
             <List className="w-4 h-4" />
           </button>
         </div>
@@ -960,7 +960,7 @@ export function LobsPage() {
           {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}
         </div>
       ) : filteredSorted.length === 0 ? (
-        <div className="rounded-2xl p-10 flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="rounded-2xl p-10 flex items-center justify-center" style={{ background: 'var(--app-bg-subtle)', border: '1px solid var(--app-border)' }}>
           <EmptyState icon={Building2} title={search ? 'No matching LOBs' : 'No Lines of Business'}
             description={search ? `No LOBs found matching "${search}".` : 'Create your first LOB to start organizing projects.'}
             action={!search && superAdmin ? <Button icon={<Plus className="w-4 h-4" />} onClick={() => setCreateOpen(true)}>Create LOB</Button> : undefined} />
@@ -993,11 +993,11 @@ export function LobsPage() {
           className="grid grid-cols-1 lg:grid-cols-12 gap-4"
         >
           {/* System overview area chart */}
-          <div className="lg:col-span-6 rounded-2xl p-5"
-            style={{ background: 'linear-gradient(135deg, rgba(12,18,36,0.95), rgba(16,24,48,0.95))', border: '1px solid rgba(255,255,255,0.07)', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
+          <div className="lg:col-span-6 rounded-2xl p-5 shadow-sm"
+            style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', boxShadow: 'var(--shadow-sm)' }}>
             <div className="mb-3">
-              <h3 className="text-sm font-bold text-white">System Overview</h3>
-              <p className="text-xs mt-0.5" style={{ color: '#566F8A' }}>Real-time health and performance across all Lines of Business</p>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">System Overview</h3>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Real-time health and performance across all Lines of Business</p>
             </div>
             <ResponsiveContainer width="100%" height={160}>
               <AreaChart data={systemTrendData} margin={{ top: 4, right: 4, bottom: 4, left: -22 }}>
@@ -1007,12 +1007,12 @@ export function LobsPage() {
                     <stop offset="100%" stopColor="#0A84FF" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="t" tick={{ fontSize: 9, fill: '#566F8A' }} tickLine={false} axisLine={false} interval={7} />
-                <YAxis tick={{ fontSize: 9, fill: '#566F8A' }} tickLine={false} axisLine={false} domain={[78, 100]} tickFormatter={(v) => `${v}%`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" />
+                <XAxis dataKey="t" tick={{ fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} interval={7} />
+                <YAxis tick={{ fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} domain={[78, 100]} tickFormatter={(v) => `${v}%`} />
                 <RechartTooltip
-                  contentStyle={{ background: 'rgba(12,18,36,0.96)', border: '1px solid rgba(10,132,255,0.3)', borderRadius: 8, fontSize: 11 }}
-                  labelStyle={{ color: '#8097B0' }} itemStyle={{ color: '#0A84FF' }}
+                  contentStyle={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: 8, fontSize: 11 }}
+                  labelStyle={{ color: 'var(--text-secondary)' }} itemStyle={{ color: '#0A84FF' }}
                   formatter={(v: number) => [`${v.toFixed(1)}%`, 'Health']} />
                 <Area type="monotone" dataKey="v" stroke="#0A84FF" strokeWidth={2} fill="url(#sysGrad)" />
               </AreaChart>
@@ -1020,9 +1020,9 @@ export function LobsPage() {
           </div>
 
           {/* Health distribution donut */}
-          <div className="lg:col-span-3 rounded-2xl p-5"
-            style={{ background: 'linear-gradient(135deg, rgba(12,18,36,0.95), rgba(16,24,48,0.95))', border: '1px solid rgba(255,255,255,0.07)', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
-            <h3 className="text-sm font-bold text-white mb-4">Health Distribution</h3>
+          <div className="lg:col-span-3 rounded-2xl p-5 shadow-sm"
+            style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', boxShadow: 'var(--shadow-sm)' }}>
+            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-4">Health Distribution</h3>
             <div className="flex items-center gap-4">
               <div className="flex-shrink-0">
                 <ResponsiveContainer width={100} height={100}>
@@ -1043,10 +1043,10 @@ export function LobsPage() {
                   <div key={label} className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c }} />
-                      <span className="text-xs" style={{ color: '#8097B0' }}>{label}</span>
+                      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{label}</span>
                     </div>
-                    <span className="text-xs font-semibold text-white">
-                      {value} <span style={{ color: '#3D5066' }}>({lobs.length > 0 ? Math.round((value / lobs.length) * 100) : 0}%)</span>
+                    <span className="text-xs font-semibold text-[var(--text-primary)]">
+                      {value} <span style={{ color: 'var(--text-muted)' }}>({lobs.length > 0 ? Math.round((value / lobs.length) * 100) : 0}%)</span>
                     </span>
                   </div>
                 ))}
@@ -1055,28 +1055,28 @@ export function LobsPage() {
           </div>
 
           {/* Recent alerts */}
-          <div className="lg:col-span-3 rounded-2xl p-5"
-            style={{ background: 'linear-gradient(135deg, rgba(12,18,36,0.95), rgba(16,24,48,0.95))', border: '1px solid rgba(255,255,255,0.07)', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
+          <div className="lg:col-span-3 rounded-2xl p-5 shadow-sm"
+            style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', boxShadow: 'var(--shadow-sm)' }}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-white">Recent Alerts</h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Recent Alerts</h3>
               <button className="text-[10px] font-semibold" style={{ color: '#0A84FF' }}>View All</button>
             </div>
             <div className="space-y-2.5">
               {recentAlerts.length === 0 ? (
-                <p className="text-xs text-center py-4" style={{ color: '#566F8A' }}>No recent alerts</p>
+                <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>No recent alerts</p>
               ) : recentAlerts.map(({ lob, msg, time, color: ac }, i) => (
                 <motion.div key={i} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.07 }}
-                  className="flex items-start gap-2.5 p-2.5 rounded-xl cursor-pointer hover:bg-white/3 transition-all"
-                  style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }}
+                  className="flex items-start gap-2.5 p-2.5 rounded-xl cursor-pointer hover:bg-[var(--app-surface-hover)] transition-all"
+                  style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)' }}
                   onClick={() => navigate(`/lobs/${lob.id}`)}>
                   <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: `${ac}20` }}>
                     <AlertTriangle className="w-3.5 h-3.5" style={{ color: ac }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-white leading-tight">{msg}</p>
-                    <p className="text-[10px] mt-0.5" style={{ color: '#566F8A' }}>{lob.name}</p>
+                    <p className="text-xs font-medium text-[var(--text-primary)] leading-tight">{msg}</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>{lob.name}</p>
                   </div>
-                  <span className="text-[10px] flex-shrink-0" style={{ color: '#3D5066' }}>{time}</span>
+                  <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{time}</span>
                 </motion.div>
               ))}
             </div>
@@ -1211,18 +1211,18 @@ function LobTable({ lobs, superAdmin, sortKey, sortDir, allTeams, allProjects, a
 
   return (
     <>
-      <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(12,18,36,0.9)' }}>
+      <div className="rounded-2xl overflow-hidden shadow-sm" style={{ border: '1px solid var(--app-border)', background: 'var(--app-surface)' }}>
         <table className="w-full">
           <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
+            <tr style={{ borderBottom: '1px solid var(--app-border)', background: 'var(--app-bg-muted)' }}>
               <th className="px-5 py-3 text-left"><SortH label="Name" k="name" /></th>
-              <th className="px-5 py-3 text-left hidden md:table-cell"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#566F8A' }}>Description</span></th>
+              <th className="px-5 py-3 text-left hidden md:table-cell"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Description</span></th>
               <th className="px-5 py-3 text-center"><SortH label="Projects" k="project_count" /></th>
               <th className="px-5 py-3 text-center"><SortH label="Members" k="member_count" /></th>
-              <th className="px-5 py-3 text-center"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#566F8A' }}>Health</span></th>
-              <th className="px-5 py-3 text-center"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#566F8A' }}>Graph</span></th>
-              <th className="px-5 py-3 text-center"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#566F8A' }}>Status</span></th>
-              {superAdmin && <th className="px-5 py-3 text-right"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#566F8A' }}>Actions</span></th>}
+              <th className="px-5 py-3 text-center"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Health</span></th>
+              <th className="px-5 py-3 text-center"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Graph</span></th>
+              <th className="px-5 py-3 text-center"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Status</span></th>
+              {superAdmin && <th className="px-5 py-3 text-right"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Actions</span></th>}
             </tr>
           </thead>
           <tbody>
@@ -1232,26 +1232,24 @@ function LobTable({ lobs, superAdmin, sortKey, sortDir, allTeams, allProjects, a
               const hp = t > 0 ? Math.round((h / t) * 100) : 90;
               const hc = hp >= 95 ? '#30D158' : hp >= 80 ? '#0A84FF' : hp >= 60 ? '#FF9F0A' : '#FF453A';
               return (
-                <tr key={lob.id} className="group cursor-pointer transition-all" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                  onClick={() => onNavigate(lob)}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = '')}>
+                <tr key={lob.id} className="group cursor-pointer transition-all hover:bg-[var(--app-surface-hover)]" style={{ borderBottom: '1px solid var(--app-border)' }}
+                  onClick={() => onNavigate(lob)}>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${lob.color}20`, border: `1px solid ${lob.color}30` }}>
                         <Building2 className="w-4 h-4" style={{ color: lob.color as string }} />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-white">{lob.name}</p>
-                        <p className="text-xs font-mono" style={{ color: '#566F8A' }}>{lob.slug}</p>
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">{lob.name}</p>
+                        <p className="text-xs font-mono text-[var(--text-secondary)]">{lob.slug}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-5 py-3.5 hidden md:table-cell">
-                    <p className="text-sm truncate max-w-xs" style={{ color: '#8097B0' }}>{lob.description || '—'}</p>
+                    <p className="text-sm truncate max-w-xs" style={{ color: 'var(--text-secondary)' }}>{lob.description || '—'}</p>
                   </td>
-                  <td className="px-5 py-3.5 text-center"><span className="text-sm font-medium text-white">{lob.project_count as number}</span></td>
-                  <td className="px-5 py-3.5 text-center"><span className="text-sm font-medium text-white">{lob.member_count as number}</span></td>
+                  <td className="px-5 py-3.5 text-center"><span className="text-sm font-medium text-[var(--text-primary)]">{lob.project_count as number}</span></td>
+                  <td className="px-5 py-3.5 text-center"><span className="text-sm font-medium text-[var(--text-primary)]">{lob.member_count as number}</span></td>
                   <td className="px-5 py-3.5 text-center"><span className="text-sm font-bold" style={{ color: hc }}>{hp}%</span></td>
                   <td className="px-5 py-3.5 text-center">
                     <button

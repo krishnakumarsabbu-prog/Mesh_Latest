@@ -203,12 +203,12 @@ export function ConnectorsPage() {
         const component = projects.find(p => p.id === row.project_id);
         return (
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-slate-800 border border-white/5">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-[var(--app-bg)] border border-[var(--app-border)]">
               <Plug className="w-3.5 h-3.5 text-cyan-400" />
             </div>
             <div>
-              <p className="text-[13px] font-semibold text-white">{row.name}</p>
-              <p className="text-[10px] text-slate-400 font-mono">{row.endpoint_url || 'No URL configured'}</p>
+              <p className="text-[13px] font-semibold text-[var(--text-primary)]">{row.name}</p>
+              <p className="text-[10px] text-[var(--text-muted)] font-mono">{row.endpoint_url || 'No URL configured'}</p>
               {component && (
                 <div 
                   onClick={() => navigate(`/projects/${component.id}`)}
@@ -227,7 +227,7 @@ export function ConnectorsPage() {
       key: 'type',
       header: 'Type',
       render: (val: unknown) => (
-        <span className="text-[10px] font-mono px-2.5 py-1 rounded-lg uppercase tracking-wider font-bold bg-slate-900 border border-white/5 text-slate-300">
+        <span className="text-[10px] font-mono px-2.5 py-1 rounded-lg uppercase tracking-wider font-bold bg-[var(--app-bg)] border border-[var(--app-border)] text-[var(--text-secondary)]">
           {String(val).replace('_', ' ')}
         </span>
       ),
@@ -241,14 +241,14 @@ export function ConnectorsPage() {
       key: 'avg_response_time_ms',
       header: 'Response Time',
       render: (val: unknown) => (
-        <span className="text-[12px] font-mono font-bold text-slate-300">{formatMs(val as number | undefined)}</span>
+        <span className="text-[12px] font-mono font-bold text-[var(--text-primary)]">{formatMs(val as number | undefined)}</span>
       ),
     },
     {
       key: 'last_checked',
       header: 'Last Check',
       render: (val: unknown) => (
-        <span className="text-[12px] font-medium text-slate-400">
+        <span className="text-[12px] font-medium text-[var(--text-secondary)]">
           {val ? formatRelativeTime(String(val)) : 'Never'}
         </span>
       ),
@@ -287,18 +287,18 @@ export function ConnectorsPage() {
   return (
     <div className="space-y-6 animate-page-enter">
       {/* Premium Obsidian Page Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-white/5">
+      <div className="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-[var(--app-border)]">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-white font-mono flex items-center gap-2">
+          <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)] font-mono flex items-center gap-2">
             <Activity className="w-5 h-5 text-cyan-400 animate-pulse" />
             REVERSE OBSERVABILITY GRID
           </h2>
-          <p className="text-xs text-slate-400 uppercase tracking-widest mt-0.5 font-bold">
+          <p className="text-xs text-[var(--text-secondary)] uppercase tracking-widest mt-0.5 font-bold">
             Catalog Connectors Reverse lookup architectural mapping
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="secondary" icon={<RefreshCw className="w-4 h-4" />} onClick={fetchData} className="border-white/5 bg-slate-900 text-slate-300">
+          <Button variant="secondary" icon={<RefreshCw className="w-4 h-4" />} onClick={fetchData} className="border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--text-primary)] hover:bg-[var(--app-surface-hover)]">
             Sync Telemetry
           </Button>
           <Button icon={<Plus className="w-4 h-4" />} onClick={() => setCreateOpen(true)} className="bg-gradient-to-r from-cyan-500 to-blue-600 border-none text-white shadow-lg shadow-cyan-500/20">
@@ -308,14 +308,14 @@ export function ConnectorsPage() {
       </div>
 
       {/* Modern Premium Tab Switcher */}
-      <div className="flex rounded-xl border border-white/5 p-1 bg-slate-950 w-fit">
+      <div className="flex rounded-xl border border-[var(--app-border)] p-1 bg-[var(--app-bg-muted)] w-fit shadow-sm">
         <button
           onClick={() => setActiveTab('adapters')}
           className={cn(
             "px-4 py-2 text-xs font-bold font-mono uppercase tracking-wider rounded-lg transition-all duration-300 flex items-center gap-2",
             activeTab === 'adapters' 
-              ? "bg-gradient-to-r from-cyan-500/15 to-blue-500/15 border border-cyan-500/30 text-cyan-400 shadow-inner" 
-              : "border border-transparent text-slate-400 hover:text-white"
+              ? "bg-[var(--app-surface)] border border-[var(--app-border)] text-[var(--text-primary)] shadow-sm font-black" 
+              : "border border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           )}
         >
           <Activity className="w-3.5 h-3.5" />
@@ -326,8 +326,8 @@ export function ConnectorsPage() {
           className={cn(
             "px-4 py-2 text-xs font-bold font-mono uppercase tracking-wider rounded-lg transition-all duration-300 flex items-center gap-2",
             activeTab === 'instantiations' 
-              ? "bg-gradient-to-r from-cyan-500/15 to-blue-500/15 border border-cyan-500/30 text-cyan-400 shadow-inner" 
-              : "border border-transparent text-slate-400 hover:text-white"
+              ? "bg-[var(--app-surface)] border border-[var(--app-border)] text-[var(--text-primary)] shadow-sm font-black" 
+              : "border border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           )}
         >
           <Plug className="w-3.5 h-3.5" />
@@ -336,22 +336,22 @@ export function ConnectorsPage() {
       </div>
 
       {/* Global Observability Filter Console */}
-      <Card padding="none" className="bg-slate-950/60 border border-white/5 backdrop-blur-md">
+      <Card padding="none" className="bg-[var(--app-surface)] border border-[var(--app-border)] shadow-sm backdrop-blur-md">
         <div className="px-5 py-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
           <div className="flex items-center gap-3 flex-wrap flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[var(--text-muted)]" />
               <input
                 type="text"
                 placeholder="Filter adapters..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pl-9 pr-8 py-2 text-[13px] rounded-xl outline-none transition-all w-56 bg-slate-900 border border-white/10 text-white font-semibold focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                className="pl-9 pr-8 py-2 text-[13px] rounded-xl outline-none transition-all w-56 bg-[var(--app-bg)] border border-[var(--app-border)] text-[var(--text-primary)] font-semibold focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -362,7 +362,7 @@ export function ConnectorsPage() {
               <select
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 text-[13px] rounded-xl outline-none cursor-pointer bg-slate-900 border border-white/10 text-slate-300 font-bold focus:border-cyan-400"
+                className="appearance-none pl-3 pr-8 py-2 text-[13px] rounded-xl outline-none cursor-pointer bg-[var(--app-bg)] border border-[var(--app-border)] text-[var(--text-primary)] font-bold focus:border-cyan-400"
               >
                 <option value="">All Health Statuses</option>
                 <option value="healthy">Healthy</option>
@@ -370,21 +370,21 @@ export function ConnectorsPage() {
                 <option value="down">Down</option>
                 <option value="unknown">Unknown</option>
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-slate-400" />
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[var(--text-muted)]" />
             </div>
 
             <div className="relative">
               <select
                 value={typeFilter}
                 onChange={e => setTypeFilter(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 text-[13px] rounded-xl outline-none cursor-pointer bg-slate-900 border border-white/10 text-slate-300 font-bold focus:border-cyan-400"
+                className="appearance-none pl-3 pr-8 py-2 text-[13px] rounded-xl outline-none cursor-pointer bg-[var(--app-bg)] border border-[var(--app-border)] text-[var(--text-primary)] font-bold focus:border-cyan-400"
               >
                 <option value="">All Adapter Types</option>
                 {CONNECTOR_TYPES.map(t => (
                   <option key={t} value={t}>{t.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-slate-400" />
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[var(--text-muted)]" />
             </div>
 
             {hasFilters && (
@@ -419,7 +419,7 @@ export function ConnectorsPage() {
             {loading ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-20 rounded-2xl shimmer-bg bg-slate-900 border border-white/5" />
+                  <div key={i} className="h-20 rounded-2xl shimmer-bg bg-[var(--app-surface-hover)] border border-[var(--app-border)]" />
                 ))}
               </div>
             ) : filteredGrouped.length === 0 ? (
@@ -440,21 +440,21 @@ export function ConnectorsPage() {
                     <motion.div 
                       key={adapter.name}
                       layout="position"
-                      className="bg-slate-900/60 border rounded-2xl overflow-hidden transition-all duration-300"
+                      className="bg-[var(--app-surface)] border rounded-2xl overflow-hidden transition-all duration-300 shadow-sm"
                       style={{
-                        borderColor: isExpanded ? `${adapterColor}30` : 'rgba(255,255,255,0.05)',
-                        boxShadow: isExpanded ? `0 0 20px ${adapterColor}0c` : 'none'
+                        borderColor: isExpanded ? `${adapterColor}30` : 'var(--app-border)',
+                        boxShadow: isExpanded ? `0 0 20px ${adapterColor}0c` : 'var(--shadow-sm)'
                       }}
                     >
                       {/* Main Card Header */}
                       <div 
                         onClick={() => setExpandedAdapter(isExpanded ? null : adapter.name)}
-                        className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-800/40 transition-all select-none"
+                        className="p-4 flex items-center justify-between cursor-pointer hover:bg-[var(--app-surface-hover)] transition-all select-none"
                       >
                         <div className="flex items-center gap-3.5">
                           {/* Sleek icon box with status border glowing */}
                           <div 
-                            className="w-11 h-11 rounded-xl flex items-center justify-center text-white"
+                            className="w-11 h-11 rounded-xl flex items-center justify-center text-[var(--text-primary)]"
                             style={{ 
                               background: 'var(--app-surface)',
                               border: `2px solid ${adapterColor}40`,
@@ -465,14 +465,14 @@ export function ConnectorsPage() {
                           </div>
                           <div>
                             <div className="flex items-center gap-2.5">
-                              <h4 className="text-sm font-bold text-white tracking-wide">{adapter.name}</h4>
-                              <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded uppercase tracking-wider text-slate-400 bg-slate-950 border border-white/5">
+                              <h4 className="text-sm font-bold text-[var(--text-primary)] tracking-wide">{adapter.name}</h4>
+                              <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded uppercase tracking-wider text-[var(--text-secondary)] bg-[var(--app-bg)] border border-[var(--app-border)]">
                                 {adapter.type.replace('_', ' ')}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2.5 mt-1 text-[11px] font-mono font-semibold text-slate-400">
-                              <span>Instantiated: <span className="text-white font-bold">{adapter.connectors.length} instances</span></span>
-                              <span className="w-1 h-1 rounded-full bg-slate-700" />
+                            <div className="flex items-center gap-2.5 mt-1 text-[11px] font-mono font-semibold text-[var(--text-secondary)]">
+                              <span>Instantiated: <span className="text-[var(--text-primary)] font-bold">{adapter.connectors.length} instances</span></span>
+                              <span className="w-1 h-1 rounded-full bg-[var(--app-border)]" />
                               <span>Leveraging: <span className="text-cyan-400 font-bold">{adapter.leveragingProjects.length} components</span></span>
                             </div>
                           </div>
@@ -481,8 +481,8 @@ export function ConnectorsPage() {
                         <div className="flex items-center gap-5">
                           {/* Avg Latency details */}
                           <div className="text-right hidden sm:block">
-                            <p className="text-[10px] text-slate-500 uppercase tracking-widest leading-none mb-1 font-bold">Avg Latency</p>
-                            <p className="text-xs font-mono font-bold text-white">{formatMs(adapter.avg_response_time)}</p>
+                            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest leading-none mb-1 font-bold">Avg Latency</p>
+                            <p className="text-xs font-mono font-bold text-[var(--text-primary)]">{formatMs(adapter.avg_response_time)}</p>
                           </div>
 
                           {/* Glowing status marker */}
@@ -514,37 +514,37 @@ export function ConnectorsPage() {
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="border-t border-white/5 bg-slate-950/70 p-4"
+                            className="border-t border-[var(--app-border)] bg-[var(--app-bg-subtle)] p-4"
                           >
                             <div className="space-y-4">
                               <div>
-                                <h5 className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2.5 font-mono">
+                                <h5 className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-2.5 font-mono">
                                   LEVERAGING INFRASTRUCTURE COMPONENTS ({adapter.leveragingProjects.length})
                                 </h5>
                                 
                                 {adapter.leveragingProjects.length === 0 ? (
-                                  <p className="text-xs font-mono text-slate-500 uppercase">No leveraging components found.</p>
+                                  <p className="text-xs font-mono text-[var(--text-muted)] uppercase">No leveraging components found.</p>
                                 ) : (
                                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                                     {adapter.leveragingProjects.map((component) => (
                                       <div 
                                         key={component.id}
                                         onClick={() => navigate(`/projects/${component.id}`)}
-                                        className="p-3 rounded-xl bg-slate-900/60 border border-white/5 hover:border-cyan-500/30 transition-all cursor-pointer group flex items-center justify-between"
+                                        className="p-3 rounded-xl bg-[var(--app-surface)] border border-[var(--app-border)] hover:border-cyan-500/50 transition-all cursor-pointer group flex items-center justify-between"
                                       >
                                         <div>
-                                          <p className="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors flex items-center gap-1.5">
+                                          <p className="text-xs font-bold text-[var(--text-primary)] group-hover:text-cyan-400 transition-colors flex items-center gap-1.5">
                                             {component.name}
                                             <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                                           </p>
-                                          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">
-                                            Env: <span className="text-slate-300">{component.environment || 'production'}</span>
+                                          <p className="text-[10px] text-[var(--text-secondary)] uppercase font-bold tracking-wider mt-0.5">
+                                            Env: <span className="text-[var(--text-primary)]">{component.environment || 'production'}</span>
                                           </p>
                                         </div>
 
                                         <div className="text-right">
                                           <StatusBadge status={component.status} />
-                                          <p className="text-[9px] font-mono text-slate-500 mt-1 font-bold">Uptime: 99.98%</p>
+                                          <p className="text-[9px] font-mono text-[var(--text-muted)] mt-1 font-bold">Uptime: 99.98%</p>
                                         </div>
                                       </div>
                                     ))}
@@ -553,29 +553,29 @@ export function ConnectorsPage() {
                               </div>
 
                               <div>
-                                <h5 className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2.5 font-mono">
+                                <h5 className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mb-2.5 font-mono">
                                   INSTANCES CONFIGURATION TELEMETRY ({adapter.connectors.length})
                                 </h5>
                                 <div className="space-y-2">
                                   {adapter.connectors.map((connector) => (
                                     <div 
                                       key={connector.id}
-                                      className="p-3 rounded-xl bg-slate-900/40 border border-white/5 flex items-center justify-between flex-wrap gap-2 text-xs"
+                                      className="p-3 rounded-xl bg-[var(--app-surface)] border border-[var(--app-border)] flex items-center justify-between flex-wrap gap-2 text-xs"
                                     >
                                       <div>
-                                        <p className="font-bold text-white font-mono">{connector.endpoint_url || 'No URL configured'}</p>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+                                        <p className="font-bold text-[var(--text-primary)] font-mono">{connector.endpoint_url || 'No URL configured'}</p>
+                                        <p className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider mt-0.5">
                                           Interval: {connector.check_interval_seconds}s  •  Timeout: {connector.timeout_seconds}s
                                         </p>
                                       </div>
                                       <div className="flex items-center gap-4">
                                         <div className="text-right">
-                                          <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-0.5 font-bold">Latency</p>
-                                          <p className="font-mono text-white font-bold">{formatMs(connector.avg_response_time_ms)}</p>
+                                          <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-widest mb-0.5 font-bold">Latency</p>
+                                          <p className="font-mono text-[var(--text-primary)] font-bold">{formatMs(connector.avg_response_time_ms)}</p>
                                         </div>
                                         <div className="text-right">
-                                          <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-0.5 font-bold">Last Run</p>
-                                          <p className="text-slate-400 font-medium">{connector.last_checked ? formatRelativeTime(connector.last_checked) : 'Never'}</p>
+                                          <p className="text-[9px] text-[var(--text-muted)] uppercase tracking-widest mb-0.5 font-bold">Last Run</p>
+                                          <p className="text-[var(--text-secondary)] font-medium">{connector.last_checked ? formatRelativeTime(connector.last_checked) : 'Never'}</p>
                                         </div>
                                         <div className="flex items-center gap-1.5">
                                           <button

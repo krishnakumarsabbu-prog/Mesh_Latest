@@ -317,20 +317,20 @@ function TeamCard({ team, lob, projects, components, canCreate, onEdit, onDelete
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ y: -3 }}
       transition={{ duration: 0.25 }}
-      className="relative rounded-2xl cursor-pointer group overflow-hidden"
+      className="relative rounded-2xl cursor-pointer group overflow-hidden shadow-sm"
       style={{
-        background: 'rgba(12,18,36,0.97)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: `0 4px 32px rgba(0,0,0,0.4), 0 0 0 0 ${color}00`,
+        background: 'var(--app-surface)',
+        border: '1px solid var(--app-border)',
+        boxShadow: `var(--shadow-sm), 0 0 0 0 ${color}00`,
         transition: 'box-shadow 0.3s, border-color 0.3s',
       }}
       onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 48px rgba(0,0,0,0.5), 0 0 24px ${color}18`;
+        (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 48px rgba(0,0,0,0.08), 0 0 24px ${color}18`;
         (e.currentTarget as HTMLElement).style.borderColor = `${color}35`;
       }}
       onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 32px rgba(0,0,0,0.4)`;
-        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)';
+        (e.currentTarget as HTMLElement).style.boxShadow = `var(--shadow-sm)`;
+        (e.currentTarget as HTMLElement).style.borderColor = 'var(--app-border)';
       }}
       onClick={() => navigate(`/teams/${team.id}`)}
     >
@@ -347,8 +347,8 @@ function TeamCard({ team, lob, projects, components, canCreate, onEdit, onDelete
               <Users className="w-5 h-5" style={{ color }} />
             </div>
             <div className="min-w-0">
-              <p className="text-[14px] font-bold text-white leading-tight truncate max-w-[130px]">{team.name}</p>
-              <p className="text-[11px] mt-0.5 truncate" style={{ color: '#566F8A' }}>
+              <p className="text-[14px] font-bold text-[var(--text-primary)] leading-tight truncate max-w-[130px]">{team.name}</p>
+              <p className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
                 {lob?.name || 'Unknown LOB'}
               </p>
             </div>
@@ -357,9 +357,9 @@ function TeamCard({ team, lob, projects, components, canCreate, onEdit, onDelete
             <button
               onClick={e => { e.stopPropagation(); onView(team); }}
               className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
-              style={{ background: 'rgba(255,255,255,0.06)', color: '#566F8A' }}
+              style={{ background: 'var(--app-bg-muted)', color: 'var(--text-secondary)' }}
               onMouseEnter={e => { e.currentTarget.style.background = color + '25'; (e.currentTarget as HTMLElement).style.color = color; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = '#566F8A'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--app-bg-muted)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
             >
               <Eye className="w-3.5 h-3.5" />
             </button>
@@ -368,9 +368,9 @@ function TeamCard({ team, lob, projects, components, canCreate, onEdit, onDelete
                 <button
                   onClick={e => { e.stopPropagation(); setMenuOpen(m => !m); }}
                   className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
-                  style={{ background: 'rgba(255,255,255,0.06)', color: '#566F8A' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                  style={{ background: 'var(--app-bg-muted)', color: 'var(--text-secondary)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-surface-hover)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--app-bg-muted)'; }}
                 >
                   <MoreVertical className="w-3.5 h-3.5" />
                 </button>
@@ -381,21 +381,17 @@ function TeamCard({ team, lob, projects, components, canCreate, onEdit, onDelete
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.9, y: -6 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-8 z-30 rounded-xl overflow-hidden w-36"
-                      style={{ background: 'rgba(16,24,44,0.98)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 16px 40px rgba(0,0,0,0.6)' }}
+                      className="absolute right-0 top-8 z-30 rounded-xl overflow-hidden w-36 shadow-lg"
+                      style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', boxShadow: 'var(--shadow-sm)' }}
                       onClick={e => e.stopPropagation()}
                     >
                       <button onClick={() => { setMenuOpen(false); onEdit(team); }}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] text-white transition-colors"
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = ''; }}>
+                        className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] text-[var(--text-primary)] transition-colors hover:bg-[var(--app-surface-hover)]">
                         <Pencil className="w-3.5 h-3.5" style={{ color: '#64D2FF' }} /> Edit Team
                       </button>
                       <button onClick={() => { setMenuOpen(false); onDelete(team); }}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] transition-colors"
-                        style={{ color: '#FF453A' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,69,58,0.08)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = ''; }}>
+                        className="w-full flex items-center gap-2 px-3 py-2.5 text-[12px] transition-colors hover:bg-[var(--app-surface-hover)]"
+                        style={{ color: '#FF453A' }}>
                         <Trash2 className="w-3.5 h-3.5" /> Delete Team
                       </button>
                     </motion.div>
@@ -407,7 +403,7 @@ function TeamCard({ team, lob, projects, components, canCreate, onEdit, onDelete
         </div>
 
         {/* Stats strip */}
-        <div className="flex items-stretch mb-4 rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="flex items-stretch mb-4 rounded-xl overflow-hidden" style={{ border: '1px solid var(--app-border)' }}>
           {[
             { label: 'Projects', value: projectCount },
             { label: 'Components', value: componentCount },
@@ -415,34 +411,34 @@ function TeamCard({ team, lob, projects, components, canCreate, onEdit, onDelete
           ].map(({ label, value }, i) => (
             <div key={label} className="flex-1 flex flex-col items-center justify-center py-3"
               style={{
-                borderRight: i < 2 ? '1px solid rgba(255,255,255,0.07)' : 'none',
-                background: 'rgba(255,255,255,0.03)',
+                borderRight: i < 2 ? '1px solid var(--app-border)' : 'none',
+                background: 'var(--app-bg-muted)',
               }}>
-              <span className="text-xl font-bold text-white leading-none">{value}</span>
-              <span className="text-[9px] font-semibold uppercase tracking-wider mt-1" style={{ color: '#566F8A' }}>{label}</span>
+              <span className="text-xl font-bold text-[var(--text-primary)] leading-none">{value}</span>
+              <span className="text-[9px] font-semibold uppercase tracking-wider mt-1" style={{ color: 'var(--text-secondary)' }}>{label}</span>
             </div>
           ))}
         </div>
 
         {/* Mini network graph */}
         <div className="rounded-xl overflow-hidden mb-4 flex items-center justify-center"
-          style={{ background: 'rgba(6,10,24,0.9)', border: '1px solid rgba(255,255,255,0.06)', height: 100 }}>
+          style={{ background: 'var(--app-bg-subtle)', border: '1px solid var(--app-border)', height: 100 }}>
           <MiniNetGraph team={team} projects={projects} components={components} color={color} />
         </div>
 
         {/* Status & active */}
-        <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--app-border)' }}>
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
             style={{
-              background: team.is_active ? 'rgba(48,209,88,0.12)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${team.is_active ? 'rgba(48,209,88,0.3)' : 'rgba(255,255,255,0.1)'}`,
+              background: team.is_active ? 'rgba(48,209,88,0.12)' : 'var(--app-bg-muted)',
+              border: `1px solid ${team.is_active ? 'rgba(48,209,88,0.3)' : 'var(--app-border)'}`,
             }}>
-            <div className="w-1.5 h-1.5 rounded-full" style={{ background: team.is_active ? '#30D158' : '#566F8A' }} />
-            <span className="text-[10px] font-semibold" style={{ color: team.is_active ? '#30D158' : '#566F8A' }}>
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: team.is_active ? '#30D158' : 'var(--text-muted)' }} />
+            <span className="text-[10px] font-semibold" style={{ color: team.is_active ? '#30D158' : 'var(--text-muted)' }}>
               {team.is_active ? 'Active' : 'Inactive'}
             </span>
           </div>
-          <ChevronRight className="w-4 h-4" style={{ color: '#566F8A' }} />
+          <ChevronRight className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
         </div>
       </div>
     </motion.div>
@@ -617,8 +613,8 @@ export function TeamsPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-black text-white tracking-tight">Teams</h1>
-            <p className="text-sm mt-1" style={{ color: '#566F8A' }}>
+            <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">Teams</h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
               {teams.length} team{teams.length !== 1 ? 's' : ''} across {lobs.length} lines of business
             </p>
           </div>
@@ -626,9 +622,9 @@ export function TeamsPage() {
             <button
               onClick={fetchAll}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-medium transition-all"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#99AABB' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; }}
+              style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: 'var(--text-secondary)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--app-surface-hover)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--app-bg-muted)'; }}
             >
               <RefreshCw className="w-4 h-4" /> Refresh
             </button>
@@ -655,11 +651,11 @@ export function TeamsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.07 }}
-            className="relative rounded-2xl p-4 overflow-hidden"
+            className="relative rounded-2xl p-4 overflow-hidden shadow-sm"
             style={{
-              background: 'rgba(12,18,36,0.97)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+              background: 'var(--app-surface)',
+              border: '1px solid var(--app-border)',
+              boxShadow: 'var(--shadow-sm)',
             }}
           >
             <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none"
@@ -668,9 +664,9 @@ export function TeamsPage() {
               style={{ background: color + '18', border: `1px solid ${color}30` }}>
               <Icon className="w-4.5 h-4.5" style={{ color }} />
             </div>
-            <p className="text-2xl font-black text-white leading-none">{value}</p>
+            <p className="text-2xl font-black text-[var(--text-primary)] leading-none">{value}</p>
             <p className="text-[11px] font-semibold mt-1" style={{ color }}>{label}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: '#566F8A' }}>{sub}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{sub}</p>
           </motion.div>
         ))}
       </div>
@@ -678,19 +674,19 @@ export function TeamsPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center mb-6">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: '#566F8A' }} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
           <input
             type="text"
             placeholder="Search teams..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9 pr-8 py-2 text-[13px] rounded-xl outline-none transition-all w-56"
-            style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+            style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: 'var(--text-primary)' }}
             onFocus={e => { e.currentTarget.style.borderColor = '#0A84FF'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(10,132,255,0.15)'; }}
-            onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.boxShadow = ''; }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'var(--app-border)'; e.currentTarget.style.boxShadow = ''; }}
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: '#566F8A' }}>
+            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
               <X className="w-3.5 h-3.5" />
             </button>
           )}
@@ -700,7 +696,7 @@ export function TeamsPage() {
           value={lobFilter}
           onChange={e => setLobFilter(e.target.value)}
           className="appearance-none pl-3 pr-7 py-2 text-[13px] rounded-xl outline-none cursor-pointer"
-          style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.1)', color: lobFilter ? 'white' : '#566F8A' }}
+          style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: lobFilter ? 'var(--text-primary)' : 'var(--text-muted)' }}
         >
           <option value="">All LOBs</option>
           {lobs.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
@@ -710,15 +706,15 @@ export function TeamsPage() {
           <button
             onClick={() => { setSearch(''); setLobFilter(''); }}
             className="text-[12px] flex items-center gap-1 px-2 py-1.5 rounded-lg transition-all"
-            style={{ color: '#566F8A' }}
+            style={{ color: 'var(--text-muted)' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#FF453A'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,69,58,0.08)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#566F8A'; (e.currentTarget as HTMLElement).style.background = ''; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.background = ''; }}
           >
             <X className="w-3 h-3" /> Clear
           </button>
         )}
 
-        <span className="ml-auto text-[12px]" style={{ color: '#566F8A' }}>
+        <span className="ml-auto text-[12px]" style={{ color: 'var(--text-muted)' }}>
           {filtered.length} of {teams.length} teams
         </span>
       </div>
@@ -732,7 +728,7 @@ export function TeamsPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl p-12 text-center"
-          style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          style={{ background: 'var(--app-bg-subtle)', border: '1px solid var(--app-border)' }}>
           <EmptyState
             icon={Users}
             title={search || lobFilter ? 'No teams match your filters' : 'No teams yet'}
@@ -771,9 +767,10 @@ export function TeamsPage() {
       {/* Bottom analytics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-10">
         {/* Trend chart */}
-        <div className="md:col-span-2 rounded-2xl p-5" style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <p className="text-[13px] font-bold text-white mb-1">Health Trend</p>
-          <p className="text-[11px] mb-4" style={{ color: '#566F8A' }}>System health score over last 24h</p>
+        {/* Trend chart */}
+        <div className="md:col-span-2 rounded-2xl p-5 shadow-sm" style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', boxShadow: 'var(--shadow-sm)' }}>
+          <p className="text-[13px] font-bold text-[var(--text-primary)] mb-1">Health Trend</p>
+          <p className="text-[11px] mb-4" style={{ color: 'var(--text-muted)' }}>System health score over last 24h</p>
           <ResponsiveContainer width="100%" height={160}>
             <AreaChart data={trendData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
               <defs>
@@ -782,19 +779,19 @@ export function TeamsPage() {
                   <stop offset="95%" stopColor="#0A84FF" stopOpacity="0.02" />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="time" tick={{ fill: '#566F8A', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#566F8A', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 100]} />
-              <RechartTooltip contentStyle={{ background: 'rgba(16,24,44,0.98)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', fontSize: 12 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" />
+              <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 100]} />
+              <RechartTooltip contentStyle={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 12 }} />
               <Area type="monotone" dataKey="score" stroke="#0A84FF" strokeWidth={2} fill="url(#trendGrad)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
         {/* LOB distribution */}
-        <div className="rounded-2xl p-5" style={{ background: 'rgba(12,18,36,0.97)', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <p className="text-[13px] font-bold text-white mb-1">LOB Distribution</p>
-          <p className="text-[11px] mb-4" style={{ color: '#566F8A' }}>Teams per line of business</p>
+        <div className="rounded-2xl p-5 shadow-sm" style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', boxShadow: 'var(--shadow-sm)' }}>
+          <p className="text-[13px] font-bold text-[var(--text-primary)] mb-1">LOB Distribution</p>
+          <p className="text-[11px] mb-4" style={{ color: 'var(--text-muted)' }}>Teams per line of business</p>
           <ResponsiveContainer width="100%" height={120}>
             <PieChart>
               <Pie data={lobDistribution} dataKey="count" innerRadius={30} outerRadius={55} paddingAngle={3}>
@@ -802,7 +799,7 @@ export function TeamsPage() {
                   <Cell key={i} fill={entry.color} opacity={0.9} />
                 ))}
               </Pie>
-              <RechartTooltip contentStyle={{ background: 'rgba(16,24,44,0.98)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'white', fontSize: 12 }}
+              <RechartTooltip contentStyle={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 12 }}
                 formatter={(v: any, n: any, p: any) => [v, p.payload.name]} />
             </PieChart>
           </ResponsiveContainer>
@@ -811,9 +808,9 @@ export function TeamsPage() {
               <div key={name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
-                  <span className="text-[11px] truncate max-w-[110px]" style={{ color: '#99AABB' }}>{name}</span>
+                  <span className="text-[11px] truncate max-w-[110px]" style={{ color: 'var(--text-secondary)' }}>{name}</span>
                 </div>
-                <span className="text-[11px] font-bold text-white">{count}</span>
+                <span className="text-[11px] font-bold text-[var(--text-primary)]">{count}</span>
               </div>
             ))}
           </div>
