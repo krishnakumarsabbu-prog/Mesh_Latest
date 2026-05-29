@@ -55,140 +55,163 @@ function layoutGraph(rawNodes: any[], rawEdges: any[]) {
   });
 }
 
-// ─────────────────────────────────────────────────────────
-// SVG Mini Tree drawn inside each card
-// Shows: LOB-root → Team nodes → (dots for projects/components)
-// All data from props (no network calls inside)
-// ─────────────────────────────────────────────────────────
-interface TreeNode {
-  id: string;
-  label: string;
-  type: 'lob' | 'team' | 'project' | 'component';
-  color: string;
-  children: TreeNode[];
-}
+// Icon path data for SVG (person/node icon shapes)
+const NODE_ICONS: Record<string, string> = {
+  lob:       'M6 2a2 2 0 110 4 2 2 0 010-4zm0 5c-2.7 0-4 1.34-4 2v1h8v-1c0-.66-1.3-2-4-2z',
+  team:      'M5 2a2 2 0 110 4 2 2 0 010-4zM2 8c0-1 1.1-2 3-2s3 1 3 2v.5H2V8zm6-6a2 2 0 110 4 2 2 0 010-4zm1 6c.7.3 1 .8 1 1.5v.5H7.2V9c0-.7.3-1.2.8-1.5z',
+  project:  'M2 3h8v1H2V3zm0 3h6v1H2V6zm0 3h8v1H2V9zm8-7v8H1V2h9zm-1 1H2v6h7V3z',
+  component:'M4 1L1 4l3 3 1-1-2-2 2-2-1-1zm4 0l-1 1 2 2-2 2 1 1 3-3-3-3zM4 7h4v1H4V7z',
+};
 
-function buildTree(lob: LobFull, teams: any[], projects: any[], components: any[]): TreeNode {
-  const lobTeams = teams.filter((t) => t.lob_id === lob.id);
-  return {
-    id: `lob-${lob.id}`,
-    label: lob.name,
-    type: 'lob',
-    color: (lob.color as string) || '#0A84FF',
-    children: lobTeams.map((t) => {
-      const tProjs = projects.filter((p) => p.lob_id === lob.id && p.team_id === t.id);
-      return {
-        id: `team-${t.id}`,
-        label: t.name,
-        type: 'team',
-        color: t.color || '#30D158',
-        children: tProjs.map((p) => ({
-          id: `proj-${p.id}`,
-          label: p.name,
-          type: 'project',
-          color: '#64D2FF',
-          children: components
-            .filter((c) => c.lob_id === lob.id)
-            .slice(0, 2)
-            .map((c) => ({
-              id: `comp-${c.id}-${p.id}`,
-              label: c.name,
-              type: 'component' as const,
-              color: '#FF9F0A',
-              children: [],
-            })),
-        })),
-      };
-    }),
-  };
-}
-
-interface SVGPoint { x: number; y: number; node: TreeNode; }
-
-function computeLayout(tree: TreeNode, width: number, height: number): { points: SVGPoint[]; links: [SVGPoint, SVGPoint][] } {
-  const points: SVGPoint[] = [];
-  const links: [SVGPoint, SVGPoint][] = [];
-  const LEVELS = ['lob', 'team', 'project', 'component'];
-  const levelX = (level: number) => 20 + level * ((width - 40) / (LEVELS.length - 0.5));
-
-  function collect(node: TreeNode, level: number): SVGPoint[] {
-    const list: SVGPoint[] = [{ x: 0, y: 0, node }];
-    for (const c of node.children) list.push(...collect(c, level + 1));
-    return list;
-  }
-
-  function assign(node: TreeNode, level: number, yStart: number, yEnd: number): SVGPoint {
-    const myX = levelX(level);
-    const myY = (yStart + yEnd) / 2;
-    const pt: SVGPoint = { x: myX, y: myY, node };
-    points.push(pt);
-
-    if (node.children.length > 0) {
-      const step = (yEnd - yStart) / node.children.length;
-      node.children.forEach((child, i) => {
-        const childPt = assign(child, level + 1, yStart + i * step, yStart + (i + 1) * step);
-        links.push([pt, childPt]);
-      });
-    }
-    return pt;
-  }
-
-  assign(tree, 0, 10, height - 10);
-  return { points, links };
-}
-
-function MiniTreeGraph({ lob, teams, projects, components }: {
+/**
+ * MiniNetGraph — renders a "constellation" style network graph inside the card.
+ * Nodes are icon circles connected by crossing lines, exactly like the target image.
+ * Positions are calculated from real LOB hierarchy data.
+ */
+function MiniNetGraph({ lob, teams, projects, components }: {
   lob: LobFull; teams: any[]; projects: any[]; components: any[];
 }) {
-  const W = 240; const H = 90;
-  const tree = useMemo(() => buildTree(lob, teams, projects, components), [lob, teams, projects, components]);
-  const { points, links } = useMemo(() => computeLayout(tree, W, H), [tree]);
-
+  const W = 260; const H = 100;
   const color = (lob.color as string) || '#0A84FF';
 
-  if (points.length === 0) {
-    // fallback: just draw a simple 3-node placeholder
-    return (
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ opacity: 0.5 }}>
-        {[0.15, 0.5, 0.85].map((cy, i) => (
-          <circle key={i} cx={W * (0.2 + i * 0.3)} cy={H * cy} r={4} fill={color} opacity={0.6} />
-        ))}
-        <line x1={W * 0.2} y1={H * 0.5} x2={W * 0.5} y2={H * 0.15} stroke={color} strokeWidth={1} opacity={0.3} />
-        <line x1={W * 0.2} y1={H * 0.5} x2={W * 0.5} y2={H * 0.85} stroke={color} strokeWidth={1} opacity={0.3} />
-        <line x1={W * 0.5} y1={H * 0.15} x2={W * 0.8} y2={H * 0.5} stroke={color} strokeWidth={1} opacity={0.3} />
-      </svg>
-    );
-  }
+  // Build positioned nodes from real data
+  const nodes = useMemo(() => {
+    const lobTeams = teams.filter((t) => t.lob_id === lob.id).slice(0, 3);
+    const lobProjects = projects.filter((p) => p.lob_id === lob.id).slice(0, 4);
+    const lobComps = components.filter((c) => c.lob_id === lob.id).slice(0, 3);
+
+    const all: { id: string; x: number; y: number; type: keyof typeof NODE_ICONS; color: string; label: string }[] = [];
+
+    // Always: LOB root node (left-center)
+    all.push({ id: `lob-${lob.id}`, x: 22, y: H / 2, type: 'lob', color, label: lob.name });
+
+    // Teams — upper-left cluster
+    if (lobTeams.length === 0) {
+      // Synthesize 2 team nodes from counts
+      const tc = (lob.team_count as number) ?? 1;
+      for (let i = 0; i < Math.min(tc, 3); i++) {
+        all.push({ id: `t-synth-${i}`, x: 70 + i * 8, y: 20 + i * 28, type: 'team', color: '#30D158', label: `Team ${i + 1}` });
+      }
+    } else {
+      lobTeams.forEach((t, i) => {
+        all.push({ id: `team-${t.id}`, x: 68 + i * 6, y: 15 + i * 30, type: 'team', color: t.color || '#30D158', label: t.name });
+      });
+    }
+
+    // Projects — middle band
+    if (lobProjects.length === 0) {
+      const pc = (lob.project_count as number) ?? 1;
+      for (let i = 0; i < Math.min(pc, 4); i++) {
+        all.push({ id: `p-synth-${i}`, x: 130 + (i % 2) * 18, y: 18 + i * 22, type: 'project', color: '#64D2FF', label: `Project ${i + 1}` });
+      }
+    } else {
+      lobProjects.forEach((p, i) => {
+        all.push({ id: `proj-${p.id}`, x: 132 + (i % 2) * 20, y: 16 + i * 20, type: 'project', color: '#64D2FF', label: p.name });
+      });
+    }
+
+    // Components — right band
+    if (lobComps.length === 0) {
+      const cc = (lob.component_count as number) ?? 1;
+      for (let i = 0; i < Math.min(cc, 3); i++) {
+        all.push({ id: `c-synth-${i}`, x: 210 + i * 5, y: 22 + i * 28, type: 'component', color: '#FF9F0A', label: `Comp ${i + 1}` });
+      }
+    } else {
+      lobComps.forEach((c, i) => {
+        all.push({ id: `comp-${c.id}`, x: 210 + i * 4, y: 20 + i * 30, type: 'component', color: '#FF9F0A', label: c.name });
+      });
+    }
+
+    // Clamp within canvas
+    return all.map((n) => ({ ...n, x: Math.max(14, Math.min(W - 14, n.x)), y: Math.max(12, Math.min(H - 12, n.y)) }));
+  }, [lob, teams, projects, components, color]);
+
+  // Build edges — connect each layer to the next, plus some cross-links for mesh look
+  const edges = useMemo(() => {
+    const e: [number, number][] = [];
+    const byType = (t: string) => nodes.filter((n) => n.type === t);
+    const lobs_ = byType('lob');
+    const teams_ = byType('team');
+    const projs_ = byType('project');
+    const comps_ = byType('component');
+
+    // lob → each team
+    lobs_.forEach((l) => teams_.forEach((t) => e.push([nodes.indexOf(l), nodes.indexOf(t)])));
+    // lob → first project (cross link)
+    if (projs_.length > 0) lobs_.forEach((l) => e.push([nodes.indexOf(l), nodes.indexOf(projs_[0])]));
+    // team → projects (distribute)
+    teams_.forEach((t, ti) => {
+      const p = projs_[ti % projs_.length];
+      if (p) e.push([nodes.indexOf(t), nodes.indexOf(p)]);
+      // cross-link to next project
+      const p2 = projs_[(ti + 1) % projs_.length];
+      if (p2 && p2 !== p) e.push([nodes.indexOf(t), nodes.indexOf(p2)]);
+    });
+    // project → components
+    projs_.forEach((p, pi) => {
+      const c = comps_[pi % comps_.length];
+      if (c) e.push([nodes.indexOf(p), nodes.indexOf(c)]);
+      const c2 = comps_[(pi + 1) % comps_.length];
+      if (c2 && c2 !== c) e.push([nodes.indexOf(p), nodes.indexOf(c2)]);
+    });
+    // Dedupe
+    const seen = new Set<string>();
+    return e.filter(([a, b]) => {
+      if (a < 0 || b < 0 || a === b) return false;
+      const k = `${Math.min(a, b)}-${Math.max(a, b)}`;
+      if (seen.has(k)) return false;
+      seen.add(k); return true;
+    });
+  }, [nodes]);
+
+  const R = 9; // icon node radius
 
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`}>
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
       <defs>
-        <radialGradient id={`glow-${lob.id}`}>
-          <stop offset="0%" stopColor={color} stopOpacity={0.6} />
-          <stop offset="100%" stopColor={color} stopOpacity={0} />
-        </radialGradient>
+        <filter id={`blur-${lob.id}`} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.5" result="blur" />
+        </filter>
+        {nodes.map((n) => (
+          <radialGradient key={`rg-${n.id}`} id={`rg-${lob.id}-${n.id}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={n.color} stopOpacity={0.9} />
+            <stop offset="100%" stopColor={n.color} stopOpacity={0.25} />
+          </radialGradient>
+        ))}
       </defs>
-      {/* Edges */}
-      {links.map(([a, b], i) => (
-        <line
-          key={i}
-          x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-          stroke={b.node.color}
-          strokeWidth={1}
-          strokeOpacity={0.35}
-          strokeDasharray={b.node.type === 'component' ? '2,2' : undefined}
-        />
-      ))}
-      {/* Nodes */}
-      {points.map((pt, i) => {
-        const r = pt.node.type === 'lob' ? 6 : pt.node.type === 'team' ? 4.5 : pt.node.type === 'project' ? 3.5 : 2.5;
+
+      {/* Edges — drawn first (behind nodes) */}
+      {edges.map(([ai, bi], i) => {
+        const a = nodes[ai]; const b = nodes[bi];
+        if (!a || !b) return null;
+        const isDashed = a.type === 'project' && b.type === 'component';
         return (
-          <g key={i}>
-            <circle cx={pt.x} cy={pt.y} r={r + 3} fill={pt.node.color} opacity={0.12} />
-            <circle cx={pt.x} cy={pt.y} r={r} fill={pt.node.color} opacity={0.9} />
-            {pt.node.type === 'lob' && (
-              <circle cx={pt.x} cy={pt.y} r={r + 5} fill="none" stroke={pt.node.color} strokeWidth={0.8} strokeOpacity={0.3} />
-            )}
+          <line key={i}
+            x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+            stroke={b.color}
+            strokeWidth={0.8}
+            strokeOpacity={0.28}
+            strokeDasharray={isDashed ? '3,3' : undefined}
+          />
+        );
+      })}
+
+      {/* Nodes */}
+      {nodes.map((n) => {
+        const iconSize = 7;
+        const iconOffset = iconSize / 2;
+        return (
+          <g key={n.id}>
+            {/* Outer glow ring */}
+            <circle cx={n.x} cy={n.y} r={R + 5} fill={n.color} opacity={0.07} filter={`url(#blur-${lob.id})`} />
+            {/* Outer ring */}
+            <circle cx={n.x} cy={n.y} r={R + 1.5} fill="none" stroke={n.color} strokeWidth={0.7} strokeOpacity={0.35} />
+            {/* Main filled circle */}
+            <circle cx={n.x} cy={n.y} r={R} fill={`url(#rg-${lob.id}-${n.id})`} />
+            {/* Icon inside */}
+            <g transform={`translate(${n.x - iconOffset - 1}, ${n.y - iconOffset - 1}) scale(${iconSize / 12})`}>
+              <path d={NODE_ICONS[n.type] || NODE_ICONS.lob} fill="white" opacity={0.9} />
+            </g>
           </g>
         );
       })}
@@ -551,31 +574,36 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
             </div>
           </div>
 
-          {/* Stats: Teams | Projects | Components */}
-          <div className="grid grid-cols-3 gap-1.5 mb-3">
+          {/* Stats: Teams | Projects | Components — large numbers with dividers */}
+          <div className="flex items-stretch mb-3 rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
             {[
               { label: 'Teams', value: teamCount },
               { label: 'Projects', value: (lob.project_count as number) ?? 0 },
               { label: 'Components', value: componentCount },
-            ].map(({ label, value }) => (
-              <div key={label} className="rounded-xl p-2 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <div className="text-sm font-bold text-white">{value}</div>
-                <div className="text-[9px] font-medium uppercase tracking-wider" style={{ color: '#566F8A' }}>{label}</div>
+            ].map(({ label, value }, i) => (
+              <div key={label} className="flex-1 flex flex-col items-center justify-center py-3"
+                style={{
+                  borderRight: i < 2 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+                  background: 'rgba(255,255,255,0.03)',
+                }}>
+                <span className="text-xl font-bold text-white leading-none">{value}</span>
+                <span className="text-[9px] font-semibold uppercase tracking-wider mt-1" style={{ color: '#566F8A' }}>{label}</span>
               </div>
             ))}
           </div>
 
-          {/* Mini tree graph area */}
+          {/* Mini network graph — icon nodes + mesh lines */}
           <div
             className="rounded-xl overflow-hidden mb-3 relative"
-            style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)', height: 80 }}
+            style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', height: 88 }}
           >
-            <MiniTreeGraph lob={lob} teams={teams} projects={projects} components={components} />
-            {/* Subtle eye hint overlay */}
+            <MiniNetGraph lob={lob} teams={teams} projects={projects} components={components} />
+            {/* Eye hint overlay on hover */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-              style={{ background: 'rgba(0,0,0,0.25)' }}>
-              <div className="flex items-center gap-1.5 text-[10px] font-semibold" style={{ color: color }}>
-                <Eye className="w-3 h-3" /> Click eye to expand
+              style={{ background: 'rgba(0,0,0,0.22)', borderRadius: 12 }}>
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-full"
+                style={{ background: `${color}22`, border: `1px solid ${color}40`, color }}>
+                <Eye className="w-3 h-3" /> Expand graph
               </div>
             </div>
           </div>
