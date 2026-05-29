@@ -556,3 +556,9 @@ export const proxySettingsApi = {
     is_enabled?: boolean;
   }) => apiClient.put('/proxy-settings', data),
 };
+
+export const aggregationApi = {
+  listLobs: () => apiClient.get('/aggregations/lobs'),
+  getLob: (lobId: string) => apiClient.get(`/aggregations/lobs/${lobId}`),
+  listTeams: () => apiClient.get('/aggregations/teams'),
+};
