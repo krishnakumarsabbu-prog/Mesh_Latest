@@ -17,9 +17,12 @@ const LobDetailPage = React.lazy(() => import('./pages/LobDetailPage').then(m =>
 const LobDashboardsPage = React.lazy(() => import('./pages/LobDashboardsPage').then(m => ({ default: m.LobDashboardsPage })));
 const LobLiveDashboardPage = React.lazy(() => import('./pages/LobLiveDashboardPage').then(m => ({ default: m.LobLiveDashboardPage })));
 const TeamsPage = React.lazy(() => import('./pages/TeamsPage').then(m => ({ default: m.TeamsPage })));
+const TeamsCommandCenterPage = React.lazy(() => import('./pages/TeamsCommandCenterPage').then(m => ({ default: m.TeamsCommandCenterPage })));
 const TeamDetailPage = React.lazy(() => import('./pages/TeamDetailPage').then(m => ({ default: m.TeamDetailPage })));
 const ComponentDetailPage = React.lazy(() => import('./pages/ComponentDetailPage').then(m => ({ default: m.ComponentDetailPage })));
 const ComponentsPage = React.lazy(() => import('./pages/ComponentsPage').then(m => ({ default: m.ComponentsPage })));
+const ComponentDashboardsPage = React.lazy(() => import('./pages/ComponentDashboardsPage').then(m => ({ default: m.ComponentDashboardsPage })));
+const ComponentLiveDashboardPage = React.lazy(() => import('./pages/ComponentLiveDashboardPage').then(m => ({ default: m.ComponentLiveDashboardPage })));
 const TeamDashboardsPage = React.lazy(() => import('./pages/TeamDashboardsPage').then(m => ({ default: m.TeamDashboardsPage })));
 const TeamLiveDashboardPage = React.lazy(() => import('./pages/TeamLiveDashboardPage').then(m => ({ default: m.TeamLiveDashboardPage })));
 const ProjectsPage = React.lazy(() => import('./pages/ProjectsPage').then(m => ({ default: m.ProjectsPage })));
@@ -109,9 +112,12 @@ export default function App() {
             <Route path="lobs/:lobId/dashboards" element={<Lazy><LobDashboardsPage /></Lazy>} />
             <Route path="lobs/:lobId/dashboards/:assignmentId" element={<Lazy><LobLiveDashboardPage /></Lazy>} />
             <Route path="teams" element={<Lazy><TeamsPage /></Lazy>} />
+            <Route path="teams-command-center" element={<Lazy><TeamsCommandCenterPage /></Lazy>} />
             <Route path="teams/:teamId" element={<Lazy><TeamDetailPage /></Lazy>} />
             <Route path="components/:componentId" element={<Lazy><ComponentDetailPage /></Lazy>} />
             <Route path="components" element={<Lazy><ComponentsPage /></Lazy>} />
+            <Route path="components/:componentId/dashboards" element={<Lazy><ComponentDashboardsPage /></Lazy>} />
+            <Route path="components/:componentId/dashboards/:assignmentId" element={<Lazy><ComponentLiveDashboardPage /></Lazy>} />
             <Route path="teams/:teamId/dashboards" element={<Lazy><TeamDashboardsPage /></Lazy>} />
             <Route path="teams/:teamId/dashboards/:assignmentId" element={<Lazy><TeamLiveDashboardPage /></Lazy>} />
             <Route path="projects" element={<Lazy><ProjectsPage /></Lazy>} />

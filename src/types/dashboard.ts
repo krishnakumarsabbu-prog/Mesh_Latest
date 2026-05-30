@@ -1,6 +1,6 @@
 import type { AggregationType } from './connector';
 
-export type DashboardScope = 'project' | 'team' | 'lob' | 'global';
+export type DashboardScope = 'project' | 'team' | 'lob' | 'component' | 'global';
 export type DashboardVisibility = 'global' | 'lob' | 'private';
 export type WidgetType =
   | 'kpi_card' | 'gauge' | 'progress_ring' | 'sparkline'
@@ -8,7 +8,7 @@ export type WidgetType =
   | 'sla_card' | 'alert_panel' | 'status_timeline' | 'comparison_grid'
   | 'table_widget' | 'heatmap' | 'health_distribution'
   | 'runtime_app_location_summary' | 'runtime_dc_health_map' | 'runtime_freshness_status';
-export type MetricSourceScope = 'connector_metric' | 'team_aggregate' | 'lob_aggregate' | 'project_aggregate';
+export type MetricSourceScope = 'connector_metric' | 'team_aggregate' | 'lob_aggregate' | 'project_aggregate' | 'component_aggregate';
 export type AggregationMode = 'latest' | 'avg' | 'sum' | 'min' | 'max' | 'count' | 'p95' | 'p99';
 
 export interface WidgetMetricBinding {

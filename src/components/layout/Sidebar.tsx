@@ -20,23 +20,24 @@ interface NavItem {
 }
 
 const operationsNavItems: NavItem[] = [
-  { label: 'Dashboard',        href: '/dashboard',         icon: LayoutDashboard, description: 'Overview & metrics' },
-  { label: 'Operations',       href: '/operations',        icon: Layers,          description: 'LOBs, Teams & Projects' },
-  { label: 'Health Monitor',   href: '/health',            icon: Activity,        description: 'Real-time health' },
-  { label: 'Runtime Location', href: '/runtime-location',  icon: MapPin,          description: 'Where is my app running?' },
-  { label: 'Topology',         href: '/topology',          icon: Network,         description: 'Live infrastructure graph' },
-  { label: 'Analytics',        href: '/analytics',         icon: BarChart2,       description: 'Historical trends & SLA' },
-  { label: 'AI Assistant',     href: '/chatbot',           icon: MessageSquare,   description: 'Intelligence layer' },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, description: 'Overview & metrics' },
+  { label: 'Operations', href: '/operations', icon: Layers, description: 'LOBs, Teams & Projects' },
+  { label: 'Health Monitor', href: '/health', icon: Activity, description: 'Real-time health' },
+  { label: 'Runtime Location', href: '/runtime-location', icon: MapPin, description: 'Where is my app running?' },
+  { label: 'Topology', href: '/topology', icon: Network, description: 'Live infrastructure graph' },
+  { label: 'Analytics', href: '/analytics', icon: BarChart2, description: 'Historical trends & SLA' },
+  { label: 'AI Assistant', href: '/chatbot', icon: MessageSquare, description: 'Intelligence layer' },
 ];
 
 const adminNavItems: NavItem[] = [
-  { label: 'Lines of Business', href: '/lobs',               icon: Building2,     description: 'Manage LOBs' },
-  { label: 'Teams',             href: '/teams',              icon: UsersRound,    description: 'Manage teams' },
-  { label: 'Projects',          href: '/components',         icon: Layers,        description: 'Manage projects' },
-  { label: 'Components',        href: '/projects',           icon: FolderOpen,    description: 'All components' },
-  { label: 'Dashboard Builder', href: '/dashboard-builder',  icon: LayoutTemplate,description: 'Template builder' },
-  { label: 'Integrations',      href: '/connector-catalog',  icon: Plug,          description: 'Connectors & catalog' },
-  { label: 'Health Rules',      href: '/rules',              icon: Shield,        description: 'Configurable rules engine' },
+  { label: 'Lines of Business', href: '/lobs', icon: Building2, description: 'Manage LOBs' },
+  { label: 'Teams Cmd Center', href: '/teams-command-center', icon: UsersRound, description: 'Organizational health' },
+  { label: 'Teams List', href: '/teams', icon: Users, description: 'Manage teams' },
+  { label: 'Projects', href: '/components', icon: Layers, description: 'Manage projects' },
+  { label: 'Components', href: '/projects', icon: FolderOpen, description: 'All components' },
+  { label: 'Dashboard Builder', href: '/dashboard-builder', icon: LayoutTemplate, description: 'Template builder' },
+  { label: 'Integrations', href: '/connector-catalog', icon: Plug, description: 'Connectors & catalog' },
+  { label: 'Health Rules', href: '/rules', icon: Shield, description: 'Configurable rules engine' },
 ];
 
 const rbacNavItems: NavItem[] = [
@@ -165,8 +166,8 @@ export function Sidebar() {
   const dynamicAdminItems = [...adminNavItems];
   if (userIsAdmin) {
     dynamicAdminItems.push(
-      { label: 'Users',      href: '/users',  icon: Users,    description: 'User management' },
-      { label: 'Audit Logs', href: '/audit',  icon: FileText, description: 'System event trail' }
+      { label: 'Users', href: '/users', icon: Users, description: 'User management' },
+      { label: 'Audit Logs', href: '/audit', icon: FileText, description: 'System event trail' }
     );
   }
 
@@ -212,8 +213,8 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto scrollbar-none px-2 py-2.5">
-        <SidebarSection label="Operations"     items={operationsNavItems}  collapsed={sidebarCollapsed} />
-        <SidebarSection label="Administration" items={dynamicAdminItems}   collapsed={sidebarCollapsed} />
+        <SidebarSection label="Operations" items={operationsNavItems} collapsed={sidebarCollapsed} />
+        <SidebarSection label="Administration" items={dynamicAdminItems} collapsed={sidebarCollapsed} />
         {userCanManageRoles && (
           <SidebarSection label="Security" items={rbacNavItems} collapsed={sidebarCollapsed} />
         )}

@@ -318,18 +318,17 @@ function ProjectCard({ project, lob, team, components, canCreate, onEdit, onDele
     >
       <div className="absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${color}60, transparent)` }} />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-12 rounded-full pointer-events-none" style={{ background: `radial-gradient(ellipse, ${color}12 0%, transparent 70%)` }} />
-
-      <div className="relative p-5">
+      <div className="relative p-4">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: color + '18', border: `1px solid ${color}35` }}>
-              <FolderOpen className="w-5 h-5" style={{ color }} />
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: color + '15', border: `1px solid ${color}25` }}>
+              <FolderOpen className="w-4.5 h-4.5" style={{ color }} />
             </div>
             <div className="min-w-0">
-              <p className="text-[14px] font-bold text-[var(--text-primary)] leading-tight truncate max-w-[120px]">{project.name}</p>
-              <p className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-[13px] font-extrabold text-[var(--text-primary)] leading-tight truncate max-w-[130px]">{project.name}</p>
+              <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>
                 {lob?.name || 'N/A'}{team ? ` · ${team.name}` : ''}
               </p>
             </div>
@@ -377,19 +376,19 @@ function ProjectCard({ project, lob, team, components, canCreate, onEdit, onDele
         </div>
 
         {/* Badges */}
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize"
-            style={{ background: statusColor + '18', color: statusColor, border: `1px solid ${statusColor}30` }}>
+        <div className="flex items-center gap-1.5 mb-2.5">
+          <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full capitalize"
+            style={{ background: statusColor + '12', color: statusColor, border: `1px solid ${statusColor}20` }}>
             {project.status}
           </span>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize"
-            style={{ background: envColor + '18', color: envColor, border: `1px solid ${envColor}30` }}>
+          <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full capitalize"
+            style={{ background: envColor + '12', color: envColor, border: `1px solid ${envColor}20` }}>
             {project.environment}
           </span>
         </div>
 
         {/* Stats strip */}
-        <div className="flex items-stretch mb-3 py-1">
+        <div className="flex items-stretch mb-3 py-2 px-1 rounded-xl bg-black/[0.02]" style={{ border: '1px solid var(--app-border)' }}>
           {[
             { label: 'Connectors', value: project.connector_count },
             { label: 'Healthy', value: project.healthy_count },
@@ -397,26 +396,26 @@ function ProjectCard({ project, lob, team, components, canCreate, onEdit, onDele
           ].map(({ label, value }, i) => (
             <div key={label} className="flex-1 flex flex-col items-center justify-center"
               style={{ borderRight: i < 2 ? '1px solid var(--app-border)' : 'none' }}>
-              <span className="text-lg font-bold text-[var(--text-primary)] leading-none">{value}</span>
-              <span className="text-[10px] font-semibold mt-1" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+              <span className="text-sm font-black text-[var(--text-primary)] leading-none">{value}</span>
+              <span className="text-[8.5px] font-bold uppercase mt-1 text-slate-400">{label}</span>
             </div>
           ))}
         </div>
 
         {/* Mini graph */}
-        <div className="overflow-hidden -mt-2.5 mb-3 relative flex items-center justify-center"
+        <div className="overflow-hidden -mt-1.5 mb-2 relative flex items-center justify-center"
           style={{ height: 72 }}>
           <MiniProjectGraph project={project} components={components} />
         </div>
 
         {/* Health bar */}
         {total > 0 && (
-          <div className="mb-3">
-            <div className="flex justify-between text-[10px] mb-1" style={{ color: 'var(--text-secondary)' }}>
+          <div className="mb-2.5">
+            <div className="flex justify-between text-[9.5px] mb-1" style={{ color: 'var(--text-secondary)' }}>
               <span>Health</span>
-              <span className="font-bold" style={{ color: pct >= 90 ? '#30D158' : pct >= 70 ? '#FF9F0A' : '#FF453A' }}>{pct}%</span>
+              <span className="font-extrabold" style={{ color: pct >= 90 ? '#30D158' : pct >= 70 ? '#FF9F0A' : '#FF453A' }}>{pct}%</span>
             </div>
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--app-bg-muted)' }}>
+            <div className="h-1.2 rounded-full overflow-hidden" style={{ background: 'var(--app-bg-muted)' }}>
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${pct}%` }}
@@ -428,33 +427,33 @@ function ProjectCard({ project, lob, team, components, canCreate, onEdit, onDele
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--app-border)' }}>
-          <div className="flex items-center gap-3 text-[10px]" style={{ color: 'var(--text-secondary)' }}>
+        <div className="flex items-center justify-between pt-2.5" style={{ borderTop: '1px solid var(--app-border)' }}>
+          <div className="flex items-center gap-2.5 text-[9.5px]" style={{ color: 'var(--text-secondary)' }}>
             {project.healthy_count > 0 && (
-              <span className="flex items-center gap-1" style={{ color: '#30D158' }}>
+              <span className="flex items-center gap-1 font-bold" style={{ color: '#30D158' }}>
                 <CheckCircle className="w-3 h-3" /> {project.healthy_count}
               </span>
             )}
             {project.degraded_count > 0 && (
-              <span className="flex items-center gap-1" style={{ color: '#FF9F0A' }}>
+              <span className="flex items-center gap-1 font-bold" style={{ color: '#FF9F0A' }}>
                 <AlertTriangle className="w-3 h-3" /> {project.degraded_count}
               </span>
             )}
             {project.down_count > 0 && (
-              <span className="flex items-center gap-1" style={{ color: '#FF453A' }}>
+              <span className="flex items-center gap-1 font-bold" style={{ color: '#FF453A' }}>
                 <AlertCircle className="w-3 h-3" /> {project.down_count}
               </span>
             )}
           </div>
-          <ChevronRight className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
+          <ChevronRight className="w-3.5 h-3.5" style={{ color: 'var(--text-secondary)' }} />
         </div>
       </div>
     </motion.div>
   );
 }
 
-function ProjectListRow({ project, lob, canCreate, onEdit, onDelete, onNavigate }: {
-  project: Project; lob: Lob | undefined; canCreate: boolean;
+function ProjectListRow({ project, lob, team, canCreate, onEdit, onDelete, onNavigate }: {
+  project: Project; lob: Lob | undefined; team: Team | undefined; canCreate: boolean;
   onEdit: (p: Project) => void; onDelete: (p: Project) => void; onNavigate: (id: string) => void;
 }) {
   const total = project.connector_count;
@@ -481,7 +480,7 @@ function ProjectListRow({ project, lob, canCreate, onEdit, onDelete, onNavigate 
           </span>
         </div>
         <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
-          {lob?.name || 'N/A'} · {project.environment}
+          {lob?.name || 'N/A'} {team ? `· ${team.name}` : ''} · {project.environment}
         </p>
       </div>
       <div className="hidden md:flex items-center gap-2 w-32">
@@ -724,17 +723,22 @@ export function ProjectsPage() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         {statCards.map(({ label, value, color, icon: Icon, sub }, idx) => (
           <motion.div key={label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.07 }}
-            className="relative rounded-2xl p-4 overflow-hidden shadow-sm"
+            className="relative rounded-2xl p-3.5 overflow-hidden shadow-sm hover:scale-[1.02] transition-transform duration-200"
             style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', boxShadow: 'var(--shadow-sm)' }}>
-            <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none"
-              style={{ background: `radial-gradient(ellipse, ${color}12 0%, transparent 70%)`, transform: 'translate(20%, -20%)' }} />
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3"
-              style={{ background: color + '18', border: `1px solid ${color}30` }}>
-              <Icon className="w-4 h-4" style={{ color }} />
+            <div className="absolute top-0 right-0 w-20 h-20 rounded-full pointer-events-none"
+              style={{ background: `radial-gradient(ellipse, ${color}10 0%, transparent 70%)`, transform: 'translate(20%, -20%)' }} />
+            
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: color + '15', border: `1px solid ${color}25` }}>
+                <Icon className="w-4.5 h-4.5" style={{ color }} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xl font-black text-[var(--text-primary)] leading-none">{value}</p>
+                <p className="text-[10.5px] font-extrabold uppercase mt-1 tracking-wider leading-none" style={{ color }}>{label}</p>
+                <p className="text-[9.5px] mt-1 leading-none truncate" style={{ color: 'var(--text-muted)' }}>{sub}</p>
+              </div>
             </div>
-            <p className="text-2xl font-black text-[var(--text-primary)] leading-none">{value}</p>
-            <p className="text-[11px] font-semibold mt-1" style={{ color }}>{label}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{sub}</p>
           </motion.div>
         ))}
       </div>
@@ -866,6 +870,7 @@ export function ProjectsPage() {
               key={proj.id}
               project={proj}
               lob={getLobById(proj.lob_id)}
+              team={getTeamById(proj.team_id)}
               canCreate={canCreate}
               onEdit={openEdit}
               onDelete={p => setDeleteTarget(p)}
@@ -884,13 +889,13 @@ export function ProjectsPage() {
                     <th key={i} className="text-left px-4 py-3">
                       {['name', 'status', 'connector_count', 'member_count'].includes(col) ? (
                         <button onClick={() => handleSort(col as SortField)}
-                          className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider transition-colors"
+                          className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider transition-colors select-none"
                           style={{ color: sortField === col ? '#30D158' : 'var(--text-secondary)' }}>
                           {col === 'connector_count' ? 'Connectors' : col === 'member_count' ? 'Members' : col.charAt(0).toUpperCase() + col.slice(1)}
                           <ArrowUpDown className="w-3 h-3" />
                         </button>
                       ) : (
-                        <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{col}</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{col}</span>
                       )}
                     </th>
                   ))}
@@ -921,8 +926,8 @@ export function ProjectsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-sm text-[var(--text-primary)]">{getLobById(proj.lob_id)?.name || 'N/A'}</p>
-                        {proj.team_name && <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{proj.team_name}</p>}
+                        <p className="text-sm font-semibold text-[var(--text-primary)] leading-tight">{getLobById(proj.lob_id)?.name || 'N/A'}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{getTeamById(proj.team_id)?.name || 'N/A'}</p>
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-[11px] font-medium px-2 py-0.5 rounded-full capitalize"

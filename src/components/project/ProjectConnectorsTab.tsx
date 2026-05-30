@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plug, Plus, Trash2, Settings, ToggleLeft, ToggleRight, ChevronUp, ChevronDown, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, Loader, Activity, ExternalLink, Lock, Eye, EyeOff, RefreshCw, Clock, Zap, List, ChartBar as BarChart2, TrendingUp, CheckCheck, TriangleAlert as AlertTriangle, ChevronRight } from 'lucide-react';
+import { Plug, Plus, Trash2, Settings, ToggleLeft, ToggleRight, ChevronUp, ChevronDown, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, Loader, Activity, ExternalLink, Lock, Eye, EyeOff, RefreshCw, Clock, Zap, List, ChartBar as BarChart2, TrendingUp, CheckCheck, TriangleAlert as AlertTriangle, ChevronRight, Terminal } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal, ConfirmModal } from '@/components/ui/Modal';
 import { Input, Select } from '@/components/ui/Input';
@@ -47,9 +47,47 @@ interface SyncResultData {
   response_time_ms?: number;
   message?: string;
   error?: string;
-  metrics?: Array<{ name: string; value: number; unit: string }>;
+  metrics?: Array<{
+    name: string;
+    value: number;
+    unit: string;
+    description?: string;
+    labels?: Record<string, string>;
+    timestamp?: string;
+  }>;
   connector_slug?: string;
   executed_at?: string;
+  project_id?: string;
+  application_name?: string;
+  environment?: string;
+  api_call_trace?: {
+    total_calls: number;
+    total_duration_ms: number;
+    calls: Array<{
+      call_index: number;
+      purpose: string;
+      connector: string;
+      started_at: string;
+      duration_ms: number;
+      success: boolean;
+      request: {
+        method: string;
+        url: string;
+        endpoint: string;
+        params?: Record<string, unknown>;
+        payload?: Record<string, unknown>;
+        headers_sent?: string[];
+      };
+      response: {
+        status_code: number;
+        result_count?: number;
+        fields_extracted?: string[];
+        metrics_produced?: string[];
+        raw_preview?: Record<string, unknown>;
+        error?: string | null;
+      };
+    }>;
+  };
 }
 
 interface Props {
@@ -126,68 +164,332 @@ function ConnectorIcon({ color, name }: { color?: string; name: string }) {
 }
 
 function SyncResultPanel({ result, pcName }: { result: SyncResultData; pcName: string }) {
-  const [showMetrics, setShowMetrics] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState<'summary' | 'metrics' | 'trace'>(
+    result.metrics && result.metrics.length > 0 ? 'metrics' : 'summary'
+  );
+  const [expandedCalls, setExpandedCalls] = useState<Record<number, boolean>>({});
+
   const statusMeta = AGENT_STATUS_META[result.health_status] || AGENT_STATUS_META.unknown;
   const hasMetrics = result.metrics && result.metrics.length > 0;
+  const hasTrace = !!result.api_call_trace && result.api_call_trace.calls && result.api_call_trace.calls.length > 0;
+
+  const toggleCall = (idx: number) => {
+    setExpandedCalls(prev => ({ ...prev, [idx]: !prev[idx] }));
+  };
 
   return (
     <div
-      className="mt-2 rounded-xl overflow-hidden border"
+      className="mt-2 rounded-2xl overflow-hidden border transition-all duration-300"
       style={{
-        background: result.success ? 'rgba(48,209,88,0.04)' : 'rgba(255,69,58,0.04)',
-        borderColor: result.success ? 'rgba(48,209,88,0.2)' : 'rgba(255,69,58,0.2)',
+        background: 'var(--app-bg-muted)',
+        borderColor: 'var(--app-border)',
+        boxShadow: 'inset 0 0 20px rgba(0, 0, 0, 0.2), var(--shadow-lg)'
       }}
     >
-      <div className="flex items-center gap-3 px-3 py-2.5">
-        <span
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ background: statusMeta.dot }}
-        />
-        <span className="text-xs font-semibold flex-1" style={{ color: statusMeta.color }}>
-          Sync complete — {statusMeta.label}
-          {result.response_time_ms != null && (
-            <span className="ml-2 opacity-70 font-normal">{result.response_time_ms}ms</span>
-          )}
-        </span>
-        {hasMetrics && (
-          <button
-            onClick={() => setShowMetrics(v => !v)}
-            className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-slate-300"
-          >
-            <TrendingUp className="w-3 h-3 text-cyan-400" />
-            {result.metrics!.length} metrics
-            <ChevronRight className={cn('w-3 h-3 transition-transform text-slate-500', showMetrics && 'rotate-90')} />
-          </button>
-        )}
-      </div>
-      {result.message && (
-        <div className="px-3 pb-2">
-          <p className="text-xs text-slate-400">{result.message}</p>
-        </div>
-      )}
-      {result.error && (
-        <div className="px-3 pb-2">
-          <p className="text-xs font-mono text-red-400">{result.error}</p>
-        </div>
-      )}
-      {showMetrics && hasMetrics && (
-        <div className="border-t px-3 py-2 space-y-1 border-white/5">
-          <p className="text-xs font-bold uppercase tracking-wider mb-2 text-slate-500">
-            Collected Metrics ({result.metrics!.length})
-          </p>
-          <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
-            {result.metrics!.map((m, i) => (
-              <div key={i} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-950/40 border border-white/5">
-                <span className="text-xs truncate text-slate-400 font-semibold">{m.name.split('.').pop()}</span>
-                <span className="text-xs font-mono font-bold ml-2 flex-shrink-0 text-white">
-                  {typeof m.value === 'number' ? m.value.toFixed(m.value % 1 === 0 ? 0 : 2) : m.value}
-                  {m.unit && <span className="ml-0.5 opacity-60 text-[10px] text-slate-500">{m.unit}</span>}
-                </span>
-              </div>
-            ))}
+      {/* Header Deck */}
+      <div 
+        className="flex items-center justify-between px-4 py-3 border-b border-white/5"
+        style={{ background: 'var(--app-surface)' }}
+      >
+        <div className="flex items-center gap-2.5">
+          <span
+            className="w-2.5 h-2.5 rounded-full flex-shrink-0 animate-pulse"
+            style={{ background: statusMeta.dot }}
+          />
+          <div>
+            <h4 className="text-xs font-black text-white flex items-center gap-1.5">
+              Sync Diagnostic Output
+              <span 
+                className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border"
+                style={{ color: statusMeta.color, background: statusMeta.bg, borderColor: statusMeta.color + '20' }}
+              >
+                {statusMeta.label}
+              </span>
+            </h4>
+            <p className="text-[10px] text-slate-500 font-medium">
+              Connector: <strong className="text-slate-400 font-semibold">{pcName}</strong> 
+              {result.connector_slug && <span className="ml-1 text-slate-600 font-mono">({result.connector_slug})</span>}
+            </p>
           </div>
         </div>
-      )}
+
+        {/* Tab Toggles */}
+        <div className="flex items-center gap-1 bg-slate-950/40 p-1 rounded-xl border border-white/5">
+          <button
+            onClick={() => setActiveSubTab('summary')}
+            className={cn(
+              'px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all uppercase tracking-wider',
+              activeSubTab === 'summary' ? 'bg-white/10 text-white border border-white/10 shadow-sm' : 'text-slate-400 hover:text-slate-200 border border-transparent'
+            )}
+          >
+            Summary
+          </button>
+          <button
+            onClick={() => setActiveSubTab('metrics')}
+            disabled={!hasMetrics}
+            className={cn(
+              'px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all uppercase tracking-wider flex items-center gap-1',
+              !hasMetrics && 'opacity-30 cursor-not-allowed',
+              activeSubTab === 'metrics' ? 'bg-white/10 text-white border border-white/10 shadow-sm' : 'text-slate-400 hover:text-slate-200 border border-transparent'
+            )}
+          >
+            <TrendingUp className="w-3 h-3 text-cyan-400" />
+            Metrics {hasMetrics ? `(${result.metrics!.length})` : ''}
+          </button>
+          <button
+            onClick={() => setActiveSubTab('trace')}
+            disabled={!hasTrace}
+            className={cn(
+              'px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all uppercase tracking-wider flex items-center gap-1',
+              !hasTrace && 'opacity-30 cursor-not-allowed',
+              activeSubTab === 'trace' ? 'bg-white/10 text-white border border-white/10 shadow-sm' : 'text-slate-400 hover:text-slate-200 border border-transparent'
+            )}
+          >
+            <Terminal className="w-3 h-3 text-amber-400" />
+            Trace {hasTrace ? `(${result.api_call_trace!.calls.length})` : ''}
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Panels */}
+      <div className="p-3.5 space-y-3">
+        {/* SUMMARY PANEL */}
+        {activeSubTab === 'summary' && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+              {[
+                { label: 'Environment', value: result.environment || 'Production', color: '#AF52DE' },
+                { label: 'Target Component', value: result.application_name || 'System Catalog', color: '#30D158' },
+                { label: 'Sync Duration', value: result.response_time_ms ? `${result.response_time_ms}ms` : '—', color: '#FF9F0A' },
+                { label: 'Total API Calls', value: result.api_call_trace ? `${result.api_call_trace.total_calls} calls` : '—', color: '#64D2FF' },
+                { label: 'Trace Latency', value: result.api_call_trace ? `${result.api_call_trace.total_duration_ms}ms` : '—', color: '#BF5AF2' },
+                { label: 'Timestamp', value: result.executed_at ? new Date(result.executed_at).toLocaleTimeString() : '—', color: '#FF453A' }
+              ].map((item, i) => (
+                <div key={i} className="bg-slate-900/40 border border-white/5 rounded-xl p-2.5">
+                  <div className="text-[9px] uppercase tracking-wider text-slate-500 font-bold">{item.label}</div>
+                  <div className="text-xs font-black mt-1 truncate" style={{ color: item.color }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {result.message && (
+              <div className="px-3.5 py-2.5 rounded-xl bg-slate-900/60 border border-white/5 text-xs text-slate-400 font-medium">
+                <span className="font-bold text-slate-300 block mb-0.5">Execution Log Status:</span>
+                {result.message}
+              </div>
+            )}
+            {result.error && (
+              <div className="px-3.5 py-2.5 rounded-xl bg-red-950/20 border border-red-500/20 text-xs text-red-400 font-medium font-mono">
+                <span className="font-bold text-red-300 block mb-0.5 font-sans">Sync Error Trace:</span>
+                {result.error}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* METRICS PANEL */}
+        {activeSubTab === 'metrics' && hasMetrics && (
+          <div className="space-y-2">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center justify-between">
+              <span>Synchronized Telemetry Variables</span>
+              <span className="text-cyan-400 font-black font-mono">{result.metrics!.length} collected</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
+              {result.metrics!.map((m, i) => (
+                <div key={i} className="flex flex-col gap-2 p-3 rounded-xl bg-slate-900/50 border border-white/5 hover:border-white/10 hover:bg-slate-900/80 transition-all">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <span className="text-xs font-black text-slate-200 block truncate" title={m.name}>
+                        {m.name}
+                      </span>
+                      {m.description && (
+                        <span className="text-[10px] text-slate-500 block leading-tight mt-0.5">
+                          {m.description}
+                        </span>
+                      )}
+                    </div>
+                    <span 
+                      className="px-2.5 py-1 rounded-lg text-xs font-black font-mono flex-shrink-0 flex items-baseline gap-0.5 border"
+                      style={{ color: '#00E599', background: 'rgba(0,229,153,0.08)', borderColor: 'rgba(0,229,153,0.18)' }}
+                    >
+                      {typeof m.value === 'number' ? m.value.toLocaleString(undefined, { maximumFractionDigits: 3 }) : m.value}
+                      {m.unit && <span className="text-[8px] opacity-60 font-sans font-bold uppercase ml-0.5 text-slate-400">{m.unit}</span>}
+                    </span>
+                  </div>
+
+                  {m.labels && Object.keys(m.labels).length > 0 && (
+                    <div className="flex flex-wrap gap-1 border-t border-white/5 pt-2 mt-1">
+                      {Object.entries(m.labels).map(([k, v]) => (
+                        <span 
+                          key={k} 
+                          className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-[9px] text-slate-400 font-mono"
+                          title={`${k}: ${v}`}
+                        >
+                          <strong className="text-slate-300 font-semibold">{k}:</strong> {v}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {m.timestamp && (
+                    <div className="text-[8px] text-slate-600 font-mono self-end">
+                      Telemetry: {new Date(m.timestamp).toLocaleTimeString()}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TRACE PANEL */}
+        {activeSubTab === 'trace' && hasTrace && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <span>Telemetry Request Pipeline</span>
+              <span className="text-amber-400 font-black font-mono">
+                {result.api_call_trace!.total_calls} calls · {result.api_call_trace!.total_duration_ms}ms
+              </span>
+            </div>
+
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+              {result.api_call_trace!.calls.map((call) => {
+                const isExpanded = !!expandedCalls[call.call_index];
+                return (
+                  <div 
+                    key={call.call_index} 
+                    className="border border-white/5 bg-slate-900/30 rounded-xl overflow-hidden transition-all hover:bg-slate-900/50"
+                  >
+                    <div 
+                      onClick={() => toggleCall(call.call_index)}
+                      className="flex items-center gap-3 px-3 py-2.5 cursor-pointer select-none text-xs font-semibold"
+                    >
+                      <span className="px-2 py-0.5 rounded font-black bg-white/5 text-slate-400 font-mono text-[10px] border border-white/5">
+                        #{call.call_index}
+                      </span>
+                      <span className={cn(
+                        'px-1.5 py-0.5 rounded font-black uppercase text-[9px] tracking-wider border',
+                        call.request.method === 'GET' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                        call.request.method === 'POST' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                        'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      )}>
+                        {call.request.method}
+                      </span>
+                      <span className="font-bold text-slate-200 truncate flex-1 leading-none">{call.purpose || call.request.endpoint}</span>
+                      <span className="text-slate-400 font-mono text-[10px] flex items-center gap-1 font-semibold">
+                        <Clock className="w-3 h-3 text-slate-500" />
+                        {call.duration_ms}ms
+                      </span>
+                      <span className={cn(
+                        'px-2 py-0.5 rounded-full font-bold uppercase text-[9px] border',
+                        call.success ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' : 'bg-red-500/10 text-red-400 border-red-500/25'
+                      )}>
+                        {call.response.status_code || (call.success ? 'Success' : 'Error')}
+                      </span>
+                      <ChevronRight className={cn('w-3.5 h-3.5 text-slate-500 transition-transform duration-200', isExpanded && 'rotate-90')} />
+                    </div>
+
+                    {isExpanded && (
+                      <div className="border-t border-white/5 p-3.5 space-y-3 bg-slate-950/50 text-[11px] leading-relaxed">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <p className="font-bold text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1.5 leading-none">
+                              <Terminal className="w-3.5 h-3.5 text-cyan-400" /> Request Payload & parameters
+                            </p>
+                            <div className="bg-slate-900/60 p-3 rounded-xl border border-white/5 font-mono text-[11px] space-y-2 break-all max-h-52 overflow-y-auto">
+                              <div>
+                                <span className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Endpoint URL:</span> 
+                                <span className="text-slate-300 block bg-slate-950/40 p-1.5 rounded border border-white/5 mt-1 text-[10px] font-mono leading-tight">{call.request.url}</span>
+                              </div>
+                              {call.request.params && Object.keys(call.request.params).length > 0 && (
+                                <div>
+                                  <span className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Query Params:</span>
+                                  <pre className="text-slate-400 text-[10px] mt-1 overflow-x-auto bg-slate-950/40 p-2 rounded border border-white/5">{JSON.stringify(call.request.params, null, 2)}</pre>
+                                </div>
+                              )}
+                              {call.request.payload && Object.keys(call.request.payload).length > 0 && (
+                                <div>
+                                  <span className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Payload body:</span>
+                                  <pre className="text-slate-400 text-[10px] mt-1 overflow-x-auto bg-slate-950/40 p-2 rounded border border-white/5">{JSON.stringify(call.request.payload, null, 2)}</pre>
+                                </div>
+                              )}
+                              {call.request.headers_sent && call.request.headers_sent.length > 0 && (
+                                <div>
+                                  <span className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Headers Sent:</span>
+                                  <div className="flex flex-col gap-1 mt-1">
+                                    {call.request.headers_sent.map((h, hi) => (
+                                      <span key={hi} className="text-[10px] bg-slate-950/50 px-2 py-1 rounded text-slate-400 font-sans border border-white/5 leading-none">{h}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <p className="font-bold text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1.5 leading-none">
+                              <Activity className="w-3.5 h-3.5 text-amber-400" /> Response Analytics & metrics
+                            </p>
+                            <div className="bg-slate-900/60 p-3 rounded-xl border border-white/5 font-mono text-[11px] space-y-2 break-all max-h-52 overflow-y-auto">
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">HTTP Status:</span>
+                                <span className={cn(
+                                  'px-2 py-0.5 rounded font-black',
+                                  call.success ? 'text-emerald-400' : 'text-red-400'
+                                )}>
+                                  {call.response.status_code}
+                                </span>
+                              </div>
+                              {call.response.result_count !== undefined && (
+                                <div className="flex items-center justify-between border-t border-white/5 pt-1.5">
+                                  <span className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Result Records:</span>
+                                  <span className="text-slate-300 font-bold">{call.response.result_count}</span>
+                                </div>
+                              )}
+                              {call.response.fields_extracted && call.response.fields_extracted.length > 0 && (
+                                <div className="border-t border-white/5 pt-2">
+                                  <span className="text-slate-500 font-bold uppercase tracking-wider text-[9px] block">Extracted Fields:</span>
+                                  <div className="flex flex-wrap gap-1 mt-1.5">
+                                    {call.response.fields_extracted.map(f => (
+                                      <span key={f} className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[9px] font-sans border border-blue-500/20">{f}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {call.response.metrics_produced && call.response.metrics_produced.length > 0 && (
+                                <div className="border-t border-white/5 pt-2">
+                                  <span className="text-slate-500 font-bold uppercase tracking-wider text-[9px] block">Produced Metrics:</span>
+                                  <div className="flex flex-wrap gap-1 mt-1.5">
+                                    {call.response.metrics_produced.map(f => (
+                                      <span key={f} className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[9px] font-sans border border-purple-500/20">{f}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {call.response.raw_preview && Object.keys(call.response.raw_preview).length > 0 && (
+                                <div className="border-t border-white/5 pt-2">
+                                  <span className="text-slate-500 font-bold uppercase tracking-wider text-[9px] block mb-1">Raw Preview:</span>
+                                  <pre className="text-slate-300 text-[10px] overflow-x-auto bg-slate-950/50 p-2.5 rounded border border-white/5 max-h-36 overflow-y-auto">{JSON.stringify(call.response.raw_preview, null, 2)}</pre>
+                                </div>
+                              )}
+                              {call.response.error && (
+                                <div className="text-red-400 mt-2 bg-red-950/20 p-2.5 rounded border border-red-500/10 text-[10px] font-mono leading-tight">
+                                  <span className="font-bold block uppercase text-[9px] text-red-300 mb-0.5">Error log:</span> 
+                                  {call.response.error}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

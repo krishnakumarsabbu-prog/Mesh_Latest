@@ -438,6 +438,31 @@ export const lobDashboardAssignmentApi = {
     apiClient.delete(`/lobs/${lobId}/dashboards/${assignmentId}/widgets/${widgetId}/override`),
 };
 
+export const componentDashboardAssignmentApi = {
+  list: (componentId: string) =>
+    apiClient.get(`/components/${componentId}/dashboards`),
+  assign: (componentId: string, data: object) =>
+    apiClient.post(`/components/${componentId}/dashboards`, data),
+  get: (componentId: string, assignmentId: string) =>
+    apiClient.get(`/components/${componentId}/dashboards/${assignmentId}`),
+  update: (componentId: string, assignmentId: string, data: object) =>
+    apiClient.patch(`/components/${componentId}/dashboards/${assignmentId}`, data),
+  setDefault: (componentId: string, assignmentId: string) =>
+    apiClient.post(`/components/${componentId}/dashboards/${assignmentId}/set-default`),
+  remove: (componentId: string, assignmentId: string) =>
+    apiClient.delete(`/components/${componentId}/dashboards/${assignmentId}`),
+  reorder: (componentId: string, orderedIds: string[]) =>
+    apiClient.post(`/components/${componentId}/dashboards/reorder`, { ordered_assignment_ids: orderedIds }),
+  validate: (componentId: string, templateId: string) =>
+    apiClient.get(`/components/${componentId}/dashboards/validate/${templateId}`),
+  render: (componentId: string, assignmentId: string) =>
+    apiClient.get(`/components/${componentId}/dashboards/${assignmentId}/render`),
+  upsertWidgetOverride: (componentId: string, assignmentId: string, widgetId: string, data: object) =>
+    apiClient.put(`/components/${componentId}/dashboards/${assignmentId}/widgets/${widgetId}/override`, data),
+  deleteWidgetOverride: (componentId: string, assignmentId: string, widgetId: string) =>
+    apiClient.delete(`/components/${componentId}/dashboards/${assignmentId}/widgets/${widgetId}/override`),
+};
+
 export const rbacApi = {
   getPermissions: () => apiClient.get('/rbac/permissions'),
   getMatrix: () => apiClient.get('/rbac/matrix'),

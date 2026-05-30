@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Layers, FolderOpen, ArrowLeft, Plus, Trash2, Play, RefreshCw, Activity,
   ChevronRight, CircleCheck as CheckCircle, Circle as XCircle, Clock, Wrench,
-  Server, Database, Lock, Shield, Globe, Network, Mail, Code, Terminal, Cpu, Plug, Eye
+  Server, Database, Lock, Shield, Globe, Network, Mail, Code, Terminal, Cpu, Plug, Eye,
+  LayoutDashboard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -47,7 +48,7 @@ function FlowNode({ data }: { data: any }) {
   return (
     <div
       onClick={() => {
-        if (data.type === 'component') navigate(`/projects/${data.id}`);
+        if (data.type === 'project') navigate(`/projects/${data.id}`);
       }}
       className="px-3 py-2 rounded-xl flex items-center gap-2 select-none cursor-pointer hover:scale-105 transition-transform duration-200"
       style={{
@@ -59,8 +60,8 @@ function FlowNode({ data }: { data: any }) {
     >
       <Handle type="target" position={Position.Left} style={{ background: data.color, width: 6, height: 6, border: 'none' }} />
       <div className="w-5 h-5 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${data.color}25` }}>
-        {data.type === 'project' && <Layers className="w-3 h-3" style={{ color: data.color }} />}
-        {data.type === 'component' && <FolderOpen className="w-3 h-3" style={{ color: data.color }} />}
+        {data.type === 'component' && <Layers className="w-3 h-3" style={{ color: data.color }} />}
+        {data.type === 'project' && <FolderOpen className="w-3 h-3" style={{ color: data.color }} />}
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[8px] font-bold uppercase tracking-widest leading-none" style={{ color: data.color }}>{data.type}</p>
@@ -145,7 +146,7 @@ export function ComponentDetailPage() {
 
       setPageTitle(comp.name);
       setBreadcrumbs([
-        { label: 'Projects', href: '/components' },
+        { label: 'Components', href: '/components' },
         { label: teamRes.data.name, href: `/teams/${comp.team_id}` },
         { label: comp.name },
       ]);
@@ -242,21 +243,21 @@ export function ComponentDetailPage() {
     const ns: any[] = [];
     const es: any[] = [];
 
-    // Root project node
+    // Root component node
     ns.push({
       id: 'comp-root',
       type: 'flowNode',
-      data: { type: 'project', label: component.name, color },
+      data: { type: 'component', label: component.name, color },
       position: { x: 0, y: 0 }
     });
 
-    // Level 5 component nodes
+    // Level 4 project nodes
     projects.forEach((p) => {
       const pColor = p.color || '#0A84FF';
       ns.push({
         id: `node-p-${p.id}`,
         type: 'flowNode',
-        data: { id: p.id, type: 'component', label: p.name, color: pColor },
+        data: { id: p.id, type: 'project', label: p.name, color: pColor },
         position: { x: 0, y: 0 }
       });
 
@@ -316,7 +317,7 @@ export function ComponentDetailPage() {
   const totalConnectors = projects.reduce((acc, p) => acc + (p.connector_count || 0), 0);
 
   const tabs: { key: Tab; label: string; icon: React.ElementType; count?: number }[] = [
-    { key: 'projects', label: 'Components', icon: FolderOpen, count: projects.length },
+    { key: 'projects', label: 'Projects', icon: FolderOpen, count: projects.length },
     { key: 'topology', label: 'Topology Map', icon: Network },
     { key: 'health', label: 'Health Runs', icon: Activity, count: Object.keys(lastRunResults).length || undefined },
   ];
@@ -372,13 +373,13 @@ export function ComponentDetailPage() {
               </div>
               
               <div className="flex items-center gap-1.5 mt-2 text-xs">
-                <Link to="/components" className="hover:underline font-semibold text-slate-400">Projects</Link>
+                <Link to="/components" className="hover:underline font-semibold text-slate-400">Components</Link>
                 <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
                 <Link to={`/teams/${team.id}`} className="hover:underline font-semibold" style={{ color: team.color }}>
                   {team.name}
                 </Link>
                 <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                <span className="text-[var(--text-secondary)] font-bold">Project Command Deck</span>
+                <span className="text-[var(--text-secondary)] font-bold">Component Command Deck</span>
               </div>
               {component.description && (
                 <p className="text-sm text-slate-400 max-w-2xl leading-relaxed mt-2.5">{component.description}</p>
@@ -387,12 +388,19 @@ export function ComponentDetailPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => navigate(`/components/${componentId}/dashboards`)}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-[var(--text-primary)] border border-[var(--app-border)] bg-[var(--app-surface)] hover:bg-[var(--app-surface-hover)] transition-all shadow-md animate-shimmer"
+            >
+              <LayoutDashboard className="w-3.5 h-3.5 text-primary-500" />
+              Dashboards
+            </button>
             {canManage && (
               <button
                 onClick={() => setDeleteConfirmOpen(true)}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-red-400 hover:text-red-300 border border-red-500/10 hover:border-red-500/20 bg-red-500/5 hover:bg-red-500/10 transition-all shadow-md"
               >
-                <Trash2 className="w-3.5 h-3.5" /> Delete Project
+                <Trash2 className="w-3.5 h-3.5" /> Delete Component
               </button>
             )}
             {projects.length > 0 && (
@@ -413,7 +421,7 @@ export function ComponentDetailPage() {
         <div className="mt-8 grid grid-cols-2 md:grid-cols-5 gap-4">
           {[
             { 
-              label: 'Components', 
+              label: 'Projects', 
               value: projects.length, 
               icon: FolderOpen, 
               color: '#0A84FF', 

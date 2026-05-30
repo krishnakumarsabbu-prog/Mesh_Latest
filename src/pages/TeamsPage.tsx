@@ -6,6 +6,7 @@ import {
   Plus, Users, Trash2, Pencil, Search, X, RefreshCw,
   Eye, FolderOpen, Activity, ChevronRight, MoveVertical as MoreVertical,
   Building2, Layers, Network, Zap, TrendingUp,
+  LayoutGrid, List, Table as TableIcon, ArrowUpDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -37,10 +38,13 @@ const PRESET_COLORS = [
   '#64D2FF', '#FF6B6B', '#1DB954', '#0077B6', '#F4845F', '#E63946',
 ];
 
+type ViewMode = 'card' | 'list' | 'table';
+type SortField = 'name' | 'status' | 'project_count' | 'member_count';
+
 const NODE_ICONS: Record<string, string> = {
-  team:      'M5 2a2 2 0 110 4 2 2 0 010-4zM2 8c0-1 1.1-2 3-2s3 1 3 2v.5H2V8zm6-6a2 2 0 110 4 2 2 0 010-4zm1 6c.7.3 1 .8 1 1.5v.5H7.2V9c0-.7.3-1.2.8-1.5z',
-  project:  'M2 3h8v1H2V3zm0 3h6v1H2V6zm0 3h8v1H2V9zm8-7v8H1V2h9zm-1 1H2v6h7V3z',
-  component:'M4 1L1 4l3 3 1-1-2-2 2-2-1-1zm4 0l-1 1 2 2-2 2 1 1 3-3-3-3zM4 7h4v1H4V7z',
+  team: 'M5 2a2 2 0 110 4 2 2 0 010-4zM2 8c0-1 1.1-2 3-2s3 1 3 2v.5H2V8zm6-6a2 2 0 110 4 2 2 0 010-4zm1 6c.7.3 1 .8 1 1.5v.5H7.2V9c0-.7.3-1.2.8-1.5z',
+  project: 'M2 3h8v1H2V3zm0 3h6v1H2V6zm0 3h8v1H2V9zm8-7v8H1V2h9zm-1 1H2v6h7V3z',
+  component: 'M4 1L1 4l3 3 1-1-2-2 2-2-1-1zm4 0l-1 1 2 2-2 2 1 1 3-3-3-3zM4 7h4v1H4V7z',
 };
 
 function layoutGraph(rawNodes: any[], rawEdges: any[]) {
@@ -343,17 +347,17 @@ function TeamCard({ team, lob, projects, components, canCreate, onEdit, onDelete
       <div className="absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${color}60, transparent)` }} />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-12 rounded-full pointer-events-none" style={{ background: `radial-gradient(ellipse, ${color}12 0%, transparent 70%)` }} />
 
-      <div className="relative p-5">
+      <div className="relative p-4">
         {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: color + '18', border: `1px solid ${color}35` }}>
-              <Users className="w-5 h-5" style={{ color }} />
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: color + '15', border: `1px solid ${color}25` }}>
+              <Users className="w-4.5 h-4.5" style={{ color }} />
             </div>
             <div className="min-w-0">
-              <p className="text-[14px] font-bold text-[var(--text-primary)] leading-tight truncate max-w-[130px]">{team.name}</p>
-              <p className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-[13px] font-extrabold text-[var(--text-primary)] leading-tight truncate max-w-[130px]">{team.name}</p>
+              <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>
                 {lob?.name || 'Unknown LOB'}
               </p>
             </div>
@@ -408,7 +412,7 @@ function TeamCard({ team, lob, projects, components, canCreate, onEdit, onDelete
         </div>
 
         {/* Stats strip */}
-        <div className="flex items-stretch mb-3 py-1">
+        <div className="flex items-stretch mb-3 py-2 px-1 rounded-xl bg-black/[0.02]" style={{ border: '1px solid var(--app-border)' }}>
           {[
             { label: 'Projects', value: projectCount },
             { label: 'Components', value: componentCount },
@@ -418,33 +422,107 @@ function TeamCard({ team, lob, projects, components, canCreate, onEdit, onDelete
               style={{
                 borderRight: i < 2 ? '1px solid var(--app-border)' : 'none',
               }}>
-              <span className="text-xl font-bold text-[var(--text-primary)] leading-none">{value}</span>
-              <span className="text-[10px] font-semibold mt-1" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+              <span className="text-sm font-black text-[var(--text-primary)] leading-none">{value}</span>
+              <span className="text-[8.5px] font-bold uppercase mt-1 text-slate-400">{label}</span>
             </div>
           ))}
         </div>
 
         {/* Mini network graph */}
-        <div className="overflow-hidden -mt-2.5 mb-3 relative flex items-center justify-center"
+        <div className="overflow-hidden -mt-1.5 mb-2 relative flex items-center justify-center"
           style={{ height: 72 }}>
           <MiniNetGraph team={team} projects={projects} components={components} color={color} />
         </div>
 
         {/* Status & active */}
-        <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--app-border)' }}>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+        <div className="flex items-center justify-between pt-2.5" style={{ borderTop: '1px solid var(--app-border)' }}>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full"
             style={{
-              background: team.is_active ? 'rgba(48,209,88,0.12)' : 'var(--app-bg-muted)',
-              border: `1px solid ${team.is_active ? 'rgba(48,209,88,0.3)' : 'var(--app-border)'}`,
+              background: team.is_active ? 'rgba(48,209,88,0.1)' : 'var(--app-bg-muted)',
+              border: `1px solid ${team.is_active ? 'rgba(48,209,88,0.2)' : 'var(--app-border)'}`,
             }}>
-            <div className="w-1.5 h-1.5 rounded-full" style={{ background: team.is_active ? '#30D158' : 'var(--text-muted)' }} />
-            <span className="text-[10px] font-semibold" style={{ color: team.is_active ? '#30D158' : 'var(--text-muted)' }}>
+            <div className="w-1.2 h-1.2 rounded-full" style={{ background: team.is_active ? '#30D158' : 'var(--text-muted)' }} />
+            <span className="text-[9.5px] font-bold" style={{ color: team.is_active ? '#30D158' : 'var(--text-muted)' }}>
               {team.is_active ? 'Active' : 'Inactive'}
             </span>
           </div>
-          <ChevronRight className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
+          <ChevronRight className="w-3.5 h-3.5" style={{ color: 'var(--text-secondary)' }} />
         </div>
       </div>
+    </motion.div>
+  );
+}
+
+function TeamListRow({ team, lob, projects, components, canCreate, onEdit, onDelete, onView }: {
+  team: Team; lob: Lob | undefined; projects: Project[]; components: Component[]; canCreate: boolean;
+  onEdit: (t: Team) => void; onDelete: (t: Team) => void; onView: (t: Team) => void;
+}) {
+  const color = team.color || '#0A84FF';
+  const teamProjects = projects.filter(p => p.team_id === team.id);
+  const teamComponents = components.filter(c => c.team_id === team.id);
+  const totalConnectors = teamProjects.reduce((s, p) => s + p.connector_count, 0);
+  const totalHealthy = teamProjects.reduce((s, p) => s + p.healthy_count, 0);
+  const pct = totalConnectors > 0 ? Math.round((totalHealthy / totalConnectors) * 100) : 100;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+      className="flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all cursor-pointer group shadow-sm"
+      style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
+      onClick={() => onView(team)}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${color}35`; (e.currentTarget as HTMLElement).style.boxShadow = `0 0 20px ${color}12`; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--app-border)'; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}
+    >
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: color + '18', border: `1px solid ${color}30` }}>
+        <Users className="w-4 h-4" style={{ color }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{team.name}</p>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full capitalize flex-shrink-0"
+            style={{
+              background: team.is_active ? 'rgba(48,209,88,0.1)' : 'var(--app-bg-muted)',
+              color: team.is_active ? '#30D158' : 'var(--text-muted)',
+              border: `1px solid ${team.is_active ? 'rgba(48,209,88,0.2)' : 'var(--app-border)'}`,
+            }}>
+            {team.is_active ? 'Active' : 'Inactive'}
+          </span>
+        </div>
+        <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
+          {lob?.name || 'N/A'} · {team.slug}
+        </p>
+      </div>
+      
+      <div className="hidden md:flex items-center gap-2 w-32 flex-shrink-0">
+        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--app-bg-muted)' }}>
+          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 90 ? '#30D158' : pct >= 70 ? '#FF9F0A' : '#FF453A' }} />
+        </div>
+        <span className="text-[11px] w-8 text-right font-bold flex-shrink-0" style={{ color: pct >= 90 ? '#30D158' : pct >= 70 ? '#FF9F0A' : '#FF453A' }}>{pct}%</span>
+      </div>
+      
+      <div className="hidden md:flex items-center gap-3 text-[11px] flex-shrink-0" style={{ color: 'var(--text-secondary)' }}>
+        <span className="flex items-center gap-1 font-semibold"><FolderOpen className="w-3.5 h-3.5" />{teamProjects.length}</span>
+        <span className="flex items-center gap-1 font-semibold"><Layers className="w-3.5 h-3.5" />{teamComponents.length}</span>
+        <span className="flex items-center gap-1 font-semibold"><Users className="w-3.5 h-3.5" />{team.member_count}</span>
+      </div>
+      
+      {canCreate && (
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+          <button onClick={() => onEdit(team)}
+            className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#64D2FF'; e.currentTarget.style.background = 'rgba(100,210,255,0.1)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={() => onDelete(team)}
+            className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#FF453A'; e.currentTarget.style.background = 'rgba(255,69,58,0.1)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+      <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--text-secondary)' }} />
     </motion.div>
   );
 }
@@ -465,9 +543,13 @@ export function TeamsPage() {
   const [healthTrends, setHealthTrends] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [graphTeam, setGraphTeam] = useState<Team | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('card');
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const search = searchParams.get('search') || '';
   const lobFilter = searchParams.get('lob') || lobIdFilter || '';
+  const statusFilter = searchParams.get('status') || '';
 
   const setSearch = (value: string) => {
     setSearchParams(prev => {
@@ -481,6 +563,14 @@ export function TeamsPage() {
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
       if (value) next.set('lob', value); else next.delete('lob');
+      return next;
+    }, { replace: true });
+  };
+
+  const setStatusFilter = (value: string) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (value) next.set('status', value); else next.delete('status');
       return next;
     }, { replace: true });
   };
@@ -533,8 +623,25 @@ export function TeamsPage() {
       );
     }
     if (lobFilter) result = result.filter(t => t.lob_id === lobFilter);
+    if (statusFilter) {
+      const wantActive = statusFilter === 'active';
+      result = result.filter(t => t.is_active === wantActive);
+    }
+
+    result.sort((a, b) => {
+      let av: string | number = '', bv: string | number = '';
+      if (sortField === 'name') { av = a.name; bv = b.name; }
+      else if (sortField === 'status') { av = a.is_active ? 1 : 0; bv = b.is_active ? 1 : 0; }
+      else if (sortField === 'project_count') { av = a.project_count || 0; bv = b.project_count || 0; }
+      else if (sortField === 'member_count') { av = a.member_count || 0; bv = b.member_count || 0; }
+
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
     return result;
-  }, [teams, search, lobFilter]);
+  }, [teams, search, lobFilter, statusFilter, sortField, sortDir]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -578,6 +685,11 @@ export function TeamsPage() {
   const openEdit = (team: Team) => {
     setEditTarget(team);
     setEditForm({ name: team.name, description: team.description || '', color: team.color, is_active: team.is_active });
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
   };
 
   const getLobById = (id: string) => lobs.find(l => l.id === id);
@@ -655,22 +767,27 @@ export function TeamsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.07 }}
-            className="relative rounded-2xl p-4 overflow-hidden shadow-sm"
+            className="relative rounded-2xl p-3.5 overflow-hidden shadow-sm hover:scale-[1.02] transition-transform duration-200"
             style={{
               background: 'var(--app-surface)',
               border: '1px solid var(--app-border)',
               boxShadow: 'var(--shadow-sm)',
             }}
           >
-            <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none"
-              style={{ background: `radial-gradient(ellipse, ${color}12 0%, transparent 70%)`, transform: 'translate(20%, -20%)' }} />
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3"
-              style={{ background: color + '18', border: `1px solid ${color}30` }}>
-              <Icon className="w-4.5 h-4.5" style={{ color }} />
+            <div className="absolute top-0 right-0 w-20 h-20 rounded-full pointer-events-none"
+              style={{ background: `radial-gradient(ellipse, ${color}10 0%, transparent 70%)`, transform: 'translate(20%, -20%)' }} />
+            
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: color + '15', border: `1px solid ${color}25` }}>
+                <Icon className="w-4.5 h-4.5" style={{ color }} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xl font-black text-[var(--text-primary)] leading-none">{value}</p>
+                <p className="text-[10.5px] font-extrabold uppercase mt-1 tracking-wider leading-none" style={{ color }}>{label}</p>
+                <p className="text-[9.5px] mt-1 leading-none truncate" style={{ color: 'var(--text-muted)' }}>{sub}</p>
+              </div>
             </div>
-            <p className="text-2xl font-black text-[var(--text-primary)] leading-none">{value}</p>
-            <p className="text-[11px] font-semibold mt-1" style={{ color }}>{label}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{sub}</p>
           </motion.div>
         ))}
       </div>
@@ -706,9 +823,20 @@ export function TeamsPage() {
           {lobs.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
         </select>
 
-        {(search || lobFilter) && (
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          className="appearance-none pl-3 pr-7 py-2 text-[13px] rounded-xl outline-none cursor-pointer"
+          style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: statusFilter ? 'var(--text-primary)' : 'var(--text-muted)' }}
+        >
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+
+        {(search || lobFilter || statusFilter) && (
           <button
-            onClick={() => { setSearch(''); setLobFilter(''); }}
+            onClick={() => { setSearch(''); setLobFilter(''); setStatusFilter(''); }}
             className="text-[12px] flex items-center gap-1 px-2 py-1.5 rounded-lg transition-all"
             style={{ color: 'var(--text-muted)' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#FF453A'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,69,58,0.08)'; }}
@@ -718,26 +846,45 @@ export function TeamsPage() {
           </button>
         )}
 
-        <span className="ml-auto text-[12px]" style={{ color: 'var(--text-muted)' }}>
-          {filtered.length} of {teams.length} teams
-        </span>
+        {/* View toggle */}
+        <div className="ml-auto flex items-center gap-1 rounded-xl p-1"
+          style={{ border: '1px solid var(--app-border)', background: 'var(--app-bg-muted)' }}>
+          {(['card', 'list', 'table'] as ViewMode[]).map((m) => {
+            const Icon = m === 'card' ? LayoutGrid : m === 'list' ? List : TableIcon;
+            return (
+              <button key={m} onClick={() => setViewMode(m)}
+                className="p-1.5 rounded-lg transition-all"
+                style={viewMode === m ? { background: '#0A84FF', color: '#fff' } : { color: 'var(--text-secondary)' }}>
+                <Icon className="w-3.5 h-3.5" />
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Grid */}
+      {/* Grid / List / Table views */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="rounded-2xl h-72 shimmer-bg" />
-          ))}
-        </div>
+        viewMode === 'card' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="rounded-2xl h-72 shimmer-bg" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-14 rounded-xl shimmer-bg" />
+            ))}
+          </div>
+        )
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl p-12 text-center"
           style={{ background: 'var(--app-bg-subtle)', border: '1px solid var(--app-border)' }}>
           <EmptyState
             icon={Users}
-            title={search || lobFilter ? 'No teams match your filters' : 'No teams yet'}
-            description={search || lobFilter ? 'Try adjusting your search or filters.' : 'Create your first team to organize projects.'}
-            action={canCreate && !search && !lobFilter ? (
+            title={search || lobFilter || statusFilter ? 'No teams match your filters' : 'No teams yet'}
+            description={search || lobFilter || statusFilter ? 'Try adjusting your search or filters.' : 'Create your first team to organize projects.'}
+            action={canCreate && !search && !lobFilter && !statusFilter ? (
               <button
                 onClick={() => setCreateOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white"
@@ -748,7 +895,7 @@ export function TeamsPage() {
             ) : undefined}
           />
         </div>
-      ) : (
+      ) : viewMode === 'card' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           <AnimatePresence>
             {filtered.map(team => (
@@ -765,6 +912,121 @@ export function TeamsPage() {
               />
             ))}
           </AnimatePresence>
+        </div>
+      ) : viewMode === 'list' ? (
+        <div className="space-y-2">
+          {filtered.map(team => (
+            <TeamListRow
+              key={team.id}
+              team={team}
+              lob={getLobById(team.lob_id)}
+              projects={projects}
+              components={components}
+              canCreate={canCreate}
+              onEdit={openEdit}
+              onDelete={t => setDeleteTarget(t)}
+              onView={t => setGraphTeam(t)}
+            />
+          ))}
+        </div>
+      ) : (
+        /* Table view */
+        <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--app-border)', background: 'var(--app-bg-muted)' }}>
+                  {(['name', 'LOB', 'status', 'projects', 'components', 'health', 'members'] as any[]).map((col, i) => (
+                    <th key={i} className="text-left px-4 py-3">
+                      {['name', 'status', 'projects', 'members'].includes(col) ? (
+                        <button onClick={() => handleSort(col === 'status' ? 'status' : col === 'projects' ? 'project_count' : col === 'members' ? 'member_count' : 'name')}
+                          className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider transition-colors select-none"
+                          style={{ color: (sortField === 'name' && col === 'name') || (sortField === 'status' && col === 'status') || (sortField === 'project_count' && col === 'projects') || (sortField === 'member_count' && col === 'members') ? '#0A84FF' : 'var(--text-secondary)' }}>
+                          {col === 'projects' ? 'Projects' : col === 'members' ? 'Members' : col.charAt(0).toUpperCase() + col.slice(1)}
+                          <ArrowUpDown className="w-3 h-3" />
+                        </button>
+                      ) : (
+                        <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{col}</span>
+                      )}
+                    </th>
+                  ))}
+                  <th className="text-right px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((team, idx) => {
+                  const teamProjects = projects.filter(p => p.team_id === team.id);
+                  const teamComponents = components.filter(c => c.team_id === team.id);
+                  const totalConnectors = teamProjects.reduce((s, p) => s + p.connector_count, 0);
+                  const totalHealthy = teamProjects.reduce((s, p) => s + p.healthy_count, 0);
+                  const pct = totalConnectors > 0 ? Math.round((totalHealthy / totalConnectors) * 100) : 100;
+                  const color = team.color || '#0A84FF';
+                  return (
+                    <tr key={team.id}
+                      className={cn('cursor-pointer transition-all group', idx !== filtered.length - 1 && 'border-b')}
+                      style={{ borderColor: 'var(--app-border)' }}
+                      onClick={() => setGraphTeam(team)}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--app-surface-hover)'}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: color + '18' }}>
+                            <Users className="w-3.5 h-3.5" style={{ color }} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">{team.name}</p>
+                            <p className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{team.slug}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-[var(--text-primary)]">{getLobById(team.lob_id)?.name || 'N/A'}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full capitalize"
+                          style={{
+                            background: team.is_active ? 'rgba(48,209,88,0.1)' : 'var(--app-bg-muted)',
+                            color: team.is_active ? '#30D158' : 'var(--text-muted)',
+                            border: `1px solid ${team.is_active ? 'rgba(48,209,88,0.2)' : 'var(--app-border)'}`,
+                          }}>
+                          {team.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3"><span className="text-sm text-[var(--text-primary)]">{teamProjects.length}</span></td>
+                      <td className="px-4 py-3"><span className="text-sm text-[var(--text-primary)]">{teamComponents.length}</span></td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 w-24">
+                          <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--app-bg-muted)' }}>
+                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 90 ? '#30D158' : pct >= 70 ? '#FF9F0A' : '#FF453A' }} />
+                          </div>
+                          <span className="text-[11px] w-8 text-right font-bold" style={{ color: pct >= 90 ? '#30D158' : pct >= 70 ? '#FF9F0A' : '#FF453A' }}>{pct}%</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3"><span className="text-sm text-[var(--text-primary)]">{team.member_count}</span></td>
+                      <td className="px-4 py-3 text-right">
+                        {canCreate && (
+                          <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                            <button onClick={() => openEdit(team)}
+                              className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+                              onMouseEnter={e => { e.currentTarget.style.color = '#64D2FF'; e.currentTarget.style.background = 'rgba(100,210,255,0.1)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => setDeleteTarget(team)}
+                              className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+                              onMouseEnter={e => { e.currentTarget.style.color = '#FF453A'; e.currentTarget.style.background = 'rgba(255,69,58,0.1)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

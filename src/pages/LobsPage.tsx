@@ -1,7 +1,7 @@
 import React, {
   useEffect, useState, useMemo, useRef, useCallback,
 } from 'react';
-import { Plus, Building2, Users, Trash2, Pencil, Search, LayoutGrid, List, ShieldCheck, UserPlus, UserMinus, ArrowUpDown, X, Check, Eye, Activity, ChevronRight, MoveVertical as MoreVertical, Cpu, Server, Layers, FolderOpen, Network, TriangleAlert as AlertTriangle, Zap } from 'lucide-react';
+import { Plus, Building2, Users, Trash2, Pencil, Search, LayoutGrid, List, Table as TableIcon, ShieldCheck, UserPlus, UserMinus, ArrowUpDown, X, Check, Eye, Activity, ChevronRight, MoveVertical as MoreVertical, Cpu, Server, Layers, FolderOpen, Network, TriangleAlert as AlertTriangle, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AreaChart, Area, ResponsiveContainer, Tooltip as RechartTooltip,
@@ -26,12 +26,12 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { notify } from '@/store/notificationStore';
 import { slugify, cn } from '@/lib/utils';
 import { CardSkeleton } from '@/components/ui/Skeleton';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { isSuperAdmin } from '@/lib/permissions';
 
 type SortKey = 'name' | 'project_count' | 'member_count' | 'created_at';
-type ViewMode = 'grid' | 'table';
+type ViewMode = 'card' | 'list' | 'table';
 type LobFull = Lob & Record<string, unknown>;
 
 const PRESET_COLORS = [
@@ -660,6 +660,113 @@ function LobCard({ lob, index, superAdmin, teams, projects, components, onNaviga
 }
 
 // ─────────────────────────────────────────────────────────
+// LobListRow
+// ─────────────────────────────────────────────────────────
+function LobListRow({
+  lob, index, superAdmin, teams, projects, components, onNavigate, onEdit, onDelete, onManageAdmins
+}: {
+  lob: LobFull; index: number; superAdmin: boolean;
+  teams: any[]; projects: any[]; components: any[];
+  onNavigate: () => void; onEdit: (e: React.MouseEvent) => void;
+  onDelete: (e: React.MouseEvent) => void; onManageAdmins: (e: React.MouseEvent) => void;
+}) {
+  const [showGraph, setShowGraph] = useState(false);
+  const color = (lob.color as string) || '#0A84FF';
+  const teamCount = (lob.team_count as number) ?? teams.filter(t => t.lob_id === lob.id).length;
+  const projectCount = (lob.project_count as number) ?? projects.filter(p => p.lob_id === lob.id).length;
+  const componentCount = (lob.component_count as number) ?? components.filter(c => c.lob_id === lob.id).length;
+  const totalConnectors = (lob.total_connectors as number) ?? 0;
+  const healthyConnectors = (lob.healthy_connectors as number) ?? 0;
+  const healthPct = totalConnectors > 0 ? (healthyConnectors / totalConnectors) * 100 : 85 + (index * 7) % 15;
+  const healthColor = healthPct >= 95 ? '#30D158' : healthPct >= 80 ? '#0A84FF' : healthPct >= 60 ? '#FF9F0A' : '#FF453A';
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+        className="flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all cursor-pointer group shadow-sm"
+        style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
+        onClick={onNavigate}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${color}35`; (e.currentTarget as HTMLElement).style.boxShadow = `0 0 20px ${color}12`; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--app-border)'; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}
+      >
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: color + '18', border: `1px solid ${color}30` }}>
+          <Building2 className="w-4.5 h-4.5" style={{ color }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{lob.name}</p>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full capitalize flex-shrink-0"
+              style={{
+                background: lob.is_active ? 'rgba(48,209,88,0.1)' : 'var(--app-bg-muted)',
+                color: lob.is_active ? '#30D158' : 'var(--text-muted)',
+                border: `1px solid ${lob.is_active ? 'rgba(48,209,88,0.2)' : 'var(--app-border)'}`,
+              }}>
+              {lob.is_active ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+          <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
+            {lob.slug} {lob.description ? `· ${lob.description}` : ''}
+          </p>
+        </div>
+
+        {/* Health */}
+        <div className="hidden md:flex items-center gap-2 w-32 flex-shrink-0">
+          <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--app-bg-muted)' }}>
+            <div className="h-full rounded-full" style={{ width: `${healthPct}%`, background: healthColor }} />
+          </div>
+          <span className="text-[11px] w-8 text-right font-bold flex-shrink-0" style={{ color: healthColor }}>{Math.round(healthPct)}%</span>
+        </div>
+
+        <div className="hidden md:flex items-center gap-4 text-[11px] flex-shrink-0" style={{ color: 'var(--text-secondary)' }}>
+          <span className="flex items-center gap-1 font-semibold" title="Teams"><Users className="w-3.5 h-3.5" />{teamCount}</span>
+          <span className="flex items-center gap-1 font-semibold" title="Projects"><Server className="w-3.5 h-3.5" />{projectCount}</span>
+          <span className="flex items-center gap-1 font-semibold" title="Components"><Cpu className="w-3.5 h-3.5" />{componentCount}</span>
+        </div>
+
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+          <button onClick={() => setShowGraph(true)}
+            className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = color; e.currentTarget.style.background = color + '15'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
+            <Eye className="w-3.5 h-3.5" />
+          </button>
+          {superAdmin && (
+            <>
+              <button onClick={onEdit}
+                className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#64D2FF'; e.currentTarget.style.background = 'rgba(100,210,255,0.1)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={onManageAdmins}
+                className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#FF9F0A'; e.currentTarget.style.background = 'rgba(255,159,10,0.1)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
+                <ShieldCheck className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={onDelete}
+                className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#FF453A'; e.currentTarget.style.background = 'rgba(255,69,58,0.1)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
+        </div>
+        <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--text-secondary)' }} />
+      </motion.div>
+
+      <AnimatePresence>
+        {showGraph && (
+          <GraphPopup lob={lob} teams={teams} projects={projects} components={components} onClose={() => setShowGraph(false)} />
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
 // Color picker
 // ─────────────────────────────────────────────────────────
 function ColorPicker({ color, onChange }: { color: string; onChange: (c: string) => void }) {
@@ -698,11 +805,45 @@ export function LobsPage() {
   const [healthStats, setHealthStats] = useState<any>(null);
   const [healthTrends, setHealthTrends] = useState<any[]>([]);
 
-  const [search, setSearch] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const viewMode = (searchParams.get('view') as ViewMode) || 'card';
+  const setViewMode = (val: ViewMode) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('view', val);
+      return next;
+    }, { replace: true });
+  };
+
+  const search = searchParams.get('search') || '';
+  const setSearch = (val: string) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (val) next.set('search', val); else next.delete('search');
+      return next;
+    }, { replace: true });
+  };
+
+  const statusFilter = (searchParams.get('status') as 'All Status' | 'Active' | 'Inactive') || 'All Status';
+  const setStatusFilter = (val: 'All Status' | 'Active' | 'Inactive') => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (val !== 'All Status') next.set('status', val); else next.delete('status');
+      return next;
+    }, { replace: true });
+  };
+
+  const sortKey = (searchParams.get('sort') as SortKey) || 'name';
+  const setSortKey = (val: SortKey) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('sort', val);
+      return next;
+    }, { replace: true });
+  };
+
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [statusFilter, setStatusFilter] = useState<'All Status' | 'Active' | 'Inactive'>('All Status');
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Lob | null>(null);
@@ -953,14 +1094,21 @@ export function LobsPage() {
           </select>
         </div>
 
-        <div className="flex rounded-xl overflow-hidden" style={{ border: '1px solid var(--app-border)', background: 'var(--app-bg-muted)' }}>
-          <button onClick={() => setViewMode('grid')} className="p-2 transition-all"
-            style={viewMode === 'grid' ? { background: '#0A84FF', color: '#fff' } : { color: 'var(--text-muted)' }}>
+        <div className="sm:ml-auto flex rounded-xl overflow-hidden" style={{ border: '1px solid var(--app-border)', background: 'var(--app-bg-muted)' }}>
+          <button onClick={() => setViewMode('card')} className="p-2 transition-all"
+            style={viewMode === 'card' ? { background: '#0A84FF', color: '#fff' } : { color: 'var(--text-muted)' }}
+            title="Card View">
             <LayoutGrid className="w-4 h-4" />
           </button>
-          <button onClick={() => setViewMode('table')} className="p-2 transition-all"
-            style={viewMode === 'table' ? { background: '#0A84FF', color: '#fff' } : { color: 'var(--text-muted)' }}>
+          <button onClick={() => setViewMode('list')} className="p-2 transition-all"
+            style={viewMode === 'list' ? { background: '#0A84FF', color: '#fff' } : { color: 'var(--text-muted)' }}
+            title="List View">
             <List className="w-4 h-4" />
+          </button>
+          <button onClick={() => setViewMode('table')} className="p-2 transition-all"
+            style={viewMode === 'table' ? { background: '#0A84FF', color: '#fff' } : { color: 'var(--text-muted)' }}
+            title="Table View">
+            <TableIcon className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -976,10 +1124,21 @@ export function LobsPage() {
             description={search ? `No LOBs found matching "${search}".` : 'Create your first LOB to start organizing projects.'}
             action={!search && superAdmin ? <Button icon={<Plus className="w-4 h-4" />} onClick={() => setCreateOpen(true)}>Create LOB</Button> : undefined} />
         </div>
-      ) : viewMode === 'grid' ? (
+      ) : viewMode === 'card' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredSorted.map((lob, i) => (
             <LobCard key={lob.id} lob={lob} index={i} superAdmin={superAdmin}
+              teams={allTeams} projects={allProjects} components={allComponents}
+              onNavigate={() => navigate(`/lobs/${lob.id}`)}
+              onEdit={(e) => openEdit(lob, e)}
+              onDelete={(e) => { e.stopPropagation(); setDeleteTarget(lob); }}
+              onManageAdmins={(e) => openAdminModal(lob, e)} />
+          ))}
+        </div>
+      ) : viewMode === 'list' ? (
+        <div className="flex flex-col gap-3">
+          {filteredSorted.map((lob, i) => (
+            <LobListRow key={lob.id} lob={lob} index={i} superAdmin={superAdmin}
               teams={allTeams} projects={allProjects} components={allComponents}
               onNavigate={() => navigate(`/lobs/${lob.id}`)}
               onEdit={(e) => openEdit(lob, e)}
@@ -1231,9 +1390,8 @@ function LobTable({ lobs, superAdmin, sortKey, sortDir, allTeams, allProjects, a
               <th className="px-5 py-3 text-center"><SortH label="Projects" k="project_count" /></th>
               <th className="px-5 py-3 text-center"><SortH label="Members" k="member_count" /></th>
               <th className="px-5 py-3 text-center"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Health</span></th>
-              <th className="px-5 py-3 text-center"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Graph</span></th>
               <th className="px-5 py-3 text-center"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Status</span></th>
-              {superAdmin && <th className="px-5 py-3 text-right"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Actions</span></th>}
+              <th className="px-5 py-3 text-right"><span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -1263,41 +1421,42 @@ function LobTable({ lobs, superAdmin, sortKey, sortDir, allTeams, allProjects, a
                   <td className="px-5 py-3.5 text-center"><span className="text-sm font-medium text-[var(--text-primary)]">{lob.member_count as number}</span></td>
                   <td className="px-5 py-3.5 text-center"><span className="text-sm font-bold" style={{ color: hc }}>{hp}%</span></td>
                   <td className="px-5 py-3.5 text-center">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setGraphLob(lob); }}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center mx-auto transition-all"
-                      style={{ background: `${lob.color}18`, color: lob.color as string }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = `${lob.color}30`; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = `${lob.color}18`; }}>
-                      <Eye className="w-3.5 h-3.5" />
-                    </button>
-                  </td>
-                  <td className="px-5 py-3.5 text-center">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                      style={lob.is_active
+                       style={lob.is_active
                         ? { background: 'rgba(48,209,88,0.14)', color: '#30D158', border: '1px solid rgba(48,209,88,0.25)' }
                         : { background: 'rgba(99,99,102,0.14)', color: '#636366', border: '1px solid rgba(99,99,102,0.25)' }}>
                       <span className="w-1.5 h-1.5 rounded-full" style={{ background: lob.is_active ? '#30D158' : '#636366' }} />
                       {lob.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  {superAdmin && (
-                    <td className="px-5 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {[
-                          { icon: Pencil, action: (e: React.MouseEvent) => { e.stopPropagation(); onEdit(lob, e); }, c: '#0A84FF', bg: 'rgba(10,132,255,0.12)' },
-                          { icon: ShieldCheck, action: (e: React.MouseEvent) => { e.stopPropagation(); onManageAdmins(lob, e); }, c: '#FF9F0A', bg: 'rgba(255,159,10,0.12)' },
-                          { icon: Trash2, action: (e: React.MouseEvent) => { e.stopPropagation(); onDelete(lob, e); }, c: '#FF453A', bg: 'rgba(255,69,58,0.12)' },
-                        ].map(({ icon: Icon, action, c, bg }) => (
-                          <button key={c} onClick={action} className="p-1.5 rounded-lg transition-all" style={{ color: c }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = bg; }}
+                  <td className="px-5 py-3.5 text-right">
+                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                      <button onClick={() => setGraphLob(lob)} className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = `${lob.color}18`; e.currentTarget.style.color = lob.color as string; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      {superAdmin && (
+                        <>
+                          <button onClick={(e) => onEdit(lob, e)} className="p-1.5 rounded-lg transition-all" style={{ color: '#0A84FF' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(10,132,255,0.12)'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}>
-                            <Icon className="w-3.5 h-3.5" />
+                            <Pencil className="w-3.5 h-3.5" />
                           </button>
-                        ))}
-                      </div>
-                    </td>
-                  )}
+                          <button onClick={(e) => onManageAdmins(lob, e)} className="p-1.5 rounded-lg transition-all" style={{ color: '#FF9F0A' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,159,10,0.12)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}>
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={(e) => onDelete(lob, e)} className="p-1.5 rounded-lg transition-all" style={{ color: '#FF453A' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,69,58,0.12)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               );
             })}

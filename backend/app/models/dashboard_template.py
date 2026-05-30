@@ -10,6 +10,7 @@ class DashboardScope(str, enum.Enum):
     PROJECT = "project"
     TEAM = "team"
     LOB = "lob"
+    COMPONENT = "component"
     GLOBAL = "global"
 
 
@@ -43,6 +44,7 @@ class MetricSourceScope(str, enum.Enum):
     TEAM_AGGREGATE = "team_aggregate"
     LOB_AGGREGATE = "lob_aggregate"
     PROJECT_AGGREGATE = "project_aggregate"
+    COMPONENT_AGGREGATE = "component_aggregate"
 
 
 class AggregationMode(str, enum.Enum):

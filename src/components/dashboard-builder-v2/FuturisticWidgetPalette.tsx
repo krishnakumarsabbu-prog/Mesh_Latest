@@ -34,12 +34,27 @@ const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ReactNode; co
   observability: { label: 'Observability', icon: <Eye className="w-3.5 h-3.5" />, color: '#06b6d4' },
 };
 
+interface ConnectorWidgetDef {
+  label: string;
+  description: string;
+  widget_type: string;
+  width: number;
+  height: number;
+  metric_bindings: Array<{
+    metric_source_scope: string;
+    metric_key: string;
+    connector_type: string;
+    aggregation_mode: string;
+    display_label: string;
+  }>;
+}
+
 const CONNECTOR_PACKS: Array<{
   id: string;
   name: string;
   icon: string;
   color: string;
-  widgets: Array<{ label: string; description: string }>;
+  widgets: ConnectorWidgetDef[];
 }> = [
   {
     id: 'splunk',
@@ -47,11 +62,76 @@ const CONNECTOR_PACKS: Array<{
     icon: '🔍',
     color: '#f97316',
     widgets: [
-      { label: 'Splunk Ingestion', description: 'Data ingestion volume' },
-      { label: 'Splunk Alerts', description: 'Active alert count' },
-      { label: 'Indexer Health', description: 'Indexer status' },
-      { label: 'Search Latency', description: 'Query response time' },
-      { label: 'Storage Metrics', description: 'Storage utilization' },
+      {
+        label: 'Splunk Indexes Total',
+        description: 'Total index count managed by Splunk',
+        widget_type: 'kpi_card',
+        width: 2,
+        height: 1,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'splunk.indexes.total',
+          connector_type: 'splunk',
+          aggregation_mode: 'latest',
+          display_label: 'Total Indexes',
+        }],
+      },
+      {
+        label: 'Splunk Indexes Healthy',
+        description: 'Status of healthy indexes',
+        widget_type: 'progress_ring',
+        width: 2,
+        height: 2,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'splunk.indexes.healthy',
+          connector_type: 'splunk',
+          aggregation_mode: 'latest',
+          display_label: 'Healthy Indexes',
+        }],
+      },
+      {
+        label: 'Active Search Jobs',
+        description: 'Current active concurrent search jobs',
+        widget_type: 'kpi_card',
+        width: 2,
+        height: 1,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'splunk.search_jobs.total',
+          connector_type: 'splunk',
+          aggregation_mode: 'latest',
+          display_label: 'Active Jobs',
+        }],
+      },
+      {
+        label: 'Splunk Ingestion Volume',
+        description: 'Daily ingested volume in megabytes',
+        widget_type: 'sparkline',
+        width: 2,
+        height: 1,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'splunk.volume.ingested_bytes',
+          connector_type: 'splunk',
+          aggregation_mode: 'latest',
+          display_label: 'Ingested Bytes',
+        }],
+      },
+      {
+        label: 'Splunk Alerts Active',
+        description: 'Total active Splunk alert triggers',
+        widget_type: 'kpi_card',
+        width: 2,
+        height: 1,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'splunk.alerts.active',
+          connector_type: 'splunk',
+          aggregation_mode: 'latest',
+          display_label: 'Active Alerts',
+        }],
+      },
     ],
   },
   {
@@ -60,35 +140,76 @@ const CONNECTOR_PACKS: Array<{
     icon: '⚡',
     color: '#0ea5e9',
     widgets: [
-      { label: 'JVM Metrics', description: 'Heap & GC stats' },
-      { label: 'Transactions', description: 'Business transaction health' },
-      { label: 'Response Time', description: 'Avg response time' },
-      { label: 'Error Rate', description: 'Application error rate' },
-      { label: 'App Health', description: 'Overall health score' },
-    ],
-  },
-  {
-    id: 'datadog',
-    name: 'Datadog',
-    icon: '🐕',
-    color: '#7c3aed',
-    widgets: [
-      { label: 'Host Health', description: 'Host availability' },
-      { label: 'Infra Monitoring', description: 'Infrastructure status' },
-      { label: 'CPU Metrics', description: 'CPU utilization' },
-      { label: 'Memory Metrics', description: 'Memory usage' },
-      { label: 'Incident Tracking', description: 'Active incidents' },
-    ],
-  },
-  {
-    id: 'ibmmq',
-    name: 'IBM MQ',
-    icon: '📨',
-    color: '#06b6d4',
-    widgets: [
-      { label: 'Queue Depth', description: 'Message queue depth' },
-      { label: 'MQ Manager', description: 'Queue manager status' },
-      { label: 'Channel Status', description: 'Channel health' },
+      {
+        label: 'AppDynamics Performance Health',
+        description: 'Overall application health status score',
+        widget_type: 'gauge',
+        width: 2,
+        height: 2,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'appdynamics.health.overall_score',
+          connector_type: 'appdynamics',
+          aggregation_mode: 'latest',
+          display_label: 'Overall App Score',
+        }],
+      },
+      {
+        label: 'JVM Heap Usage',
+        description: 'Heap memory usage in percentage',
+        widget_type: 'progress_ring',
+        width: 2,
+        height: 2,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'appdynamics.jvm.heap_used',
+          connector_type: 'appdynamics',
+          aggregation_mode: 'latest',
+          display_label: 'JVM Heap Usage',
+        }],
+      },
+      {
+        label: 'JVM GC CPU Overhead',
+        description: 'Total garbage collection overhead time',
+        widget_type: 'kpi_card',
+        width: 2,
+        height: 1,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'appdynamics.jvm.gc_time',
+          connector_type: 'appdynamics',
+          aggregation_mode: 'latest',
+          display_label: 'JVM GC Overhead',
+        }],
+      },
+      {
+        label: 'Average Response Time',
+        description: 'Latency overview in milliseconds',
+        widget_type: 'sparkline',
+        width: 2,
+        height: 1,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'appdynamics.performance.average_response_time',
+          connector_type: 'appdynamics',
+          aggregation_mode: 'latest',
+          display_label: 'Response Time',
+        }],
+      },
+      {
+        label: 'Transaction Errors',
+        description: 'Transaction error rate percentage',
+        widget_type: 'kpi_card',
+        width: 2,
+        height: 1,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'appdynamics.performance.error_rate',
+          connector_type: 'appdynamics',
+          aggregation_mode: 'latest',
+          display_label: 'Error Rate',
+        }],
+      },
     ],
   },
   {
@@ -97,9 +218,98 @@ const CONNECTOR_PACKS: Array<{
     icon: '🍃',
     color: '#10b981',
     widgets: [
-      { label: 'Replica Status', description: 'Replica set health' },
-      { label: 'Connection Pool', description: 'Active connections' },
-      { label: 'Op Metrics', description: 'Operations per second' },
+      {
+        label: 'MongoDB Replica Health',
+        description: 'Replica set primary/secondary health score',
+        widget_type: 'gauge',
+        width: 2,
+        height: 2,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'mongodb.replica_set.status',
+          connector_type: 'mongodb',
+          aggregation_mode: 'latest',
+          display_label: 'Replica Health',
+        }],
+      },
+      {
+        label: 'MongoDB Connection Pool',
+        description: 'Active client connections',
+        widget_type: 'kpi_card',
+        width: 2,
+        height: 1,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'mongodb.connections.active',
+          connector_type: 'mongodb',
+          aggregation_mode: 'latest',
+          display_label: 'Connections',
+        }],
+      },
+      {
+        label: 'Operations Rate',
+        description: 'Database operations executed per second',
+        widget_type: 'sparkline',
+        width: 2,
+        height: 1,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'mongodb.operations.rate',
+          connector_type: 'mongodb',
+          aggregation_mode: 'latest',
+          display_label: 'Op Rate',
+        }],
+      },
+    ],
+  },
+  {
+    id: 'ibmmq',
+    name: 'IBM MQ',
+    icon: '📨',
+    color: '#06b6d4',
+    widgets: [
+      {
+        label: 'MQ Manager Status',
+        description: 'Queue manager runtime state',
+        widget_type: 'kpi_card',
+        width: 2,
+        height: 1,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'ibmmq.qmgr.status',
+          connector_type: 'ibmmq',
+          aggregation_mode: 'latest',
+          display_label: 'Qmgr Health',
+        }],
+      },
+      {
+        label: 'MQ Queue Depth',
+        description: 'Total messages waiting on queues',
+        widget_type: 'progress_ring',
+        width: 2,
+        height: 2,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'ibmmq.queue.depth',
+          connector_type: 'ibmmq',
+          aggregation_mode: 'latest',
+          display_label: 'Queue Depth',
+        }],
+      },
+      {
+        label: 'MQ Channel Status',
+        description: 'Aggregate state of transmission channels',
+        widget_type: 'gauge',
+        width: 2,
+        height: 2,
+        metric_bindings: [{
+          metric_source_scope: 'connector_metric',
+          metric_key: 'ibmmq.channel.status',
+          connector_type: 'ibmmq',
+          aggregation_mode: 'latest',
+          display_label: 'Channel Status',
+        }],
+      },
     ],
   },
 ];
@@ -115,10 +325,11 @@ const EXTRA_CATEGORIES = [
 interface Props {
   widgetTypes: WidgetTypeMeta[];
   onAdd: (type: WidgetTypeMeta) => void;
+  onBulkAdd?: (widgets: any[]) => void;
   onClose: () => void;
 }
 
-export function FuturisticWidgetPalette({ widgetTypes, onAdd, onClose }: Props) {
+export function FuturisticWidgetPalette({ widgetTypes, onAdd, onBulkAdd, onClose }: Props) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [expandedConnector, setExpandedConnector] = useState<string | null>(null);
@@ -269,36 +480,86 @@ export function FuturisticWidgetPalette({ widgetTypes, onAdd, onClose }: Props) 
         {activeTab === 'connectors' && (
           <div className="space-y-1.5 pt-1">
             {CONNECTOR_PACKS.map(pack => (
-              <div key={pack.id}>
-                <button
-                  onClick={() => setExpandedConnector(expandedConnector === pack.id ? null : pack.id)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
-                  style={{
-                    background: expandedConnector === pack.id ? `${pack.color}12` : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${expandedConnector === pack.id ? pack.color + '30' : 'rgba(255,255,255,0.06)'}`,
-                  }}
-                >
-                  <span className="text-base">{pack.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold" style={{ color: '#f1f5f9' }}>{pack.name}</p>
-                    <p className="text-[10px]" style={{ color: 'rgba(148,163,184,0.5)' }}>{pack.widgets.length} widgets</p>
-                  </div>
-                  <div
-                    className="transition-transform duration-200"
-                    style={{ transform: expandedConnector === pack.id ? 'rotate(90deg)' : 'rotate(0deg)', color: pack.color }}
+              <div key={pack.id} className="relative group/pack">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setExpandedConnector(expandedConnector === pack.id ? null : pack.id)}
+                    className="flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
+                    style={{
+                      background: expandedConnector === pack.id ? `${pack.color}12` : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${expandedConnector === pack.id ? pack.color + '30' : 'rgba(255,255,255,0.06)'}`,
+                    }}
                   >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </div>
-                </button>
+                    <span className="text-base">{pack.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold" style={{ color: '#f1f5f9' }}>{pack.name}</p>
+                      <p className="text-[10px]" style={{ color: 'rgba(148,163,184,0.5)' }}>{pack.widgets.length} widgets</p>
+                    </div>
+                    <div
+                      className="transition-transform duration-200"
+                      style={{ transform: expandedConnector === pack.id ? 'rotate(90deg)' : 'rotate(0deg)', color: pack.color }}
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onBulkAdd) {
+                        onBulkAdd(pack.widgets);
+                      } else {
+                        pack.widgets.forEach(w => {
+                          const matchingType = widgetTypes.find(t => t.value === w.widget_type) || widgetTypes[0];
+                          onAdd({
+                            ...matchingType,
+                            label: w.label,
+                            description: w.description,
+                          });
+                        });
+                      }
+                    }}
+                    className="px-2.5 py-2.5 rounded-xl text-[10px] font-bold transition-all flex items-center gap-1.5 border"
+                    style={{
+                      background: `rgba(255, 255, 255, 0.03)`,
+                      borderColor: 'rgba(255, 255, 255, 0.06)',
+                      color: pack.color,
+                    }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLButtonElement).style.background = `${pack.color}18`;
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = `${pack.color}40`;
+                      (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 0 10px ${pack.color}25`;
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.03)';
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                      (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
+                    }}
+                    title={`Add all ${pack.name} widgets at once`}
+                  >
+                    <Zap className="w-3 h-3 animate-pulse" />
+                    Add All
+                  </button>
+                </div>
 
                 {expandedConnector === pack.id && (
                   <div className="ml-3 mt-1 space-y-1 pl-2" style={{ borderLeft: `1px solid ${pack.color}20` }}>
                     {pack.widgets.map((w, i) => {
-                      const firstType = widgetTypes[0];
+                      const matchingType = widgetTypes.find(t => t.value === w.widget_type) || widgetTypes[0];
                       return (
                         <button
                           key={i}
-                          onClick={() => firstType && onAdd({ ...firstType, label: w.label, description: w.description })}
+                          onClick={() => {
+                            if (onBulkAdd) {
+                              onBulkAdd([w]);
+                            } else {
+                              onAdd({
+                                ...matchingType,
+                                label: w.label,
+                                description: w.description,
+                              });
+                            }
+                          }}
                           className="w-full flex items-start gap-2 px-2.5 py-2 rounded-lg text-left transition-all"
                           style={{ background: 'transparent', border: '1px solid transparent' }}
                           onMouseEnter={e => {

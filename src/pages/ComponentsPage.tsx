@@ -4,6 +4,7 @@ import {
   Plus, Layers, Trash2, Pencil, Search, X, ChevronRight,
   RefreshCw, Eye, Users, FolderOpen, Building2, Activity,
   Network, Zap, MoveVertical as MoreVertical, Box,
+  LayoutGrid, List, Table as TableIcon, ArrowUpDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -36,9 +37,9 @@ const PRESET_COLORS = [
 ];
 
 const NODE_ICONS: Record<string, string> = {
-  component:'M4 1L1 4l3 3 1-1-2-2 2-2-1-1zm4 0l-1 1 2 2-2 2 1 1 3-3-3-3zM4 7h4v1H4V7z',
-  project:  'M2 3h8v1H2V3zm0 3h6v1H2V6zm0 3h8v1H2V9zm8-7v8H1V2h9zm-1 1H2v6h7V3z',
-  team:     'M5 2a2 2 0 110 4 2 2 0 010-4zM2 8c0-1 1.1-2 3-2s3 1 3 2v.5H2V8zm6-6a2 2 0 110 4 2 2 0 010-4zm1 6c.7.3 1 .8 1 1.5v.5H7.2V9c0-.7.3-1.2.8-1.5z',
+  component: 'M4 1L1 4l3 3 1-1-2-2 2-2-1-1zm4 0l-1 1 2 2-2 2 1 1 3-3-3-3zM4 7h4v1H4V7z',
+  project: 'M2 3h8v1H2V3zm0 3h6v1H2V6zm0 3h8v1H2V9zm8-7v8H1V2h9zm-1 1H2v6h7V3z',
+  team: 'M5 2a2 2 0 110 4 2 2 0 010-4zM2 8c0-1 1.1-2 3-2s3 1 3 2v.5H2V8zm6-6a2 2 0 110 4 2 2 0 010-4zm1 6c.7.3 1 .8 1 1.5v.5H7.2V9c0-.7.3-1.2.8-1.5z',
 };
 
 function layoutGraph(rawNodes: any[], rawEdges: any[]) {
@@ -309,17 +310,17 @@ function ComponentCard({ component, team, lob, projects, canCreate, onEdit, onDe
       <div className="absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${color}60, transparent)` }} />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-12 rounded-full pointer-events-none" style={{ background: `radial-gradient(ellipse, ${color}12 0%, transparent 70%)` }} />
 
-      <div className="relative p-5">
+      <div className="relative p-4">
         {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: color + '18', border: `1px solid ${color}35` }}>
-              <Layers className="w-5 h-5" style={{ color }} />
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: color + '15', border: `1px solid ${color}25` }}>
+              <Layers className="w-4.5 h-4.5" style={{ color }} />
             </div>
             <div className="min-w-0">
-              <p className="text-[14px] font-bold text-[var(--text-primary)] leading-tight truncate max-w-[130px]">{component.name}</p>
-              <p className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
+              <p className="text-[13px] font-extrabold text-[var(--text-primary)] leading-tight truncate max-w-[130px]">{component.name}</p>
+              <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>
                 {team?.name || 'Unknown Team'} {lob ? `· ${lob.name}` : ''}
               </p>
             </div>
@@ -367,7 +368,7 @@ function ComponentCard({ component, team, lob, projects, canCreate, onEdit, onDe
         </div>
 
         {/* Stats strip */}
-        <div className="flex items-stretch mb-3 py-1">
+        <div className="flex items-stretch mb-3 py-2 px-1 rounded-xl bg-black/[0.02]" style={{ border: '1px solid var(--app-border)' }}>
           {[
             { label: 'Projects', value: projectCount },
             { label: 'Team', value: team?.member_count || 0 },
@@ -375,38 +376,113 @@ function ComponentCard({ component, team, lob, projects, canCreate, onEdit, onDe
           ].map(({ label, value }, i) => (
             <div key={label} className="flex-1 flex flex-col items-center justify-center"
               style={{ borderRight: i < 2 ? '1px solid var(--app-border)' : 'none' }}>
-              <span className="text-xl font-bold text-[var(--text-primary)] leading-none">{value}</span>
-              <span className="text-[10px] font-semibold mt-1" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+              <span className="text-sm font-black text-[var(--text-primary)] leading-none">{value}</span>
+              <span className="text-[8.5px] font-bold uppercase mt-1 text-slate-400">{label}</span>
             </div>
           ))}
         </div>
 
         {/* Mini graph */}
-        <div className="overflow-hidden -mt-2.5 mb-3 relative flex items-center justify-center"
+        <div className="overflow-hidden -mt-1.5 mb-2 relative flex items-center justify-center"
           style={{ height: 72 }}>
           <MiniComponentGraph component={component} projects={projects} team={team} />
         </div>
 
         {/* Description */}
         {component.description && (
-          <p className="text-[11px] mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{component.description}</p>
+          <p className="text-[10px] mb-2.5 line-clamp-2" style={{ color: 'var(--text-muted)' }}>{component.description}</p>
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--app-border)' }}>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+        <div className="flex items-center justify-between pt-2.5" style={{ borderTop: '1px solid var(--app-border)' }}>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full"
             style={{
-              background: component.is_active ? 'rgba(48,209,88,0.12)' : 'var(--app-bg-muted)',
-              border: `1px solid ${component.is_active ? 'rgba(48,209,88,0.3)' : 'var(--app-border)'}`,
+              background: component.is_active ? 'rgba(48,209,88,0.1)' : 'var(--app-bg-muted)',
+              border: `1px solid ${component.is_active ? 'rgba(48,209,88,0.2)' : 'var(--app-border)'}`,
             }}>
-            <div className="w-1.5 h-1.5 rounded-full" style={{ background: component.is_active ? '#30D158' : 'var(--text-muted)' }} />
-            <span className="text-[10px] font-semibold" style={{ color: component.is_active ? '#30D158' : 'var(--text-muted)' }}>
+            <div className="w-1.2 h-1.2 rounded-full" style={{ background: component.is_active ? '#30D158' : 'var(--text-muted)' }} />
+            <span className="text-[9.5px] font-bold" style={{ color: component.is_active ? '#30D158' : 'var(--text-muted)' }}>
               {component.is_active ? 'Active' : 'Inactive'}
             </span>
           </div>
-          <ChevronRight className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
+          <ChevronRight className="w-3.5 h-3.5" style={{ color: 'var(--text-secondary)' }} />
         </div>
       </div>
+    </motion.div>
+  );
+}
+
+function ComponentListRow({
+  component, team, lob, projects, canCreate, onEdit, onDelete, onView, onNavigate
+}: {
+  component: Component; team: Team | undefined; lob: Lob | undefined; projects: Project[];
+  canCreate: boolean;
+  onEdit: (c: Component) => void; onDelete: (c: Component) => void;
+  onView: (c: Component) => void; onNavigate: (id: string) => void;
+}) {
+  const color = component.color || '#64D2FF';
+  const compProjects = projects.filter(p => p.team_id === component.team_id);
+  const projectCount = compProjects.length || component.project_count || 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+      className="flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all cursor-pointer group shadow-sm"
+      style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
+      onClick={() => onNavigate(component.id)}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${color}35`; (e.currentTarget as HTMLElement).style.boxShadow = `0 0 20px ${color}12`; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--app-border)'; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}
+    >
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: color + '18', border: `1px solid ${color}30` }}>
+        <Layers className="w-4 h-4" style={{ color }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{component.name}</p>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full capitalize flex-shrink-0"
+            style={{
+              background: component.is_active ? 'rgba(48,209,88,0.1)' : 'var(--app-bg-muted)',
+              color: component.is_active ? '#30D158' : 'var(--text-muted)',
+              border: `1px solid ${component.is_active ? 'rgba(48,209,88,0.2)' : 'var(--app-border)'}`,
+            }}>
+            {component.is_active ? 'Active' : 'Inactive'}
+          </span>
+        </div>
+        <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
+          {lob?.name || 'N/A'} {team ? `· ${team.name}` : ''} · {component.slug}
+        </p>
+      </div>
+      <div className="hidden md:flex items-center gap-3 text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+        <span className="flex items-center gap-1 font-semibold"><FolderOpen className="w-3.5 h-3.5" />{projectCount} Projects</span>
+        {team?.member_count !== undefined && (
+          <span className="flex items-center gap-1 font-semibold"><Users className="w-3.5 h-3.5" />{team.member_count} Members</span>
+        )}
+      </div>
+      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button onClick={e => { e.stopPropagation(); onView(component); }}
+          className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+          onMouseEnter={e => { e.currentTarget.style.color = color; e.currentTarget.style.background = color + '15'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
+          <Eye className="w-3.5 h-3.5" />
+        </button>
+        {canCreate && (
+          <>
+            <button onClick={e => { e.stopPropagation(); onEdit(component); }}
+              className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#64D2FF'; e.currentTarget.style.background = 'rgba(100,210,255,0.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={e => { e.stopPropagation(); onDelete(component); }}
+              className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#FF453A'; e.currentTarget.style.background = 'rgba(255,69,58,0.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </>
+        )}
+      </div>
+      <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--text-secondary)' }} />
     </motion.div>
   );
 }
@@ -431,29 +507,42 @@ export function ComponentsPage() {
   const search = searchParams.get('search') || '';
   const teamFilter = searchParams.get('team') || teamIdFilter || '';
   const lobFilter = searchParams.get('lob') || '';
+  const statusFilter = searchParams.get('status') || '';
 
-  const setSearch = (value: string) => {
+  type ViewMode = 'card' | 'list' | 'table';
+  type SortField = 'name' | 'project_count' | 'is_active';
+
+  const viewMode = (searchParams.get('view') || 'card') as ViewMode;
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const setFilter = (key: string, value: string) => {
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
-      if (value) next.set('search', value); else next.delete('search');
+      if (value) next.set(key, value); else next.delete(key);
       return next;
     }, { replace: true });
   };
 
-  const setTeamFilter = (value: string) => {
+  const setViewMode = (mode: ViewMode) => setFilter('view', mode);
+
+  const clearFilters = () => {
     setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      if (value) next.set('team', value); else next.delete('team');
+      const next = new URLSearchParams();
+      if (prev.get('team_id')) next.set('team_id', prev.get('team_id')!);
       return next;
     }, { replace: true });
   };
 
-  const setLobFilter = (value: string) => {
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      if (value) next.set('lob', value); else next.delete('lob');
-      return next;
-    }, { replace: true });
+  const hasFilters = !!(search || teamFilter || lobFilter || statusFilter);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
   };
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -510,8 +599,24 @@ export function ComponentsPage() {
     }
     if (teamFilter) result = result.filter(c => c.team_id === teamFilter);
     if (lobFilter) result = result.filter(c => c.lob_id === lobFilter);
+    if (statusFilter) {
+      const isAct = statusFilter === 'active';
+      result = result.filter(c => c.is_active === isAct);
+    }
+
+    result.sort((a, b) => {
+      let av: string | number = '', bv: string | number = '';
+      if (sortField === 'name') { av = a.name; bv = b.name; }
+      else if (sortField === 'project_count') { av = a.project_count || 0; bv = b.project_count || 0; }
+      else if (sortField === 'is_active') { av = a.is_active ? 1 : 0; bv = b.is_active ? 1 : 0; }
+
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
     return result;
-  }, [components, search, teamFilter, lobFilter]);
+  }, [components, search, teamFilter, lobFilter, statusFilter, sortField, sortDir]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -640,17 +745,22 @@ export function ComponentsPage() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         {statCards.map(({ label, value, color, icon: Icon, sub }, idx) => (
           <motion.div key={label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.07 }}
-            className="relative rounded-2xl p-4 overflow-hidden shadow-sm"
+            className="relative rounded-2xl p-3.5 overflow-hidden shadow-sm hover:scale-[1.02] transition-transform duration-200"
             style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', boxShadow: 'var(--shadow-sm)' }}>
-            <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none"
-              style={{ background: `radial-gradient(ellipse, ${color}12 0%, transparent 70%)`, transform: 'translate(20%, -20%)' }} />
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3"
-              style={{ background: color + '18', border: `1px solid ${color}30` }}>
-              <Icon className="w-4 h-4" style={{ color }} />
+            <div className="absolute top-0 right-0 w-20 h-20 rounded-full pointer-events-none"
+              style={{ background: `radial-gradient(ellipse, ${color}10 0%, transparent 70%)`, transform: 'translate(20%, -20%)' }} />
+
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: color + '15', border: `1px solid ${color}25` }}>
+                <Icon className="w-4.5 h-4.5" style={{ color }} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xl font-black text-[var(--text-primary)] leading-none">{value}</p>
+                <p className="text-[10.5px] font-extrabold uppercase mt-1 tracking-wider leading-none" style={{ color }}>{label}</p>
+                <p className="text-[9.5px] mt-1 leading-none truncate" style={{ color: 'var(--text-muted)' }}>{sub}</p>
+              </div>
             </div>
-            <p className="text-2xl font-black text-[var(--text-primary)] leading-none">{value}</p>
-            <p className="text-[11px] font-semibold mt-1" style={{ color }}>{label}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{sub}</p>
           </motion.div>
         ))}
       </div>
@@ -660,41 +770,44 @@ export function ComponentsPage() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
           <input type="text" placeholder="Search components..." value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => setFilter('search', e.target.value)}
             className="pl-9 pr-8 py-2 text-[13px] rounded-xl outline-none transition-all w-56"
             style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: 'var(--text-primary)' }}
             onFocus={e => { e.currentTarget.style.borderColor = '#64D2FF'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(100,210,255,0.12)'; }}
             onBlur={e => { e.currentTarget.style.borderColor = 'var(--app-border)'; e.currentTarget.style.boxShadow = ''; }} />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+            <button onClick={() => setFilter('search', '')} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        <select value={lobFilter} onChange={e => setLobFilter(e.target.value)}
+        <select value={lobFilter} onChange={e => setFilter('lob', e.target.value)}
           className="appearance-none pl-3 pr-7 py-2 text-[13px] rounded-xl outline-none cursor-pointer"
           style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: lobFilter ? 'var(--text-primary)' : 'var(--text-muted)' }}>
           <option value="">All LOBs</option>
           {lobs.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
         </select>
 
-        <select value={teamFilter} onChange={e => setTeamFilter(e.target.value)}
+        <select value={teamFilter} onChange={e => setFilter('team', e.target.value)}
           className="appearance-none pl-3 pr-7 py-2 text-[13px] rounded-xl outline-none cursor-pointer"
           style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: teamFilter ? 'var(--text-primary)' : 'var(--text-muted)' }}>
           <option value="">All Teams</option>
-          {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          {(lobFilter ? teams.filter(t => t.lob_id === lobFilter) : teams).map(t => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
         </select>
 
-        {(search || teamFilter || lobFilter) && (
-          <button
-            onClick={() => {
-              setSearchParams(prev => {
-                const next = new URLSearchParams();
-                if (prev.get('team_id')) next.set('team_id', prev.get('team_id')!);
-                return next;
-              }, { replace: true });
-            }}
+        <select value={statusFilter} onChange={e => setFilter('status', e.target.value)}
+          className="appearance-none pl-3 pr-7 py-2 text-[13px] rounded-xl outline-none cursor-pointer"
+          style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: statusFilter ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+
+        {hasFilters && (
+          <button onClick={clearFilters}
             className="flex items-center gap-1 text-[12px] px-2 py-1.5 rounded-lg transition-all"
             style={{ color: 'var(--text-muted)' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#FF453A'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,69,58,0.08)'; }}
@@ -703,23 +816,40 @@ export function ComponentsPage() {
           </button>
         )}
 
-        <span className="ml-auto text-[12px]" style={{ color: 'var(--text-muted)' }}>
-          {filtered.length} of {components.length} components
-        </span>
+        {/* View toggle */}
+        <div className="ml-auto flex items-center gap-1 rounded-xl p-1"
+          style={{ border: '1px solid var(--app-border)', background: 'var(--app-bg-muted)' }}>
+          {(['card', 'list', 'table'] as ViewMode[]).map((m) => {
+            const Icon = m === 'card' ? LayoutGrid : m === 'list' ? List : TableIcon;
+            return (
+              <button key={m} onClick={() => setViewMode(m)}
+                className="p-1.5 rounded-lg transition-all"
+                style={viewMode === m ? { background: '#64D2FF', color: '#fff' } : { color: 'var(--text-secondary)' }}>
+                <Icon className="w-3.5 h-3.5" />
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Grid */}
+      {/* Content */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {Array.from({ length: 8 }).map((_, i) => <div key={i} className="rounded-2xl h-80 shimmer-bg" />)}
-        </div>
+        viewMode === 'card' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {Array.from({ length: 8 }).map((_, i) => <div key={i} className="rounded-2xl h-80 shimmer-bg" />)}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-14 rounded-xl shimmer-bg" />)}
+          </div>
+        )
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl p-12 text-center"
           style={{ background: 'var(--app-bg-subtle)', border: '1px solid var(--app-border)' }}>
           <EmptyState icon={Layers}
-            title={search || teamFilter || lobFilter ? 'No components match your filters' : 'No components yet'}
-            description={search || teamFilter || lobFilter ? 'Try adjusting your filters.' : 'Create your first component to group and manage projects.'}
-            action={canCreate && !search && !teamFilter && !lobFilter ? (
+            title={hasFilters ? 'No matching components' : 'No Components'}
+            description={hasFilters ? 'Try adjusting your filters.' : 'Create your first component to group and manage projects.'}
+            action={!hasFilters && canCreate ? (
               <button onClick={() => setCreateOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white"
                 style={{ background: 'linear-gradient(135deg, #64D2FF, #0A84FF)' }}>
@@ -728,7 +858,7 @@ export function ComponentsPage() {
             ) : undefined}
           />
         </div>
-      ) : (
+      ) : viewMode === 'card' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           <AnimatePresence>
             {filtered.map(comp => (
@@ -746,6 +876,116 @@ export function ComponentsPage() {
               />
             ))}
           </AnimatePresence>
+        </div>
+      ) : viewMode === 'list' ? (
+        <div className="space-y-2">
+          {filtered.map(comp => (
+            <ComponentListRow
+              key={comp.id}
+              component={comp}
+              team={getTeamById(comp.team_id)}
+              lob={getLobById(comp.lob_id)}
+              projects={projects}
+              canCreate={canCreate}
+              onEdit={openEdit}
+              onDelete={c => setDeleteTarget(c)}
+              onView={c => setGraphComponent(c)}
+              onNavigate={id => navigate(`/components/${id}`)}
+            />
+          ))}
+        </div>
+      ) : (
+        /* Table view */
+        <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--app-border)', background: 'var(--app-bg-muted)' }}>
+                  {(['name', 'LOB / Team', 'status', 'project_count'] as any[]).map((col, i) => (
+                    <th key={i} className="text-left px-4 py-3">
+                      {['name', 'status', 'project_count'].includes(col) ? (
+                        <button onClick={() => handleSort(col as SortField)}
+                          className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider transition-colors select-none"
+                          style={{ color: sortField === col ? '#64D2FF' : 'var(--text-secondary)' }}>
+                          {col === 'project_count' ? 'Projects' : col.charAt(0).toUpperCase() + col.slice(1)}
+                          <ArrowUpDown className="w-3 h-3" />
+                        </button>
+                      ) : (
+                        <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{col}</span>
+                      )}
+                    </th>
+                  ))}
+                  <th className="text-right px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((comp, idx) => {
+                  const color = comp.color || '#64D2FF';
+                  return (
+                    <tr key={comp.id}
+                      className={cn('cursor-pointer transition-all group', idx !== filtered.length - 1 && 'border-b')}
+                      style={{ borderColor: 'var(--app-border)' }}
+                      onClick={() => navigate(`/components/${comp.id}`)}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--app-surface-hover)'}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: color + '18' }}>
+                            <Layers className="w-3.5 h-3.5" style={{ color }} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">{comp.name}</p>
+                            <p className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>{comp.slug}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-semibold text-[var(--text-primary)] leading-tight">{getLobById(comp.lob_id)?.name || 'N/A'}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{getTeamById(comp.team_id)?.name || 'N/A'}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full capitalize"
+                          style={{
+                            background: comp.is_active ? 'rgba(48,209,88,0.1)' : 'var(--app-bg-muted)',
+                            color: comp.is_active ? '#30D158' : 'var(--text-muted)',
+                            border: `1px solid ${comp.is_active ? 'rgba(48,209,88,0.2)' : 'var(--app-border)'}`,
+                          }}>
+                          {comp.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3"><span className="text-sm font-bold text-[var(--text-primary)]">{comp.project_count || 0}</span></td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={e => { e.stopPropagation(); setGraphComponent(comp); }}
+                            className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+                            onMouseEnter={e => { e.currentTarget.style.color = color; e.currentTarget.style.background = color + '15'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          {canCreate && (
+                            <>
+                              <button onClick={e => { e.stopPropagation(); openEdit(comp); }}
+                                className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+                                onMouseEnter={e => { e.currentTarget.style.color = '#64D2FF'; e.currentTarget.style.background = 'rgba(100,210,255,0.1)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={e => { e.stopPropagation(); setDeleteTarget(comp); }}
+                                className="p-1.5 rounded-lg transition-all" style={{ color: 'var(--text-secondary)' }}
+                                onMouseEnter={e => { e.currentTarget.style.color = '#FF453A'; e.currentTarget.style.background = 'rgba(255,69,58,0.1)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}>
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

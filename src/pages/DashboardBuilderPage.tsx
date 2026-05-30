@@ -12,6 +12,7 @@ const SCOPE_META: Record<DashboardScope, { label: string; color: string; icon: R
   project: { label: 'Project', color: '#0A84FF', icon: <FolderOpen className="w-3.5 h-3.5" /> },
   team: { label: 'Team', color: '#30D158', icon: <UsersRound className="w-3.5 h-3.5" /> },
   lob: { label: 'LOB', color: '#FF9F0A', icon: <Building2 className="w-3.5 h-3.5" /> },
+  component: { label: 'Component', color: '#64D2FF', icon: <Zap className="w-3.5 h-3.5" /> },
   global: { label: 'Global', color: '#BF5AF2', icon: <Zap className="w-3.5 h-3.5" /> },
 };
 

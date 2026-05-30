@@ -160,6 +160,59 @@ export function DashboardBuilderEditorV2() {
     setShowPalette(false);
   };
 
+  const addWidgets = (newWidgetsList: Array<{
+    widget_type: string;
+    label: string;
+    description: string;
+    width: number;
+    height: number;
+    metric_bindings: any[];
+  }>) => {
+    const maxY = widgets.reduce((m, w) => Math.max(m, w.layout_y + w.height), 0);
+    
+    let currentX = 0;
+    let currentY = maxY;
+    let rowMaxHeight = 0;
+
+    const localList: LocalWidget[] = newWidgetsList.map((w, idx) => {
+      if (currentX + w.width > COLS) {
+        currentX = 0;
+        currentY += rowMaxHeight;
+        rowMaxHeight = 0;
+      }
+
+      const localId = makeLocalId();
+      const widgetItem: LocalWidget = {
+        _localId: localId,
+        widget_type: w.widget_type as WidgetType,
+        title: w.label,
+        subtitle: w.description,
+        layout_x: currentX,
+        layout_y: currentY,
+        width: w.width,
+        height: w.height,
+        chart_config: {},
+        threshold_config: {},
+        display_config: { show_legend: true, time_range: '1h' },
+        sort_order: widgets.length + idx,
+        metric_bindings: (w.metric_bindings || []).map(mb => ({
+          ...mb,
+          id: makeLocalId(),
+        })),
+      };
+
+      currentX += w.width;
+      rowMaxHeight = Math.max(rowMaxHeight, w.height);
+
+      return widgetItem;
+    });
+
+    setWidgets(prev => [...prev, ...localList]);
+    setDirty(true);
+    setShowPalette(false);
+    notify.success(`Bulk added ${newWidgetsList.length} connector widgets to dashboard`);
+  };
+
   const removeWidget = (localId: string) => {
     setWidgets(prev => prev.filter(w => w._localId !== localId));
     if (selectedId === localId) { setSelectedId(null); setShowConfigPanel(false); }
@@ -475,6 +528,7 @@ export function DashboardBuilderEditorV2() {
           <FuturisticWidgetPalette
             widgetTypes={widgetTypes}
             onAdd={addWidget}
+            onBulkAdd={addWidgets}
             onClose={() => setShowPalette(false)}
           />
         )}
