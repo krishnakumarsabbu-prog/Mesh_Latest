@@ -14,6 +14,8 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 const DashboardPage = React.lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const LobsPage = React.lazy(() => import('./pages/LobsPage').then(m => ({ default: m.LobsPage })));
 const LobDetailPage = React.lazy(() => import('./pages/LobDetailPage').then(m => ({ default: m.LobDetailPage })));
+const SubLobsPage = React.lazy(() => import('./pages/SubLobsPage').then(m => ({ default: m.SubLobsPage })));
+const SubLobsDetailPage = React.lazy(() => import('./pages/SubLobsDetailPage').then(m => ({ default: m.SubLobsDetailPage })));
 const LobDashboardsPage = React.lazy(() => import('./pages/LobDashboardsPage').then(m => ({ default: m.LobDashboardsPage })));
 const LobLiveDashboardPage = React.lazy(() => import('./pages/LobLiveDashboardPage').then(m => ({ default: m.LobLiveDashboardPage })));
 const TeamsPage = React.lazy(() => import('./pages/TeamsPage').then(m => ({ default: m.TeamsPage })));
@@ -109,6 +111,8 @@ export default function App() {
             <Route path="operations" element={<Lazy><OperationsDashboardPage /></Lazy>} />
             <Route path="lobs" element={<Lazy><LobsPage /></Lazy>} />
             <Route path="lobs/:lobId" element={<Lazy><LobDetailPage /></Lazy>} />
+            <Route path="sublobs" element={<Lazy><SubLobsPage /></Lazy>} />
+            <Route path="sublobs/:subLobId" element={<Lazy><SubLobsDetailPage /></Lazy>} />
             <Route path="lobs/:lobId/dashboards" element={<Lazy><LobDashboardsPage /></Lazy>} />
             <Route path="lobs/:lobId/dashboards/:assignmentId" element={<Lazy><LobLiveDashboardPage /></Lazy>} />
             <Route path="teams" element={<Lazy><TeamsPage /></Lazy>} />

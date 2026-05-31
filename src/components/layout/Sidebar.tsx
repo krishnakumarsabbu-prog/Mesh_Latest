@@ -31,6 +31,7 @@ const operationsNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { label: 'Lines of Business', href: '/lobs', icon: Building2, description: 'Manage LOBs' },
+  { label: 'Sub-LOBs', href: '/sublobs', icon: Building2, description: 'Manage Sub-LOBs' },
   { label: 'Teams Cmd Center', href: '/teams-command-center', icon: UsersRound, description: 'Organizational health' },
   { label: 'Teams List', href: '/teams', icon: Users, description: 'Manage teams' },
   { label: 'Projects', href: '/components', icon: Layers, description: 'Manage projects' },

@@ -13,6 +13,7 @@ class TeamBase(BaseModel):
 class TeamCreate(TeamBase):
     slug: str
     lob_id: str
+    sub_lob_id: Optional[str] = None
 
 
 class TeamUpdate(BaseModel):
@@ -21,12 +22,15 @@ class TeamUpdate(BaseModel):
     color: Optional[str] = None
     icon: Optional[str] = None
     is_active: Optional[bool] = None
+    lob_id: Optional[str] = None
+    sub_lob_id: Optional[str] = None
 
 
 class TeamResponse(TeamBase):
     id: str
     slug: str
     lob_id: str
+    sub_lob_id: Optional[str] = None
     is_active: bool
     tenant_id: str
     created_by: Optional[str]

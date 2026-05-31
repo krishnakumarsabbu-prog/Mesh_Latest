@@ -15,7 +15,7 @@ import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';
 
 import { useUIStore } from '@/store/uiStore';
-import { lobApi, teamApi, componentApi, projectApi, lobDashboardAssignmentApi } from '@/lib/api';
+import { lobApi, subLobApi, teamApi, componentApi, projectApi, lobDashboardAssignmentApi } from '@/lib/api';
 import { Lob, Team, LobAssignmentResponse, Project, Component } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -41,6 +41,7 @@ function layoutGraph(rawNodes: any[], rawEdges: any[]) {
 
 const NODE_ICONS: Record<string, string> = {
   lob:       'M6 2a2 2 0 110 4 2 2 0 010-4zm0 5c-2.7 0-4 1.34-4 2v1h8v-1c0-.66-1.3-2-4-2z',
+  sublob:    'M12 2L2 7l10 5 10-5-10-5zm0 18l-10-5 2-1 8 4 8-4 2 1-10 5z',
   team:      'M5 2a2 2 0 110 4 2 2 0 010-4zM2 8c0-1 1.1-2 3-2s3 1 3 2v.5H2V8zm6-6a2 2 0 110 4 2 2 0 010-4zm1 6c.7.3 1 .8 1 1.5v.5H7.2V9c0-.7.3-1.2.8-1.5z',
   project:  'M2 3h8v1H2V3zm0 3h6v1H2V6zm0 3h8v1H2V9zm8-7v8H1V2h9zm-1 1H2v6h7V3z',
   component:'M4 1L1 4l3 3 1-1-2-2 2-2-1-1zm4 0l-1 1 2 2-2 2 1 1 3-3-3-3zM4 7h4v1H4V7z',
@@ -52,7 +53,8 @@ function FlowNode({ data }: { data: any }) {
   return (
     <div
       onClick={() => {
-        if (data.type === 'team') navigate(`/teams/${data.id}`);
+        if (data.type === 'sublob') navigate(`/sublobs/${data.id}`);
+        else if (data.type === 'team') navigate(`/teams/${data.id}`);
         else if (data.type === 'project') navigate(`/projects/${data.id}`);
         else if (data.type === 'component') navigate(`/components/${data.id}`);
       }}
@@ -67,6 +69,7 @@ function FlowNode({ data }: { data: any }) {
       <Handle type="target" position={Position.Left} style={{ background: data.color, width: 6, height: 6, border: 'none' }} />
       <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${data.color}25` }}>
         {data.type === 'lob' && <Building2 className="w-3.5 h-3.5" style={{ color: data.color }} />}
+        {data.type === 'sublob' && <Building2 className="w-3.5 h-3.5" style={{ color: data.color }} />}
         {data.type === 'team' && <Users className="w-3.5 h-3.5" style={{ color: data.color }} />}
         {data.type === 'project' && <FolderOpen className="w-3.5 h-3.5" style={{ color: data.color }} />}
         {data.type === 'component' && <Layers className="w-3.5 h-3.5" style={{ color: data.color }} />}
@@ -200,6 +203,7 @@ export function LobDetailPage() {
   const superAdmin = user ? isSuperAdmin(user.role) : false;
 
   const [lob, setLob] = useState<Lob | null>(null);
+  const [sublobs, setSublobs] = useState<any[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [components, setComponents] = useState<Component[]>([]);
@@ -216,14 +220,16 @@ export function LobDetailPage() {
     if (!lobId) return;
     setLoading(true);
     try {
-      const [lobRes, teamsRes, dashboardsRes, projectsRes, componentsRes] = await Promise.all([
+      const [lobRes, subLobsRes, teamsRes, dashboardsRes, projectsRes, componentsRes] = await Promise.all([
         lobApi.get(lobId),
+        subLobApi.list({ lob_id: lobId }).catch(() => ({ data: [] })),
         teamApi.list(lobId),
         lobDashboardAssignmentApi.list(lobId).catch(() => ({ data: [] })),
         projectApi.list(lobId).catch(() => ({ data: [] })),
         componentApi.list(lobId).catch(() => ({ data: [] })),
       ]);
       setLob(lobRes.data);
+      setSublobs(subLobsRes.data);
       setTeams(teamsRes.data);
       setDashboards(dashboardsRes.data);
       setProjects(projectsRes.data);
@@ -257,7 +263,28 @@ export function LobDetailPage() {
       position: { x: 0, y: 0 }
     });
 
-    // 2. Team nodes
+    // 2. Sub-LOB nodes
+    sublobs.forEach((sl) => {
+      const slColor = sl.color || '#A259FF';
+      ns.push({
+        id: `sublob-${sl.id}`,
+        type: 'flowNode',
+        data: { id: sl.id, type: 'sublob', label: sl.name, color: slColor },
+        position: { x: 0, y: 0 }
+      });
+
+      // Connect LOB to Sub-LOB
+      es.push({
+        id: `e-lob-${sl.id}`,
+        source: `lob-${lob.id}`,
+        target: `sublob-${sl.id}`,
+        animated: true,
+        style: { stroke: slColor, strokeWidth: 1.5 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: slColor }
+      });
+    });
+
+    // 3. Team nodes
     teams.forEach((t) => {
       const tColor = t.color || '#30D158';
       ns.push({
@@ -267,17 +294,19 @@ export function LobDetailPage() {
         position: { x: 0, y: 0 }
       });
 
-      // Connect LOB to Team
+      // Connect parent tier to Team
+      const hasSubLobParent = t.sub_lob_id && sublobs.some(sl => sl.id === t.sub_lob_id);
+      const sourceId = hasSubLobParent ? `sublob-${t.sub_lob_id}` : `lob-${lob.id}`;
       es.push({
-        id: `e-lob-${t.id}`,
-        source: `lob-${lob.id}`,
+        id: `e-parent-team-${t.id}`,
+        source: sourceId,
         target: `team-${t.id}`,
         animated: true,
         style: { stroke: tColor, strokeWidth: 1.5 },
         markerEnd: { type: MarkerType.ArrowClosed, color: tColor }
       });
 
-      // 3. Projects for this Team
+      // 4. Projects for this Team
       const teamProjs = projects.filter((p) => p.team_id === t.id);
       teamProjs.forEach((p) => {
         ns.push({
@@ -296,7 +325,7 @@ export function LobDetailPage() {
           markerEnd: { type: MarkerType.ArrowClosed, color: '#30D158' }
         });
 
-        // 4. Components for this project
+        // 5. Components for this project
         const projComps = components.filter((c) => c.team_id === t.id).slice(0, 2); // slice to prevent layout bloat
         projComps.forEach((c) => {
           const compNodeId = `comp-${c.id}-${p.id}`;
@@ -321,7 +350,7 @@ export function LobDetailPage() {
 
     const layouted = layoutGraph(ns, es);
     return { nodes: layouted, edges: es };
-  }, [lob, teams, projects, components]);
+  }, [lob, sublobs, teams, projects, components]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
@@ -555,58 +584,58 @@ export function LobDetailPage() {
 
       {activeTab === 'overview' ? (
         <div className="space-y-8">
-          {/* Teams Section */}
+          {/* Sub-LOBs Section */}
           <div id="teams-section" className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-[var(--text-primary)] tracking-tight flex items-center gap-2">
-                  <Users className="w-5 h-5" style={{ color: lobColor }} />
-                  Operational Teams
+                  <Building2 className="w-5 h-5" style={{ color: lobColor }} />
+                  Sub-Lines of Business (Sub-LOBs)
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5">{teams.length} active teams driving business value</p>
+                <p className="text-xs text-slate-500 mt-0.5">{sublobs.length} sub-tiers driving organizational alignment</p>
               </div>
               <button
-                onClick={() => navigate(`/teams?lob_id=${lob.id}`)}
+                onClick={() => navigate(`/sublobs?lob_id=${lob.id}`)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 transition-all shadow-md"
               >
                 View Catalog <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {teams.length === 0 ? (
+            {sublobs.length === 0 ? (
               <div className="bg-[var(--app-surface)] rounded-3xl border border-[var(--app-border)] p-12 text-center shadow-sm">
                 <EmptyState
-                  icon={Users}
-                  title="No Teams Registered"
-                  description="No organizational teams have been assigned under this Line of Business yet."
+                  icon={Building2}
+                  title="No Sub-LOBs Registered"
+                  description="No sub-lines of business have been assigned under this Line of Business yet."
                   action={
-                    <Button size="sm" onClick={() => navigate('/teams')}>
-                      Create Team
+                    <Button size="sm" onClick={() => navigate('/sublobs')}>
+                      Create Sub-LOB
                     </Button>
                   }
                 />
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {teams.map((team, i) => {
-                  const tColor = team.color || '#30D158';
-                  const tProjectCount = projects.filter(p => p.team_id === team.id).length;
-                  const tComponentCount = components.filter(c => c.team_id === team.id).length;
+                {sublobs.map((sl, i) => {
+                  const slColor = sl.color || '#A259FF';
+                  const slTeams = teams.filter(t => t.sub_lob_id === sl.id);
+                  const slProjects = projects.filter(p => slTeams.some(t => t.id === p.team_id));
+                  const slComponents = components.filter(c => slTeams.some(t => t.id === c.team_id));
                   
-                  // Calculate health percentage for this team
-                  const teamProjects = projects.filter(p => p.team_id === team.id);
-                  const tTotalConn = teamProjects.reduce((acc, p) => acc + (p.connector_count || 0), 0);
-                  const tHealthyConn = teamProjects.reduce((acc, p) => acc + (p.healthy_count || 0), 0);
-                  const tHealthPct = tTotalConn > 0 ? Math.round((tHealthyConn / tTotalConn) * 100) : 85 + (i * 7) % 15;
-                  const tHealthColor = tHealthPct >= 90 ? '#30D158' : tHealthPct >= 75 ? '#0A84FF' : tHealthPct >= 60 ? '#FF9F0A' : '#FF453A';
+                  // Calculate health percentage for this sub-lob
+                  const tTotalConn = slProjects.reduce((acc, p) => acc + (p.connector_count || 0), 0);
+                  const tHealthyConn = slProjects.reduce((acc, p) => acc + (p.healthy_count || 0), 0);
+                  const slHealthPct = tTotalConn > 0 ? Math.round((tHealthyConn / tTotalConn) * 100) : 85 + (i * 7) % 15;
+                  const slHealthColor = slHealthPct >= 90 ? '#30D158' : slHealthPct >= 75 ? '#0A84FF' : slHealthPct >= 60 ? '#FF9F0A' : '#FF453A';
 
                   return (
                     <motion.div
-                      key={team.id}
+                      key={sl.id}
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.04 }}
-                      whileHover={{ y: -4, boxShadow: `0 16px 40px rgba(0,0,0,0.55), 0 0 0 1px ${tColor}35` }}
+                      whileHover={{ y: -4, boxShadow: `0 16px 40px rgba(0,0,0,0.55), 0 0 0 1px ${slColor}35` }}
                       className="relative rounded-2xl p-5 cursor-pointer overflow-hidden border"
                       style={{
                         background: 'var(--app-surface)',
@@ -614,29 +643,29 @@ export function LobDetailPage() {
                         boxShadow: 'var(--shadow-md)',
                         transition: 'box-shadow 0.25s ease, border-color 0.25s ease',
                       }}
-                      onClick={() => navigate(`/teams/${team.id}`)}
+                      onClick={() => navigate(`/sublobs/${sl.id}`)}
                     >
                       {/* Accent color bar */}
-                      <div className="absolute top-0 inset-x-0 h-[3px]" style={{ background: `linear-gradient(90deg, transparent, ${tColor}, transparent)` }} />
-                      <div className="absolute top-0 left-0 w-24 h-24 pointer-events-none" style={{ background: `radial-gradient(circle, ${tColor}12 0%, transparent 70%)` }} />
+                      <div className="absolute top-0 inset-x-0 h-[3px]" style={{ background: `linear-gradient(90deg, transparent, ${slColor}, transparent)` }} />
+                      <div className="absolute top-0 left-0 w-24 h-24 pointer-events-none" style={{ background: `radial-gradient(circle, ${slColor}12 0%, transparent 70%)` }} />
 
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-xl relative overflow-hidden"
-                            style={{ background: `${tColor}18`, border: `1px solid ${tColor}40` }}>
-                            {team.name.substring(0, 2).toUpperCase()}
+                            style={{ background: `${slColor}18`, border: `1px solid ${slColor}40` }}>
+                            {sl.name.substring(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <h3 className="font-bold text-sm text-[var(--text-primary)] transition-colors leading-tight truncate max-w-[130px]">{team.name}</h3>
-                            <p className="text-[10px] text-slate-500 font-mono leading-none mt-1 uppercase tracking-wider">{team.slug}</p>
+                            <h3 className="font-bold text-sm text-[var(--text-primary)] transition-colors leading-tight truncate max-w-[130px]">{sl.name}</h3>
+                            <p className="text-[10px] text-slate-500 font-mono leading-none mt-1 uppercase tracking-wider">{sl.slug}</p>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2">
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border"
-                            style={{ background: tHealthColor + '12', color: tHealthColor, borderColor: tHealthColor + '25' }}>
-                            <span className="w-1 h-1 rounded-full animate-pulse" style={{ background: tHealthColor }} />
-                            {tHealthPct}% Health
+                            style={{ background: slHealthColor + '12', color: slHealthColor, borderColor: slHealthColor + '25' }}>
+                            <span className="w-1 h-1 rounded-full animate-pulse" style={{ background: slHealthColor }} />
+                            {slHealthPct}% Health
                           </span>
                         </div>
                       </div>
@@ -644,9 +673,9 @@ export function LobDetailPage() {
                       {/* Stats grid */}
                       <div className="flex items-stretch mb-3 py-1">
                         {[
-                          { label: 'Projects', value: tProjectCount },
-                          { label: 'Components', value: tComponentCount },
-                          { label: 'Members', value: team.member_count || 3 },
+                          { label: 'Teams', value: slTeams.length },
+                          { label: 'Projects', value: slProjects.length },
+                          { label: 'Components', value: slComponents.length },
                         ].map(({ label, value }, idx) => (
                           <div key={label} className="flex-1 flex flex-col items-center justify-center"
                             style={{
@@ -658,24 +687,12 @@ export function LobDetailPage() {
                         ))}
                       </div>
 
-                      {/* Mini constellation topology SVG graph */}
-                      <div className="overflow-hidden -mt-2.5 mb-3 relative flex items-center justify-center group"
-                        style={{ height: 72 }}>
-                        <MiniNetGraph team={team} projects={projects} components={components} color={tColor} />
-                        
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <span className="text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full bg-[var(--app-surface-active)] border border-[var(--app-border)] text-[var(--text-primary)] flex items-center gap-1.5">
-                            <Eye className="w-3 h-3" style={{ color: tColor }} /> Live Topology →
-                          </span>
-                        </div>
-                      </div>
-
                       <div className="flex items-center justify-between pt-3 border-t border-[var(--app-border)]">
-                        <Badge variant={team.is_active ? 'active' : 'inactive'} size="xs">
-                          {team.is_active ? 'Active' : 'Inactive'}
+                        <Badge variant="active" size="xs">
+                          Active
                         </Badge>
                         <span className="flex items-center gap-0.5 text-[10px] font-bold text-slate-500 group-hover:text-slate-300 transition-colors">
-                          Deployments <ChevronRight className="w-3 h-3" />
+                          Explore Sub-LOB <ChevronRight className="w-3 h-3" />
                         </span>
                       </div>
                     </motion.div>

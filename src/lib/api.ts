@@ -91,6 +91,18 @@ export const lobApi = {
   getMembers: (id: string) => apiClient.get(`/lobs/${id}/members`),
 };
 
+export const subLobApi = {
+  list: (params?: { search?: string; lob_id?: string }) => apiClient.get('/sublobs', { params }),
+  create: (data: object) => apiClient.post('/sublobs', data),
+  get: (id: string) => apiClient.get(`/sublobs/${id}`),
+  update: (id: string, data: object) => apiClient.patch(`/sublobs/${id}`, data),
+  delete: (id: string) => apiClient.delete(`/sublobs/${id}`),
+  getAdmins: (id: string) => apiClient.get(`/sublobs/${id}/admins`),
+  assignAdmin: (id: string, user_id: string) => apiClient.post(`/sublobs/${id}/admins`, { user_id }),
+  removeAdmin: (id: string, userId: string) => apiClient.delete(`/sublobs/${id}/admins/${userId}`),
+  getMembers: (id: string) => apiClient.get(`/sublobs/${id}/members`),
+};
+
 export const projectApi = {
   list: (lob_id?: string, team_id?: string, component_id?: string) => apiClient.get('/projects', { params: { lob_id, team_id, component_id } }),
   create: (data: object) => apiClient.post('/projects', data),

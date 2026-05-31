@@ -21,7 +21,7 @@ import '@xyflow/react/dist/style.css';
 // @ts-ignore
 import dagre from 'dagre';
 import { useUIStore } from '@/store/uiStore';
-import { teamApi, lobApi, projectApi, componentApi, healthApi } from '@/lib/api';
+import { teamApi, lobApi, subLobApi, projectApi, componentApi, healthApi } from '@/lib/api';
 import { Team, Lob, Project, Component } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Modal, ConfirmModal } from '@/components/ui/Modal';
@@ -303,8 +303,8 @@ function TeamGraphPopup({ team, projects, components, lob, onClose }: {
   );
 }
 
-function TeamCard({ team, lob, projects, components, canCreate, onEdit, onDelete, onView }: {
-  team: Team; lob: Lob | undefined;
+function TeamCard({ team, lob, subLob, projects, components, canCreate, onEdit, onDelete, onView }: {
+  team: Team; lob: Lob | undefined; subLob?: any;
   projects: Project[]; components: Component[];
   canCreate: boolean;
   onEdit: (t: Team) => void;
@@ -358,7 +358,7 @@ function TeamCard({ team, lob, projects, components, canCreate, onEdit, onDelete
             <div className="min-w-0">
               <p className="text-[13px] font-extrabold text-[var(--text-primary)] leading-tight truncate max-w-[130px]">{team.name}</p>
               <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>
-                {lob?.name || 'Unknown LOB'}
+                {lob?.name || 'Unknown LOB'}{subLob ? ` · ${subLob.name}` : ''}
               </p>
             </div>
           </div>
@@ -453,8 +453,8 @@ function TeamCard({ team, lob, projects, components, canCreate, onEdit, onDelete
   );
 }
 
-function TeamListRow({ team, lob, projects, components, canCreate, onEdit, onDelete, onView }: {
-  team: Team; lob: Lob | undefined; projects: Project[]; components: Component[]; canCreate: boolean;
+function TeamListRow({ team, lob, subLob, projects, components, canCreate, onEdit, onDelete, onView }: {
+  team: Team; lob: Lob | undefined; subLob?: any; projects: Project[]; components: Component[]; canCreate: boolean;
   onEdit: (t: Team) => void; onDelete: (t: Team) => void; onView: (t: Team) => void;
 }) {
   const color = team.color || '#0A84FF';
@@ -489,7 +489,7 @@ function TeamListRow({ team, lob, projects, components, canCreate, onEdit, onDel
           </span>
         </div>
         <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
-          {lob?.name || 'N/A'} · {team.slug}
+          {lob?.name || 'N/A'}{subLob ? ` · ${subLob.name}` : ''} · {team.slug}
         </p>
       </div>
       
@@ -537,6 +537,7 @@ export function TeamsPage() {
 
   const [teams, setTeams] = useState<Team[]>([]);
   const [lobs, setLobs] = useState<Lob[]>([]);
+  const [sublobs, setSublobs] = useState<any[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [components, setComponents] = useState<Component[]>([]);
   const [healthStats, setHealthStats] = useState<any>(null);
@@ -580,8 +581,8 @@ export function TeamsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Team | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [form, setForm] = useState({ name: '', slug: '', description: '', lob_id: lobIdFilter || '', color: '#0A84FF' });
-  const [editForm, setEditForm] = useState({ name: '', description: '', color: '#0A84FF', is_active: true });
+  const [form, setForm] = useState({ name: '', slug: '', description: '', lob_id: lobIdFilter || '', sub_lob_id: '', color: '#0A84FF' });
+  const [editForm, setEditForm] = useState({ name: '', description: '', color: '#0A84FF', is_active: true, lob_id: '', sub_lob_id: '' });
 
   useEffect(() => {
     setPageTitle('Teams');
@@ -592,9 +593,10 @@ export function TeamsPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [teamRes, lobRes, projRes, compRes, statsRes, trendRes] = await Promise.all([
+      const [teamRes, lobRes, subLobRes, projRes, compRes, statsRes, trendRes] = await Promise.all([
         teamApi.list(lobIdFilter || undefined),
         lobApi.list(),
+        subLobApi.list(),
         projectApi.list(),
         componentApi.list(),
         healthApi.stats(),
@@ -602,6 +604,7 @@ export function TeamsPage() {
       ]);
       setTeams(teamRes.data);
       setLobs(lobRes.data);
+      setSublobs(subLobRes.data);
       setProjects(projRes.data);
       setComponents(compRes.data);
       setHealthStats(statsRes.data);
@@ -650,7 +653,7 @@ export function TeamsPage() {
       await teamApi.create(form);
       notify.success('Team created');
       setCreateOpen(false);
-      setForm({ name: '', slug: '', description: '', lob_id: lobIdFilter || '', color: '#0A84FF' });
+      setForm({ name: '', slug: '', description: '', lob_id: lobIdFilter || '', sub_lob_id: '', color: '#0A84FF' });
       fetchAll();
     } catch (err: unknown) {
       notify.error('Failed to create team', (err as any)?.response?.data?.detail);
@@ -684,7 +687,14 @@ export function TeamsPage() {
 
   const openEdit = (team: Team) => {
     setEditTarget(team);
-    setEditForm({ name: team.name, description: team.description || '', color: team.color, is_active: team.is_active });
+    setEditForm({
+      name: team.name,
+      description: team.description || '',
+      color: team.color,
+      is_active: team.is_active,
+      lob_id: team.lob_id,
+      sub_lob_id: (team as any).sub_lob_id || ''
+    });
   };
 
   const handleSort = (field: SortField) => {
@@ -693,6 +703,7 @@ export function TeamsPage() {
   };
 
   const getLobById = (id: string) => lobs.find(l => l.id === id);
+  const getSubLobById = (id: string) => sublobs.find(sl => sl.id === id);
 
   // Stats
   const totalProjects = useMemo(() => teams.reduce((s, t) => s + (t.project_count || 0), 0), [teams]);
@@ -903,6 +914,7 @@ export function TeamsPage() {
                 key={team.id}
                 team={team}
                 lob={getLobById(team.lob_id)}
+                subLob={getSubLobById((team as any).sub_lob_id)}
                 projects={projects}
                 components={components}
                 canCreate={canCreate}
@@ -920,6 +932,7 @@ export function TeamsPage() {
               key={team.id}
               team={team}
               lob={getLobById(team.lob_id)}
+              subLob={getSubLobById((team as any).sub_lob_id)}
               projects={projects}
               components={components}
               canCreate={canCreate}
@@ -980,7 +993,10 @@ export function TeamsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm text-[var(--text-primary)]">{getLobById(team.lob_id)?.name || 'N/A'}</span>
+                        <span className="text-sm text-[var(--text-primary)]">
+                          {getLobById(team.lob_id)?.name || 'N/A'}
+                          {(team as any).sub_lob_id && getSubLobById((team as any).sub_lob_id) ? ` · ${getSubLobById((team as any).sub_lob_id)?.name}` : ''}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full capitalize"
@@ -1111,10 +1127,19 @@ export function TeamsPage() {
           <Select
             label="Line of Business"
             value={form.lob_id}
-            onChange={e => setForm({ ...form, lob_id: e.target.value })}
+            onChange={e => setForm({ ...form, lob_id: e.target.value, sub_lob_id: '' })}
             options={[{ value: '', label: 'Select a LOB...' }, ...lobs.map(l => ({ value: l.id, label: l.name }))]}
             required
           />
+          {form.lob_id && (
+            <Select
+              label="Sub-Line of Business"
+              value={form.sub_lob_id}
+              onChange={e => setForm({ ...form, sub_lob_id: e.target.value })}
+              options={[{ value: '', label: 'Select a Sub-LOB...' }, ...sublobs.filter(sl => sl.lob_id === form.lob_id).map(sl => ({ value: sl.id, label: sl.name }))]}
+              required
+            />
+          )}
           <Input label="Team Name" placeholder="e.g., Platform Engineering"
             value={form.name} onChange={e => setForm({ ...form, name: e.target.value, slug: slugify(e.target.value) })} required />
           <Input label="Slug" placeholder="platform-engineering"
@@ -1148,6 +1173,22 @@ export function TeamsPage() {
         }
       >
         <form id="edit-team-form" onSubmit={handleEdit} className="space-y-4">
+          <Select
+            label="Line of Business"
+            value={editForm.lob_id}
+            onChange={e => setEditForm({ ...editForm, lob_id: e.target.value, sub_lob_id: '' })}
+            options={[{ value: '', label: 'Select a LOB...' }, ...lobs.map(l => ({ value: l.id, label: l.name }))]}
+            required
+          />
+          {editForm.lob_id && (
+            <Select
+              label="Sub-Line of Business"
+              value={editForm.sub_lob_id}
+              onChange={e => setEditForm({ ...editForm, sub_lob_id: e.target.value })}
+              options={[{ value: '', label: 'Select a Sub-LOB...' }, ...sublobs.filter(sl => sl.lob_id === editForm.lob_id).map(sl => ({ value: sl.id, label: sl.name }))]}
+              required
+            />
+          )}
           <Input label="Team Name" value={editForm.name}
             onChange={e => setEditForm({ ...editForm, name: e.target.value })} required />
           <TextArea label="Description" value={editForm.description}

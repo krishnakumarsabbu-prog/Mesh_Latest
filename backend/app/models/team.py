@@ -15,6 +15,7 @@ class Team(Base):
     color = Column(String, default="#0A84FF")
     icon = Column(String, default="users")
     lob_id = Column(String, ForeignKey("lobs.id"), nullable=False)
+    sub_lob_id = Column(String, ForeignKey("sub_lobs.id", ondelete="SET NULL"), nullable=True)
     is_active = Column(Boolean, default=True)
     tenant_id = Column(String, nullable=False)
     created_by = Column(String, ForeignKey("users.id"), nullable=True)
@@ -22,6 +23,7 @@ class Team(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     lob = relationship("Lob", back_populates="teams")
+    sub_lob = relationship("SubLob", back_populates="teams")
     members = relationship("TeamMember", back_populates="team", cascade="all, delete-orphan")
     projects = relationship("TeamProject", back_populates="team", cascade="all, delete-orphan")
     owned_projects = relationship("Project", back_populates="team", foreign_keys="Project.team_id")

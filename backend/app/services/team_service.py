@@ -19,6 +19,7 @@ class TeamService:
             color=data.color,
             icon=data.icon,
             lob_id=data.lob_id,
+            sub_lob_id=data.sub_lob_id if hasattr(data, "sub_lob_id") else None,
             tenant_id=tenant_id,
             created_by=user_id,
         )

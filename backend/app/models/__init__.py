@@ -1,5 +1,6 @@
 from app.models.user import User, UserRole, UserRoleAssignment
 from app.models.lob import Lob, LobMember
+from app.models.sub_lob import SubLob, SubLobMember
 from app.models.component import Component
 from app.models.project import Project, ProjectStatus
 from app.models.connector import Connector, ConnectorType, ConnectorStatus
@@ -12,6 +13,7 @@ from app.models.runtime import RuntimeDataCenter, RuntimeAsset, DataSourceImport
 __all__ = [
     "User", "UserRole", "UserRoleAssignment",
     "Lob", "LobMember",
+    "SubLob", "SubLobMember",
     "Component",
     "Project", "ProjectStatus",
     "Connector", "ConnectorType", "ConnectorStatus",
@@ -21,3 +23,4 @@ __all__ = [
     "Permission", "RolePermission", "ScopedRoleAssignment",
     "RuntimeDataCenter", "RuntimeAsset", "DataSourceImport", "ApplicationIntent", "SourceProposal", "RuntimeAuditLog",
 ]
+
