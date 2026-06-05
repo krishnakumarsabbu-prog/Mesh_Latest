@@ -1,0 +1,182 @@
+{
+  "uuid": "d0c3359c-5448-4a9b-a077-e3295a7e9057",
+  "comment": "This is a data volume",
+  "create_time": "2018-07-05T14:56:44+05:30",
+  "language": "en_us",
+  "name": "datavol",
+  "size": 20971520,
+  "state": "online",
+  "style": "flexvol",
+  "tiering_policy": "auto",
+  "type": "rw",
+  "aggregates": [
+    {
+      "name": "data",
+      "uuid": "aa742322-36bc-4d98-bbc4-0a827534c035",
+      "_links": {
+        "self": {
+          "href": "/api/cluster/aggregates/data"
+        }
+      }
+    }
+  ],
+  "efficiency": {
+    "ratio": 1
+  },
+  "encryption": {
+    "enabled": false,
+    "state": "none",
+    "key_id": "",
+    "type": "none"
+  },
+  "error_state": {
+    "has_bad_blocks": false,
+    "is_inconsistent": false
+  },
+  "files": {
+    "maximum": 566,
+    "used": 96
+  },
+  "nas": {
+    "gid": 2468,
+    "security_style": "unix",
+    "uid": 1357,
+    "unix_permissions": 4755,
+    "export_policy": {
+      "name": "default",
+      "id": 8589934593
+    }
+  },
+  "junction_parent": {
+    "name": "vol1",
+    "uuid": "a2564f80-25fb-41e8-9b49-44de2600991f",
+    "_links": {
+      "self": {
+        "href": "/api/storage/volumes/a2564f80-25fb-41e8-9b49-44de2600991f"
+      }
+    }
+  },
+  "metric": {
+    "timestamp": "2019-04-09T05:50:15Z",
+    "status": "ok",
+    "duration": "PT15S",
+    "latency": {
+      "other": 0,
+      "total": 0,
+      "read": 0,
+      "write": 0
+    },
+    "iops": {
+      "read": 0,
+      "write": 0,
+      "other": 0,
+      "total": 0
+    },
+    "throughput": {
+      "read": 0,
+      "write": 0,
+      "other": 0,
+      "total": 0
+    },
+    "cloud": {
+      "timestamp": "2019-04-09T05:50:15Z",
+      "status": "ok",
+      "duration": "PT15S",
+      "iops": {
+        "read": 0,
+        "write": 0,
+        "other": 0,
+        "total": 0
+      },
+      "latency": {
+        "read": 0,
+        "write": 0,
+        "other": 0,
+        "total": 0
+      }
+    },
+    "flexcache": {
+      "timestamp": "2019-04-09T05:50:15Z",
+      "status": "ok",
+      "duration": "PT1D",
+      "cache_miss_percent": 0,
+      "bandwidth_savings": 0
+    }
+  },
+  "statistics": {
+    "timestamp": "2019-04-09T05:50:42Z",
+    "status": "ok",
+    "latency_raw": {
+      "other": 38298,
+      "total": 38298,
+      "read": 0,
+      "write": 0
+    },
+    "iops_raw": {
+      "read": 0,
+      "write": 0,
+      "other": 3,
+      "total": 3
+    },
+    "throughput_raw": {
+      "read": 0,
+      "write": 0,
+      "other": 0,
+      "total": 0
+    },
+    "cloud": {
+      "timestamp": "2019-04-09T05:50:42Z",
+      "status": "ok",
+      "iops_raw": {
+        "read": 0,
+        "write": 0,
+        "other": 0,
+        "total": 0
+      },
+      "latency_raw": {
+        "read": 0,
+        "write": 0,
+        "other": 0,
+        "total": 0
+      }
+    },
+    "flexcache_raw": {
+      "timestamp": "2019-04-09T05:50:15Z",
+      "status": "ok",
+      "cache_miss_blocks": 0,
+      "client_requested_blocks": 0
+    }
+  },
+  "qos": {
+    "policy": {
+      "min_throughput_iops": 0,
+      "min_throughput_mbps": 0,
+      "max_throughput_iops": 1000,
+      "max_throughput_mbps": 0,
+      "uuid": "228454af-5a8b-11e9-bd5b-005056ac6f1f",
+      "name": "pg1"
+    }
+  },
+  "snaplock": {
+    "append_mode_enabled": false,
+    "autocommit_period": "none",
+    "compliance_clock_time": "2019-05-24T10:59:00+05:30",
+    "expiry_time": "2038-01-19T08:44:28+05:30",
+    "is_audit_log": false,
+    "litigation_count": 0,
+    "privileged_delete": "disabled",
+    "type": "enterprise",
+    "retention": {
+      "default": "P0Y",
+      "minimum": "P0Y",
+      "maximum": "P30Y"
+    }
+  },
+  "snapshot_policy": {
+    "name": "default"
+  },
+  "svm": {
+    "name": "vsdata",
+    "uuid": "d61b69f5-7458-11e8-ad3f-0050569503ac"
+  }
+}

@@ -582,6 +582,10 @@ export const runtimeApi = {
     apiClient.post('/runtime-location/conflicts/resolve', data),
   simulateFailover: (dc: string) =>
     apiClient.post('/runtime-location/simulate-failover', { dc }),
+  executeFailover: (data: { application_id: string; failed_dc: string; promoted_dc: string; environment?: string }) =>
+    apiClient.post('/runtime-location/failover', data),
+  executeFailback: (data: { application_id: string; environment?: string }) =>
+    apiClient.post('/runtime-location/failback', data),
 };
 
 export const proxySettingsApi = {

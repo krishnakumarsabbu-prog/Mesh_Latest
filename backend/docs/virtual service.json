@@ -1,0 +1,5 @@
+avi_healthscore_performance_score{uuid="virtualservice-e925c82d-a341-4973-85a9-7430142681ed",type="virtualservice",tenant="adcs",name="arista-inline"} 100.0
+avi_healthscore_security_penalty{uuid="virtualservice-e925c82d-a341-4973-85a9-7430142681ed",type="virtualservice",tenant="adcs",name="arista-inline"} 0.0
+avi_healthscore_resources_penalty{uuid="virtualservice-e925c82d-a341-4973-85a9-7430142681ed",type="virtualservice",tenant="adcs",name="arista-inline"} 0.0
+avi_healthscore_anomaly_penalty{uuid="virtualservice-e925c82d-a341-4973-85a9-7430142681ed",type="virtualservice",tenant="adcs",name="arista-inline"} 0.0
+avi_healthscore_health_score_value{uuid="virtualservice-e925c82d-a341-4973-85a9-7430142681ed",type="virtualservice",tenant="adcs",name="arista-inline"} 100.0

@@ -1,0 +1,17 @@
+avi_healthscore_health_score_value{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="10.1.1.1:80",name="arista-inline-pool"} 0.0
+avi_healthscore_performance_score_value{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="10.1.1.1:80",name="arista-inline-pool"} 0.0
+avi_healthscore_security_penalty{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="10.1.1.1:80",name="arista-inline-pool"} 0.0
+avi_healthscore_resources_penalty{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="10.1.1.1:80",name="arista-inline-pool"} 0.0
+avi_healthscore_anomaly_penalty{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="10.1.1.1:80",name="arista-inline-pool"} 0.0
+avi_healthscore_health_score_value{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="30.0.60.109:80",name="arista-inline-pool"} 100.0
+avi_healthscore_performance_score_value{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="30.0.60.109:80",name="arista-inline-pool"} 100.0
+avi_l7_server_avg_complete_responses{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="30.0.60.109:80",name="arista-inline-pool"} 0.0
+avi_l7_server_avg_satisfactory_responses{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="30.0.60.109:80",name="arista-inline-pool"} 0.0
+avi_l7_server_avg_resp_3xx{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="30.0.60.109:80",name="arista-inline-pool"} 0.0
+avi_l7_server_sum_total_responses{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="30.0.60.109:80",name="arista-inline-pool"} 0.0
+avi_l7_server_avg_resp_4xx_errors{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="30.0.60.109:80",name="arista-inline-pool"} 0.0
+avi_l7_server_sum_other_reqs{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="30.0.60.109:80",name="arista-inline-pool"} 0.0
+avi_l7_server_avg_resp_1xx{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="30.0.60.109:80",name="arista-inline-pool"} 0.0
+avi_l7_server_sum_resp_4xx_errors{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="30.0.60.109:80",name="arista-inline-pool"} 0.0
+avi_l7_server_sum_resp_5xx_errors{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="30.0.60.109:80",name="arista-inline-pool"} 0.0
+avi_l7_server_avg_application_response_time{uuid="pool-0087e377-185d-45fa-bfcf-c5f8688b9776",type="pool",tenant="adcs",server="30.0.60.109:80",name="arista-inline-pool"} 1e-05

@@ -185,6 +185,10 @@ interface RuntimeLocationState {
 
   // Simulation
   setSimulatedAgeOffset: (minutes: number) => void;
+
+  // Failover / Failback operations
+  executeFailover: (appId: string, failedDc: string, promotedDc: string, environment?: string) => Promise<void>;
+  executeFailback: (appId: string, environment?: string) => Promise<void>;
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -448,6 +452,36 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
       set({ proposals: propsRes.data });
     } catch (err) {
       console.error('Failed to update proposal status:', err);
+    }
+  },
+
+  executeFailover: async (appId, failedDc, promotedDc, environment) => {
+    try {
+      const env = environment || 'PRODUCTION';
+      await runtimeApi.executeFailover({
+        application_id: appId,
+        failed_dc: failedDc,
+        promoted_dc: promotedDc,
+        environment: env,
+      });
+      await get().loadApplications();
+      await get().loadDetail(appId, env);
+    } catch (err) {
+      console.error('Failed to execute failover:', err);
+    }
+  },
+
+  executeFailback: async (appId, environment) => {
+    try {
+      const env = environment || 'PRODUCTION';
+      await runtimeApi.executeFailback({
+        application_id: appId,
+        environment: env,
+      });
+      await get().loadApplications();
+      await get().loadDetail(appId, env);
+    } catch (err) {
+      console.error('Failed to execute failback:', err);
     }
   },
 }));

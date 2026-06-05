@@ -1591,3 +1591,201 @@ async def simulate_failover(
             for a in result.warning_apps
         ],
     }
+
+
+@router.post("/failover", response_model=Dict[str, Any])
+async def execute_failover(
+    data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    POST /api/v1/runtime-location/failover
+    Body: { "application_id": "PCA", "failed_dc": "IBB1", "promoted_dc": "SHV", "environment": "PRODUCTION" }
+    """
+    app_id = data.get("application_id")
+    failed_dc = data.get("failed_dc")
+    promoted_dc = data.get("promoted_dc")
+    environment = data.get("environment", "PRODUCTION")
+
+    if not app_id or not failed_dc or not promoted_dc:
+        raise HTTPException(status_code=400, detail="Missing required fields: application_id, failed_dc, promoted_dc")
+
+    # Fetch all assets for this app and environment
+    result = await db.execute(select(RuntimeAsset))
+    all_assets = result.scalars().all()
+
+    app_assets = []
+    for a in all_assets:
+        if a.environment == environment:
+            if a.metadata_json and a.metadata_json.get("application_id") == app_id:
+                app_assets.append(a)
+            elif app_id == "MQ_INFRA" and a.data_source == "ibm_mq":
+                app_assets.append(a)
+            elif app_id == "MONGO_INFRA" and a.data_source == "mongodb":
+                app_assets.append(a)
+            elif app_id == "ORACLE_INFRA" and a.data_source == "oracle_oem":
+                app_assets.append(a)
+
+    if not app_assets:
+        raise HTTPException(status_code=404, detail="No assets found for the specified application and environment")
+
+    # Mutate operational states and roles
+    mutated_count = 0
+    for asset in app_assets:
+        # If the asset resides in the failed DC, make it offline
+        if asset.data_center_short == failed_dc:
+            asset.latest_operational_state = "OFFLINE"
+            asset.write_authority = False
+            # Demote roles if database
+            if asset.latest_replication_role in ["PRIMARY", "PHYSICAL_STANDBY"]:
+                asset.latest_replication_role = "SECONDARY" if asset.tech_stack == "mongodb" else "PHYSICAL_STANDBY"
+            mutated_count += 1
+
+        # If the asset resides in the promoted DC, make it active and promote it
+        elif asset.data_center_short == promoted_dc:
+            asset.latest_operational_state = "ACTIVE"
+            # Promote standby roles
+            if asset.latest_replication_role in ["SECONDARY", "PHYSICAL_STANDBY"]:
+                asset.latest_replication_role = "PRIMARY"
+                asset.write_authority = True
+            mutated_count += 1
+
+    # Log the event in Audit database
+    audit = RuntimeAuditLog(
+        id=str(uuid.uuid4()),
+        event_type="FAILOVER_EXECUTED",
+        description=f"Executed simulated failover for {app_id} in {environment}. Failed DC: {failed_dc}, Promoted DC: {promoted_dc}.",
+        application_id=app_id,
+        actor="operator"
+    )
+    db.add(audit)
+
+    # Re-run drift detection
+    drifts = await run_drift_detection(db, app_id, environment, persist_critical=True)
+    alignment = compute_alignment_status(drifts)
+    await db.execute(
+        update(ApplicationIntent)
+        .where(ApplicationIntent.application_id == app_id)
+        .values(alignment_status=alignment)
+    )
+
+    await db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "message": f"Successfully executed simulated failover for {app_id}.",
+        "mutated_assets_count": mutated_count,
+        "alignment_status": alignment
+    }
+
+
+@router.post("/failback", response_model=Dict[str, Any])
+async def execute_failback(
+    data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    POST /api/v1/runtime-location/failback
+    Body: { "application_id": "PCA", "environment": "PRODUCTION" }
+    """
+    app_id = data.get("application_id")
+    environment = data.get("environment", "PRODUCTION")
+
+    if not app_id:
+        raise HTTPException(status_code=400, detail="Missing required field: application_id")
+
+    # Fetch all assets for this app and environment
+    result = await db.execute(select(RuntimeAsset))
+    all_assets = result.scalars().all()
+
+    app_assets = []
+    for a in all_assets:
+        if a.environment == environment:
+            if a.metadata_json and a.metadata_json.get("application_id") == app_id:
+                app_assets.append(a)
+            elif app_id == "MQ_INFRA" and a.data_source == "ibm_mq":
+                app_assets.append(a)
+            elif app_id == "MONGO_INFRA" and a.data_source == "mongodb":
+                app_assets.append(a)
+            elif app_id == "ORACLE_INFRA" and a.data_source == "oracle_oem":
+                app_assets.append(a)
+
+    if not app_assets:
+        raise HTTPException(status_code=404, detail="No assets found for the specified application and environment")
+
+    # Revert to seeded defaults based on intent if it exists, or toggle
+    intent_res = await db.execute(select(ApplicationIntent).where(ApplicationIntent.application_id == app_id))
+    intent = intent_res.scalar_one_or_none()
+    
+    primary_dc = intent.intended_primary_dc if intent else "IBB1"
+
+    mutated_count = 0
+    for asset in app_assets:
+        is_in_primary_dc = asset.data_center_short == primary_dc
+        
+        # Check tech stack specific defaults
+        if asset.tech_stack == "oracle":
+            if is_in_primary_dc:
+                asset.latest_operational_state = "ACTIVE"
+                asset.latest_replication_role = "PRIMARY"
+                asset.write_authority = True
+            else:
+                asset.latest_operational_state = "STANDBY"
+                asset.latest_replication_role = "PHYSICAL_STANDBY"
+                asset.write_authority = False
+        elif asset.tech_stack == "mongodb":
+            if is_in_primary_dc:
+                asset.latest_operational_state = "ACTIVE"
+                asset.latest_replication_role = "PRIMARY"
+                asset.write_authority = True
+            else:
+                asset.latest_operational_state = "STANDBY"
+                asset.latest_replication_role = "SECONDARY"
+                asset.write_authority = False
+        elif asset.tech_stack == "mssql":
+            if is_in_primary_dc:
+                asset.latest_operational_state = "ACTIVE"
+                asset.latest_replication_role = "PRIMARY"
+                asset.write_authority = True
+            else:
+                asset.latest_operational_state = "STANDBY"
+                asset.latest_replication_role = "SECONDARY"
+                asset.write_authority = False
+        elif asset.tech_stack == "ibm_mq":
+            is_ga = asset.data_center_short == "GA-PRD"
+            asset.latest_operational_state = "ACTIVE" if is_ga else "STANDBY"
+            asset.write_authority = is_ga
+        else:
+            asset.latest_operational_state = "ACTIVE"
+            asset.write_authority = False
+
+        mutated_count += 1
+
+    # Log the event in Audit database
+    audit = RuntimeAuditLog(
+        id=str(uuid.uuid4()),
+        event_type="FAILBACK_EXECUTED",
+        description=f"Executed simulated failback for {app_id} in {environment}. Restored primary DC: {primary_dc}.",
+        application_id=app_id,
+        actor="operator"
+    )
+    db.add(audit)
+
+    # Re-run drift detection
+    drifts = await run_drift_detection(db, app_id, environment, persist_critical=True)
+    alignment = compute_alignment_status(drifts)
+    await db.execute(
+        update(ApplicationIntent)
+        .where(ApplicationIntent.application_id == app_id)
+        .values(alignment_status=alignment)
+    )
+
+    await db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "message": f"Successfully executed failback for {app_id} to primary DC {primary_dc}.",
+        "mutated_assets_count": mutated_count,
+        "alignment_status": alignment
+    }
+
