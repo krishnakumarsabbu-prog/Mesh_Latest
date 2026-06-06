@@ -10,6 +10,7 @@ import { FreshnessIndicator } from '@/components/runtime/FreshnessIndicator';
 import { AssetStatusBadge } from '@/components/runtime/AssetStatusBadge';
 import { TechStackIcon } from '@/components/runtime/TechStackIcon';
 import { DataSourcePanel } from '@/components/runtime/DataSourcePanel';
+import { ConfidenceBreakdownPanel } from '@/components/runtime/ConfidenceBreakdownPanel';
 import { ConflictAlert } from '@/components/runtime/ConflictAlert';
 import { LocationMap } from '@/components/runtime/LocationMap';
 import { RuntimeDependencyGraph } from '@/components/runtime/RuntimeDependencyGraph';
@@ -112,6 +113,41 @@ function OperatorQuickSummary({ detail }: { detail: ApplicationLocationDetail })
       className="rounded-2xl p-4 flex flex-col gap-3"
       style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
     >
+      {/* 2AM trust banner — can the operator trust this answer right now? */}
+      {(() => {
+        const strongSources = detail.data_sources.filter(
+          (s) => s.status === 'FRESH' && s.topology_confidence >= 3
+        );
+        const hasConflict = detail.conflicts && detail.conflicts.length > 0;
+        const canTrust = !hasConflict && staleCount === 0 && strongSources.length >= 2;
+        const trustColor = canTrust ? '#30D158' : hasConflict ? '#FF453A' : '#FF9F0A';
+        const trustLabel = canTrust ? 'TRUSTWORTHY' : hasConflict ? 'CONFLICT — DO NOT ACT WITHOUT MANUAL CHECK' : 'CAUTION — Some signals are stale';
+        const trustBg = canTrust ? 'rgba(48,209,88,0.06)' : hasConflict ? 'rgba(255,69,58,0.07)' : 'rgba(255,159,10,0.06)';
+        const trustBorder = canTrust ? 'rgba(48,209,88,0.2)' : hasConflict ? 'rgba(255,69,58,0.3)' : 'rgba(255,159,10,0.2)';
+        return (
+          <div
+            className="rounded-xl px-3 py-2 flex items-center gap-3"
+            style={{ background: trustBg, border: `1px solid ${trustBorder}` }}
+          >
+            <div
+              className="w-2 h-2 rounded-full flex-shrink-0"
+              style={{ background: trustColor, boxShadow: canTrust ? `0 0 6px ${trustColor}` : 'none' }}
+            />
+            <div className="flex-1 min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: trustColor }}>
+                {trustLabel}
+              </span>
+              <span className="text-[10px] ml-2" style={{ color: 'var(--text-muted)' }}>
+                {strongSources.length} fresh source{strongSources.length !== 1 ? 's' : ''} · {staleCount} stale · {detail.conflicts?.length ?? 0} conflict{(detail.conflicts?.length ?? 0) !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <span className="text-[9px] font-bold uppercase tracking-widest flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+              2AM READY
+            </span>
+          </div>
+        );
+      })()}
+
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4 divide-y md:divide-y-0 md:divide-x divide-white/5">
         {items.map((item, idx) => (
           <div key={item.key} className={cn("flex flex-col justify-between min-w-0", idx > 0 ? "pt-2 md:pt-0 md:pl-4" : "")}>
@@ -1605,7 +1641,12 @@ export function ApplicationLocationDetailPage() {
             {activeTab === 'components' && <ComponentsTable components={detail.components} />}
             {activeTab === 'openshift' && <OpenShiftTab detail={detail} />}
             {activeTab === 'intent' && <IntentVsActualTab detail={detail} />}
-            {activeTab === 'quality' && <DataSourcePanel dataSources={detail.data_sources} />}
+            {activeTab === 'quality' && (
+              <div className="flex flex-col gap-5">
+                <ConfidenceBreakdownPanel detail={detail} defaultExpanded />
+                <DataSourcePanel dataSources={detail.data_sources} />
+              </div>
+            )}
             {activeTab === 'snapshots' && <SnapshotsTab snapshots={snapshots} />}
             {activeTab === 'compare' && <CompareEnvsTab appId={appId!} />}
             {activeTab === 'audit' && <AuditLogTab />}

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle,
   CircleHelp as HelpCircle, Database, Plus, Send,
-  ChevronDown, Share2, Clock, Zap, Trophy,
+  ChevronDown, Share2, Clock, Zap, Trophy, Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TECH_STACK_COVERAGE, CONFIDENCE_LABELS, type TechStackCoverage } from '@/lib/runtimeLocationMock';
@@ -847,6 +847,87 @@ export function DataDiscoveryPanel({ onClose }: Props) {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Problem Statement Alignment — Signal Gap Analysis */}
+          <div className="px-5 pt-4 pb-2">
+            <div className="flex items-center gap-2 mb-3">
+              <Info className="w-4 h-4" style={{ color: '#0A84FF' }} />
+              <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                Problem Statement Signal Gap Analysis
+              </p>
+            </div>
+            <div
+              className="rounded-xl p-3 mb-3"
+              style={{ background: 'rgba(10,132,255,0.05)', border: '1px solid rgba(10,132,255,0.2)' }}
+            >
+              <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+                The table below maps every tech stack from the <strong>Problem Statement §7</strong> to our current signal availability. Stacks rated 1–2 represent active gaps where deterministic data is missing or proprietary.
+              </p>
+            </div>
+            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--app-border)' }}>
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr style={{ background: 'var(--app-surface)', borderBottom: '1px solid var(--app-border)' }}>
+                    {['Tech Stack', 'Topology', 'Traffic', 'Our Signal', 'Status'].map((h) => (
+                      <th key={h} className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { stack: 'vm',      display: 'VM',           topoConf: 4, trafConf: 3, ourSignal: 'CMDB + AppDynamics',    status: 'INTEGRATED' },
+                    { stack: 'ocp',     display: 'OCP',          topoConf: 3, trafConf: 4, ourSignal: 'OCP pod info CSV',       status: 'INTEGRATED' },
+                    { stack: 'mongodb', display: 'MongoDB',      topoConf: 3, trafConf: 3, ourSignal: 'MongoDB Ops Manager CSV', status: 'INTEGRATED' },
+                    { stack: 'oracle',  display: 'Oracle',       topoConf: 3, trafConf: 2, ourSignal: 'OEM CSV (WIP — capped)',  status: 'WIP' },
+                    { stack: 'mssql',   display: 'MS SQL',       topoConf: 3, trafConf: 3, ourSignal: 'SCOM replica status CSV', status: 'INTEGRATED' },
+                    { stack: 'kafka',   display: 'Kafka',        topoConf: 3, trafConf: 3, ourSignal: 'Broker topology CSV',     status: 'INTEGRATED' },
+                    { stack: 'ibm_mq',  display: 'IBM MQ',       topoConf: 3, trafConf: 3, ourSignal: 'QMgr status CSV (det.)', status: 'INTEGRATED' },
+                    { stack: 'vm',      display: 'Object Store',  topoConf: 3, trafConf: 2, ourSignal: '— Not yet integrated',   status: 'GAP' },
+                    { stack: 'vm',      display: 'File Store',    topoConf: 3, trafConf: 2, ourSignal: '— Not yet integrated',   status: 'GAP' },
+                    { stack: 'vm',      display: 'Batch/AutoSys', topoConf: 2, trafConf: 2, ourSignal: 'Batch job CSV (DC prefix)', status: 'INTEGRATED' },
+                    { stack: 'vm',      display: 'AVI LB',       topoConf: 3, trafConf: 2, ourSignal: 'Pool member JSON (WIP)', status: 'WIP' },
+                  ].map((row, i) => {
+                    const topoColor = row.topoConf >= 4 ? '#30D158' : row.topoConf >= 3 ? '#FF9F0A' : '#FF453A';
+                    const trafColor = row.trafConf >= 4 ? '#30D158' : row.trafConf >= 3 ? '#FF9F0A' : '#FF453A';
+                    const statusConfig = {
+                      INTEGRATED: { color: '#30D158', bg: 'rgba(48,209,88,0.1)',   border: 'rgba(48,209,88,0.25)',   label: 'Integrated' },
+                      WIP:        { color: '#FF9F0A', bg: 'rgba(255,159,10,0.1)',  border: 'rgba(255,159,10,0.25)',  label: 'WIP' },
+                      GAP:        { color: '#FF453A', bg: 'rgba(255,69,58,0.1)',   border: 'rgba(255,69,58,0.25)',   label: 'Gap' },
+                    }[row.status] ?? { color: '#8E8E93', bg: 'rgba(142,142,147,0.1)', border: 'rgba(142,142,147,0.2)', label: row.status };
+                    return (
+                      <tr
+                        key={`${row.display}-${i}`}
+                        style={{
+                          borderBottom: '1px solid var(--app-border)',
+                          background: row.status === 'GAP' ? 'rgba(255,69,58,0.02)' : 'transparent',
+                        }}
+                      >
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-1.5">
+                            <TechStackIcon techStack={row.stack as any} size={12} />
+                            <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{row.display}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5 font-bold" style={{ color: topoColor }}>{row.topoConf}/4</td>
+                        <td className="px-3 py-2.5 font-bold" style={{ color: trafColor }}>{row.trafConf}/4</td>
+                        <td className="px-3 py-2.5 font-mono text-[10px]" style={{ color: 'var(--text-secondary)' }}>{row.ourSignal}</td>
+                        <td className="px-3 py-2.5">
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[9px] font-bold"
+                            style={{ background: statusConfig.bg, color: statusConfig.color, border: `1px solid ${statusConfig.border}` }}
+                          >
+                            {statusConfig.label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

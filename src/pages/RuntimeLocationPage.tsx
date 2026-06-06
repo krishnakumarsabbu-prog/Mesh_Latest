@@ -1290,6 +1290,43 @@ export function RuntimeLocationPage() {
         />
       </div>
 
+      {/* Signal coverage banner — explicit gap disclosure per problem statement */}
+      {(() => {
+        const gapStacks = ['Object Storage', 'File Storage'];
+        const wipStacks = ['Oracle OEM', 'AVI LB'];
+        const hasGaps = true;
+        return (
+          <div
+            className="rounded-xl px-4 py-3 flex items-start gap-3"
+            style={{ background: 'rgba(255,159,10,0.05)', border: '1px solid rgba(255,159,10,0.2)' }}
+          >
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#FF9F0A' }} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[12px] font-bold" style={{ color: '#FF9F0A' }}>Signal Coverage Gaps</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,159,10,0.12)', color: '#FF9F0A' }}>
+                  explicit — per FAQ §4 & §5
+                </span>
+              </div>
+              <p className="text-[11px] mt-1" style={{ color: 'var(--text-secondary)' }}>
+                <span className="font-semibold" style={{ color: '#FF453A' }}>Not yet integrated: </span>
+                {gapStacks.join(', ')} — no deterministic signals available.
+                {' '}<span className="font-semibold" style={{ color: '#FF9F0A' }}>WIP (confidence capped): </span>
+                {wipStacks.join(', ')} — proprietary API, using sample CSV, confidence held at MEDIUM.
+                {' '}Operators should verify these stacks manually.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowDiscovery(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold flex-shrink-0"
+              style={{ background: 'rgba(255,159,10,0.1)', color: '#FF9F0A', border: '1px solid rgba(255,159,10,0.25)' }}
+            >
+              View Full Gap Analysis
+            </button>
+          </div>
+        );
+      })()}
+
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <FilterSelect
