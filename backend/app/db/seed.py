@@ -117,6 +117,47 @@ _REFERENCE_PROPOSALS = [
         "proposed_by": "Team HealthMesh",
         "status": "ACCEPTED",
     },
+    # ─── Phase 10: Hackathon Bonus-Credit Team Discoveries ───────────────────
+    {
+        "source_name": "AVI Load Balancer Pool JSON",
+        "system": "AVI Networks / NSX Advanced Load Balancer",
+        "signal_type": "Traffic — active/standby pool member distribution across DCs",
+        "tech_stack": "vm",
+        "rationale": "AVI pool_member_status + traffic_weight fields provide active/standby distribution across DCs. Fills the traffic confidence gap for VM and OCP workloads. Not deterministic alone but corroborates topology signals.",
+        "is_deterministic_claim": False,
+        "proposed_by": "Team HealthMesh — Hackathon Discovery",
+        "status": "ACCEPTED",
+    },
+    {
+        "source_name": "AutoSys Batch Job CSV — RUN_MACHINE FQDN",
+        "system": "Broadcom AutoSys Workload Automation",
+        "signal_type": "Topology — DC derivation from batch execution host FQDN prefix",
+        "tech_stack": "vm",
+        "rationale": "RUN_MACHINE FQDN field identifies which physical server executed each batch job. Parsing the FQDN prefix (ibb1*, shv*, az3*) maps execution to a data center, filling topology gaps for batch workloads.",
+        "is_deterministic_claim": False,
+        "proposed_by": "Team HealthMesh — Hackathon Discovery",
+        "status": "ACCEPTED",
+    },
+    {
+        "source_name": "IBM MQ QMgr Command Server Status (CMDSERVER=RUNNING)",
+        "system": "IBM MQ QMgr Status Export",
+        "signal_type": "Topology — live vs passive queue manager identification",
+        "tech_stack": "ibm_mq",
+        "rationale": "CMDSERVER=RUNNING is a reliable active-instance indicator for IBM MQ independent of replication state. Identifies which queue managers are accepting commands (live vs passive) without requiring cluster configuration.",
+        "is_deterministic_claim": True,
+        "proposed_by": "Team HealthMesh — Hackathon Discovery",
+        "status": "ACCEPTED",
+    },
+    {
+        "source_name": "MongoDB Replica State — rs_state field",
+        "system": "MongoDB Ops Manager API",
+        "signal_type": "Replication — deterministic write authority (rs_state=1 PRIMARY, rs_state=2 SECONDARY)",
+        "tech_stack": "mongodb",
+        "rationale": "rs_state is the single most deterministic write-authority indicator in the dataset. rs_state=1 unambiguously identifies the PRIMARY — the node that owns all writes. No inference required. Confidence 4.",
+        "is_deterministic_claim": True,
+        "proposed_by": "Team HealthMesh — Hackathon Discovery",
+        "status": "ACCEPTED",
+    },
 ]
 
 
@@ -248,13 +289,13 @@ async def _seed_intents(session: AsyncSession) -> None:
 
 
 async def _seed_proposals(session: AsyncSession) -> None:
-    # Check if any proposals already exist to avoid re-seeding
-    result = await session.execute(select(SourceProposal))
-    existing = result.scalars().all()
-    if existing:
-        return
-
+    seeded = 0
     for p in _REFERENCE_PROPOSALS:
+        result = await session.execute(
+            select(SourceProposal).where(SourceProposal.source_name == p["source_name"])
+        )
+        if result.scalar_one_or_none():
+            continue
         proposal = SourceProposal(
             id=str(uuid.uuid4()),
             source_name=p["source_name"],
@@ -267,8 +308,10 @@ async def _seed_proposals(session: AsyncSession) -> None:
             status=p["status"],
         )
         session.add(proposal)
+        seeded += 1
 
-    logger.info(f"  [seed] {len(_REFERENCE_PROPOSALS)} source proposals created")
+    if seeded:
+        logger.info(f"  [seed] {seeded} source proposals created")
 
 
 _BUILTIN_RULES = [

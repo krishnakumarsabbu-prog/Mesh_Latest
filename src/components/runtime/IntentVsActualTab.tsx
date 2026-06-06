@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Target, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Circle as XCircle, CircleHelp as HelpCircle, Zap, Info, ChevronRight, CreditCard as Edit3, RefreshCw } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useRuntimeLocationStore } from '@/store/runtimeLocationStore';
 import { IntentDefinitionPanel } from './IntentDefinitionPanel';
@@ -29,25 +30,37 @@ const DRIFT_TYPE_LABELS: Record<string, string> = {
 
 function DriftCard({ drift }: { drift: IntentDrift }) {
   const cfg = SEVERITY_CONFIG[drift.severity];
+  const isCritical = drift.severity === 'CRITICAL';
+  
   return (
-    <div
+    <motion.div
       className="rounded-xl px-4 py-3 flex items-start gap-3"
       style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}
+      whileHover={{ scale: 1.01 }}
     >
       <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: cfg.color }} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span
+          <motion.span
             className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
             style={{ background: cfg.border, color: cfg.color }}
+            animate={isCritical ? {
+              x: [0, -3, 3, -3, 3, -3, 3, 0],
+            } : {}}
+            transition={isCritical ? {
+              repeat: Infinity,
+              repeatType: 'reverse' as const,
+              duration: 0.6,
+              repeatDelay: 2.5
+            } : {}}
           >
             {cfg.label}
-          </span>
+          </motion.span>
           <span className="text-[11px] font-semibold" style={{ color: cfg.color }}>
             {DRIFT_TYPE_LABELS[drift.drift_type] ?? drift.drift_type}
           </span>
         </div>
-        <p className="text-[12px]" style={{ color: 'var(--text-primary)' }}>{drift.description}</p>
+        <p className="text-[12px] font-medium text-white/90">{drift.description}</p>
         <div className="flex items-center gap-4 mt-1.5">
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
             Intended: <span style={{ color: 'var(--text-secondary)' }}>{drift.intended}</span>
@@ -61,7 +74,7 @@ function DriftCard({ drift }: { drift: IntentDrift }) {
           Detected: {new Date(drift.detected_at).toLocaleString()}
         </p>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

@@ -159,6 +159,9 @@ interface RuntimeLocationState {
   environmentFilter: EnvironmentFilter;
   techStackFilter: TechStackFilter;
   searchQuery: string;
+  confidenceFilters: string[];
+  freshnessFilters: string[];
+  statusFilters: string[];
 
   // Actions
   loadApplications: () => Promise<void>;
@@ -168,6 +171,9 @@ interface RuntimeLocationState {
   setEnvironmentFilter: (env: EnvironmentFilter) => void;
   setTechStackFilter: (stack: TechStackFilter) => void;
   setSearchQuery: (q: string) => void;
+  setConfidenceFilters: (filters: string[]) => void;
+  setFreshnessFilters: (filters: string[]) => void;
+  setStatusFilters: (filters: string[]) => void;
   importCsv: (file: File, sourceType?: DataSourceName) => Promise<DataSourceImport>;
   seedSampleData: () => Promise<void>;
   clearDetail: () => void;
@@ -211,6 +217,9 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
   environmentFilter: 'ALL',
   techStackFilter: 'ALL',
   searchQuery: '',
+  confidenceFilters: [],
+  freshnessFilters: [],
+  statusFilters: [],
 
   loadApplications: async () => {
     set({ isLoadingApplications: true });
@@ -268,8 +277,18 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
   },
 
   loadSnapshots: async (appId, environment) => {
-    await new Promise((r) => setTimeout(r, 100));
-    const snaps = getMockSnapshots(appId, environment ?? 'PRODUCTION');
+    const env = environment ?? 'PRODUCTION';
+    try {
+      const res = await runtimeApi.getSnapshots(appId, env);
+      if (res.data && res.data.length > 0) {
+        set({ snapshots: res.data });
+        return;
+      }
+    } catch {
+      // Backend not seeded yet — fall back to mock
+    }
+    // Fallback: derive from mock data
+    const snaps = getMockSnapshots(appId, env);
     set({ snapshots: snaps });
   },
 
@@ -285,6 +304,9 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
   setEnvironmentFilter: (env) => set({ environmentFilter: env }),
   setTechStackFilter: (stack) => set({ techStackFilter: stack }),
   setSearchQuery: (q) => set({ searchQuery: q }),
+  setConfidenceFilters: (filters) => set({ confidenceFilters: filters }),
+  setFreshnessFilters: (filters) => set({ freshnessFilters: filters }),
+  setStatusFilters: (filters) => set({ statusFilters: filters }),
   setSimulatedAgeOffset: (minutes) => {
     setSimulatedAge(minutes);
     set({ simulatedAgeOffset: minutes });
@@ -489,7 +511,10 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
 // ─── Selector: filter applications list ───────────────────────────────────────
 
 export function selectFilteredApplications(state: RuntimeLocationState): ApplicationLocationSummary[] {
-  const { applications, environmentFilter, techStackFilter, searchQuery } = state;
+  const {
+    applications, environmentFilter, techStackFilter, searchQuery,
+    confidenceFilters, freshnessFilters, statusFilters
+  } = state;
   return applications.filter((app) => {
     if (environmentFilter !== 'ALL' && app.environment !== environmentFilter) return false;
     if (techStackFilter !== 'ALL') {
@@ -504,6 +529,35 @@ export function selectFilteredApplications(state: RuntimeLocationState): Applica
       if (!app.application_name.toLowerCase().includes(q) &&
           !app.application_id.toLowerCase().includes(q)) return false;
     }
+
+    // Confidence filter (multi-select)
+    if (confidenceFilters && confidenceFilters.length > 0) {
+      const label = app.overall_confidence === 4 ? 'HIGH'
+        : app.overall_confidence === 3 ? 'MEDIUM'
+        : app.overall_confidence === 2 ? 'LOW'
+        : 'UNKNOWN';
+      if (!confidenceFilters.includes(label)) return false;
+    }
+
+    // Freshness filter (multi-select)
+    if (freshnessFilters && freshnessFilters.length > 0) {
+      const freshLabel = app.stale_source_count === 0 ? 'FRESH'
+        : app.stale_source_count === 1 ? 'STALE'
+        : 'VERY_STALE';
+      if (!freshnessFilters.includes(freshLabel)) return false;
+    }
+
+    // Status filter (multi-select)
+    if (statusFilters && statusFilters.length > 0) {
+      const hasDrift = app.alignment_status === 'DRIFTED';
+      const hasConflict = app.confidence_label === 'CONFLICT';
+      
+      const matchesDrift = statusFilters.includes('DRIFTED') && hasDrift;
+      const matchesConflict = statusFilters.includes('CONFLICT') && hasConflict;
+      
+      if (!matchesDrift && !matchesConflict) return false;
+    }
+
     return true;
   });
 }

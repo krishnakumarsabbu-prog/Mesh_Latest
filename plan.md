@@ -405,7 +405,7 @@ The problem statement says teams must share newly discovered data sources in a c
 
 **Current:** Zustand in-memory. Page refresh = data loss.
 
-**What to implement with Supabase:**
+**What to implement with existing backend:**
 ```sql
 -- Core runtime tables
 runtime_applications (id, name, environment, confidence_level, primary_dc, last_updated)

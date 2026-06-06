@@ -32,6 +32,14 @@ const LABEL_CONFIG: Record<string, { label: string; color: string; bg: string; I
   UNKNOWN:  { label: 'Unknown',  color: '#8E8E93', bg: 'rgba(142,142,147,0.12)', Icon: HelpCircle },
 };
 
+const TOOLTIP_EXPLANATIONS: Record<string, string> = {
+  HIGH: "High confidence: Cluster primary assertion confirmed by multiple independent active telemetry sources (Ops Manager + Prometheus). Data is fresh.",
+  MEDIUM: "Moderate confidence: Core signals (e.g. AppDynamics) verify traffic load, but secondary sources are missing or CMDB mapping is outdated.",
+  LOW: "Low confidence: Telemetry sources are outdated, or only static CMDB entries are currently available without traffic validation.",
+  CONFLICT: "Conflict detected: AppDynamics traffic and CMDB registry report mismatching operational states!",
+  UNKNOWN: "Unknown: No operational or configuration signal has been received for this asset.",
+};
+
 export function ConfidenceBadge({
   level,
   label,
@@ -50,9 +58,9 @@ export function ConfidenceBadge({
     ? `${cfg.label} (${score})`
     : cfg.label;
 
-  const title = score !== undefined
+  const title = TOOLTIP_EXPLANATIONS[resolvedLabel] ?? (score !== undefined
     ? `Confidence: ${cfg.label} — score ${score}/100`
-    : `Confidence Level ${level}: ${cfg.label}`;
+    : `Confidence Level ${level}: ${cfg.label}`);
 
   return (
     <span

@@ -3,13 +3,74 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle,
   CircleHelp as HelpCircle, Database, Plus, Send,
-  ChevronDown, Share2, Clock,
+  ChevronDown, Share2, Clock, Zap, Trophy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TECH_STACK_COVERAGE, CONFIDENCE_LABELS, type TechStackCoverage } from '@/lib/runtimeLocationMock';
 import { TechStackIcon } from './TechStackIcon';
 import { useRuntimeLocationStore } from '@/store/runtimeLocationStore';
 import type { TechStack, SourceProposal, ProposalStatus } from '@/types';
+
+// ─── Pre-populated Team Discoveries ──────────────────────────────────────────
+
+interface TeamDiscovery {
+  id: string;
+  title: string;
+  sourceType: string;
+  techStack: string;
+  signal: string;
+  valueProposition: string;
+  isDeterministic: boolean;
+  sharedAt: string;
+  sharedToChannel: boolean;
+}
+
+const TEAM_DISCOVERIES: TeamDiscovery[] = [
+  {
+    id: 'disc-1',
+    title: 'AVI Load Balancer Pool JSON',
+    sourceType: 'avi_loadbalancer',
+    techStack: 'vm',
+    signal: 'pool_member_status, traffic_weight, active_connections per DC',
+    valueProposition: 'Provides active/standby pool member status and traffic-weighted distribution across DCs — fills the traffic confidence gap for VM and OCP workloads.',
+    isDeterministic: false,
+    sharedAt: '2026-06-05T09:00:00Z',
+    sharedToChannel: true,
+  },
+  {
+    id: 'disc-2',
+    title: 'AutoSys Batch Job CSV',
+    sourceType: 'batch',
+    techStack: 'vm',
+    signal: 'RUN_MACHINE FQDN → DC prefix derivation (ibb1*, shv*, az3*)',
+    valueProposition: 'RUN_MACHINE FQDN field lets us derive which data center executed each batch job. Maps execution location per job, filling topology gaps for batch workloads.',
+    isDeterministic: false,
+    sharedAt: '2026-06-05T10:30:00Z',
+    sharedToChannel: true,
+  },
+  {
+    id: 'disc-3',
+    title: 'IBM MQ QMgr Command Server Status',
+    sourceType: 'ibm_mq',
+    techStack: 'ibm_mq',
+    signal: 'CMDSERVER=RUNNING identifies live vs passive queue managers',
+    valueProposition: 'Identifies which queue managers are actively accepting commands (live vs passive). CMDSERVER=RUNNING is a reliable active-instance indicator independent of replication state.',
+    isDeterministic: true,
+    sharedAt: '2026-06-05T11:15:00Z',
+    sharedToChannel: true,
+  },
+  {
+    id: 'disc-4',
+    title: 'MongoDB Replica State Field',
+    sourceType: 'mongodb',
+    techStack: 'mongodb',
+    signal: 'rs_state=1 (PRIMARY), rs_state=2 (SECONDARY) from Ops Manager API',
+    valueProposition: 'rs_state is the single most deterministic write-authority indicator in the dataset. A value of 1 means this node owns all writes — no ambiguity, no inference.',
+    isDeterministic: true,
+    sharedAt: '2026-06-05T12:00:00Z',
+    sharedToChannel: true,
+  },
+];
 
 interface Props {
   onClose: () => void;
@@ -67,6 +128,209 @@ function SampleBadge({ value }: { value: 'Yes' | 'No' | 'Partial' }) {
     >
       {value}
     </span>
+  );
+}
+
+// ─── Submit Discovery Banner ──────────────────────────────────────────────────
+
+const QUICK_DISCOVERIES = TEAM_DISCOVERIES.map((d) => ({
+  value: d.id,
+  label: d.title,
+}));
+
+function SubmitDiscoveryBanner({ onSubmitted }: { onSubmitted: (id: string) => void }) {
+  const [selectedId, setSelectedId] = useState<string>(TEAM_DISCOVERIES[0].id);
+  const [customNote, setCustomNote] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [sharing, setSharing] = useState(false);
+
+  const selected = TEAM_DISCOVERIES.find((d) => d.id === selectedId)!;
+
+  function handleShare() {
+    setSharing(true);
+    setTimeout(() => {
+      setSharing(false);
+      setSubmitted(true);
+      onSubmitted(selectedId);
+    }, 1200);
+  }
+
+  if (submitted) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mx-5 mt-4 rounded-2xl p-4 flex items-center gap-3 border"
+        style={{ background: 'rgba(48,209,88,0.07)', borderColor: 'rgba(48,209,88,0.25)' }}
+      >
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(48,209,88,0.15)' }}>
+          <CheckCircle className="w-4 h-4" style={{ color: '#30D158' }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[12px] font-bold" style={{ color: '#30D158' }}>Shared to Hackathon Channel ✓</p>
+          <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>{selected.title}</span> has been published to the shared discovery channel.
+          </p>
+        </div>
+        <button
+          onClick={() => { setSubmitted(false); setSelectedId(TEAM_DISCOVERIES[0].id); setCustomNote(''); }}
+          className="text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-colors"
+          style={{ color: 'var(--text-muted)', borderColor: 'var(--app-border)', background: 'var(--app-surface)' }}
+        >
+          Share Another
+        </button>
+      </motion.div>
+    );
+  }
+
+  return (
+    <div
+      className="mx-5 mt-4 rounded-2xl p-4 flex flex-col gap-3 border"
+      style={{ background: 'rgba(10,132,255,0.06)', borderColor: 'rgba(10,132,255,0.2)' }}
+    >
+      <div className="flex items-center gap-2">
+        <Zap className="w-4 h-4" style={{ color: '#0A84FF' }} />
+        <p className="text-[12px] font-bold" style={{ color: '#0A84FF' }}>Submit Discovery to Hackathon Channel</p>
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full ml-auto" style={{ background: 'rgba(10,132,255,0.15)', color: '#0A84FF' }}>
+          BONUS CREDIT
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+          Select Discovery to Share
+        </label>
+        <div className="relative">
+          <select
+            value={selectedId}
+            onChange={(e) => setSelectedId(e.target.value)}
+            className="w-full appearance-none rounded-xl pl-3 pr-7 py-2 text-[12px] font-medium outline-none"
+            style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--text-primary)' }}
+          >
+            {QUICK_DISCOVERIES.map((d) => (
+              <option key={d.value} value={d.value}>{d.label}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
+        </div>
+
+        <div
+          className="rounded-xl p-3 flex flex-col gap-1.5"
+          style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
+        >
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)' }}>
+              {selected.sourceType}
+            </span>
+            {selected.isDeterministic && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(48,209,88,0.12)', color: '#30D158', border: '1px solid rgba(48,209,88,0.25)' }}>
+                DETERMINISTIC
+              </span>
+            )}
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(255,159,10,0.1)', color: '#FF9F0A', border: '1px solid rgba(255,159,10,0.25)' }}>
+              {selected.isDeterministic ? 'inferred=false' : 'inferred=true'}
+            </span>
+          </div>
+          <p className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>Signal: {selected.signal}</p>
+          <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{selected.valueProposition}</p>
+        </div>
+
+        <textarea
+          value={customNote}
+          onChange={(e) => setCustomNote(e.target.value)}
+          placeholder="Optional: add context or sample data reference…"
+          rows={2}
+          className="rounded-xl px-3 py-2 text-[11px] outline-none resize-none"
+          style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--text-primary)' }}
+        />
+      </div>
+
+      <button
+        onClick={handleShare}
+        disabled={sharing}
+        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-bold text-white transition-all disabled:opacity-70"
+        style={{ background: 'linear-gradient(135deg, #0A84FF 0%, #0060CC 100%)', boxShadow: '0 4px 12px rgba(10,132,255,0.3)' }}
+      >
+        {sharing ? (
+          <>
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white" />
+            Sharing to Channel…
+          </>
+        ) : (
+          <>
+            <Share2 className="w-3.5 h-3.5" />
+            Share to Hackathon Channel
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+
+// ─── Team Discovery Card ──────────────────────────────────────────────────────
+
+function TeamDiscoveryCard({ discovery }: { discovery: TeamDiscovery }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div
+      className="rounded-xl overflow-hidden border"
+      style={{ background: 'var(--app-surface)', borderColor: 'var(--app-border)' }}
+    >
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-start gap-3 p-3 text-left"
+      >
+        <div
+          className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+          style={{ background: discovery.isDeterministic ? 'rgba(48,209,88,0.12)' : 'rgba(255,159,10,0.1)' }}
+        >
+          {discovery.isDeterministic
+            ? <CheckCircle className="w-3.5 h-3.5" style={{ color: '#30D158' }} />
+            : <Zap className="w-3.5 h-3.5" style={{ color: '#FF9F0A' }} />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>{discovery.title}</span>
+            {discovery.sharedToChannel && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(48,209,88,0.1)', color: '#30D158', border: '1px solid rgba(48,209,88,0.2)' }}>
+                ✓ SHARED
+              </span>
+            )}
+            {discovery.isDeterministic && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(10,132,255,0.1)', color: '#0A84FF', border: '1px solid rgba(10,132,255,0.2)' }}>
+                DETERMINISTIC
+              </span>
+            )}
+          </div>
+          <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--text-muted)' }}>{discovery.signal}</p>
+        </div>
+        <ChevronDown
+          className="w-3.5 h-3.5 flex-shrink-0 mt-1 transition-transform"
+          style={{ color: 'var(--text-muted)', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+        />
+      </button>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="px-3 pb-3 flex flex-col gap-2 border-t" style={{ borderColor: 'var(--app-border)' }}>
+              <p className="text-[11px] pt-2" style={{ color: 'var(--text-secondary)' }}>{discovery.valueProposition}</p>
+              <div className="flex items-center gap-3 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                <span>Source: <span className="font-mono">{discovery.sourceType}</span></span>
+                <span>·</span>
+                <span>Tech: {discovery.techStack}</span>
+                <span>·</span>
+                <span>Shared: {new Date(discovery.sharedAt).toLocaleDateString()}</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -402,6 +666,9 @@ function ProposalCard({ proposal, onAccept, onReject }: {
 
 export function DataDiscoveryPanel({ onClose }: Props) {
   const [showPropose, setShowPropose] = useState(false);
+  const [sharedDiscoveryIds, setSharedDiscoveryIds] = useState<Set<string>>(
+    new Set(TEAM_DISCOVERIES.filter((d) => d.sharedToChannel).map((d) => d.id))
+  );
   const { proposals, updateProposalStatus } = useRuntimeLocationStore();
 
   const gaps = TECH_STACK_COVERAGE.filter(
@@ -439,10 +706,10 @@ export function DataDiscoveryPanel({ onClose }: Props) {
             </div>
             <div>
               <h2 className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>
-                Data Source Coverage
+                Data Discovery Hub
               </h2>
               <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                Coverage matrix & gap discovery
+                Share discoveries · Coverage matrix · Gap analysis
               </p>
             </div>
           </div>
@@ -485,9 +752,35 @@ export function DataDiscoveryPanel({ onClose }: Props) {
           </div>
         </div>
 
+        {/* Submit Discovery Banner — Phase 10 */}
+        <SubmitDiscoveryBanner
+          onSubmitted={(id) => setSharedDiscoveryIds((prev) => new Set([...prev, id]))}
+        />
+
         {/* Coverage matrix */}
         <div className="flex-1 overflow-y-auto">
+          {/* Discoveries by This Team */}
           <div className="px-5 pt-4 pb-2">
+            <div className="flex items-center gap-2 mb-3">
+              <Trophy className="w-4 h-4" style={{ color: '#FF9F0A' }} />
+              <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                Discoveries by This Team
+              </p>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full ml-auto" style={{ background: 'rgba(48,209,88,0.1)', color: '#30D158' }}>
+                {sharedDiscoveryIds.size} shared
+              </span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {TEAM_DISCOVERIES.map((disc) => (
+                <TeamDiscoveryCard
+                  key={disc.id}
+                  discovery={{ ...disc, sharedToChannel: sharedDiscoveryIds.has(disc.id) }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="px-5 pt-2 pb-2">
             <p className="text-[11px] font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
               Tech Stack Coverage Matrix
             </p>

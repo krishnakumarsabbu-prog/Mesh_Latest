@@ -1789,3 +1789,53 @@ async def execute_failback(
         "alignment_status": alignment
     }
 
+
+# ─── Snapshots ────────────────────────────────────────────────────────────────
+
+@router.get("/snapshots/{app_id}", response_model=List[Dict[str, Any]])
+async def get_snapshots(
+    app_id: str,
+    environment: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    GET /api/v1/runtime-location/snapshots/{app_id}
+    Returns synthesized snapshot history from the current DB asset state.
+    Each asset becomes a snapshot record representing its last-known state.
+    Provides real persistence: data survives page refresh.
+    """
+    env = environment or "PRODUCTION"
+
+    result = await db.execute(select(RuntimeAsset))
+    all_assets = result.scalars().all()
+
+    # Filter to assets matching this application
+    app_assets = []
+    for a in all_assets:
+        if a.environment != env:
+            continue
+        if a.metadata_json and a.metadata_json.get("application_id") == app_id:
+            app_assets.append(a)
+        elif app_id == "MQ_INFRA" and a.data_source == "ibm_mq":
+            app_assets.append(a)
+        elif app_id == "MONGO_INFRA" and a.data_source == "mongodb":
+            app_assets.append(a)
+        elif app_id == "ORACLE_INFRA" and a.data_source == "oracle_oem":
+            app_assets.append(a)
+
+    snapshots = []
+    for asset in app_assets:
+        snapshots.append({
+            "id": f"snap-{asset.id}",
+            "asset_id": asset.id,
+            "snapshot_time": asset.last_seen_at.isoformat() + "Z" if asset.last_seen_at else datetime.utcnow().isoformat() + "Z",
+            "operational_state": asset.latest_operational_state or "UNKNOWN",
+            "replication_role": asset.latest_replication_role or "NONE",
+            "data_source": asset.data_source,
+            "confidence_level": asset.latest_confidence_level or 3,
+            "is_deterministic": asset.is_deterministic or False,
+        })
+
+    # Sort most-recent first
+    snapshots.sort(key=lambda x: x["snapshot_time"], reverse=True)
+    return snapshots

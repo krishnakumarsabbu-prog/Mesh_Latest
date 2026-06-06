@@ -8,6 +8,13 @@ export default {
   theme: {
     extend: {
       colors: {
+        'dc-primary': '#00E599',
+        'dc-standby': '#F59E0B',
+        'dc-critical': '#EF4444',
+        'confidence-high': '#22C55E',
+        'confidence-medium': '#F59E0B',
+        'confidence-low': '#EF4444',
+        'confidence-unknown': '#6B7280',
         // Harness.io primary brand tokens
         harness: {
           bg:           '#F4F5F7',

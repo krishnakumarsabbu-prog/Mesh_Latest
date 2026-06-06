@@ -669,7 +669,7 @@ export function formatRelativeTime(isoString?: string): string {
 
 // ─── Environment Comparison ───────────────────────────────────────────────────
 
-export type EnvComparisonStatus = 'consistent' | 'inconsistent' | 'prod_only' | 'uat_only';
+export type EnvComparisonStatus = 'consistent' | 'inconsistent' | 'prod_only' | 'uat_only' | 'dr_only';
 
 export interface EnvComparisonRow {
   asset_name: string;
@@ -681,6 +681,9 @@ export interface EnvComparisonRow {
   uat_role?: string;
   uat_dc?: string;
   uat_confidence?: number;
+  dr_role?: string;
+  dr_dc?: string;
+  dr_confidence?: number;
   status: EnvComparisonStatus;
 }
 
@@ -689,36 +692,42 @@ const PCA_ENV_COMPARISON: EnvComparisonRow[] = [
     asset_name: 'MQ.PCA.GA', tech_stack: 'ibm_mq', component: 'PCA Messaging Layer',
     prod_role: 'ACTIVE', prod_dc: 'IBB1', prod_confidence: 3,
     uat_role: 'ACTIVE',  uat_dc: 'GA-UAT', uat_confidence: 3,
+    dr_role: 'STANDBY',  dr_dc: 'MA-UAT',  dr_confidence: 3,
     status: 'consistent',
   },
   {
     asset_name: 'MQ.PCA.MA', tech_stack: 'ibm_mq', component: 'PCA Messaging Layer',
     prod_role: 'ACTIVE', prod_dc: 'SHV', prod_confidence: 3,
     uat_role: 'ACTIVE',  uat_dc: 'MA-UAT', uat_confidence: 3,
+    dr_role: 'STANDBY',  dr_dc: 'GA-UAT',  dr_confidence: 3,
     status: 'consistent',
   },
   {
     asset_name: 'pcadb_primary', tech_stack: 'oracle', component: 'PCA Database Tier',
     prod_role: 'PRIMARY', prod_dc: 'IBB1', prod_confidence: 3,
     uat_role: undefined,  uat_dc: undefined, uat_confidence: undefined,
-    status: 'prod_only',
+    dr_role: 'PHYSICAL_STANDBY', dr_dc: 'SHV', dr_confidence: 4,
+    status: 'consistent',
   },
   {
     asset_name: 'pcadb_standby', tech_stack: 'oracle', component: 'PCA Database Tier',
     prod_role: 'PHYSICAL_STANDBY', prod_dc: 'SHV', prod_confidence: 3,
     uat_role: undefined,             uat_dc: undefined, uat_confidence: undefined,
-    status: 'prod_only',
+    dr_role: 'PHYSICAL_STANDBY',     dr_dc: 'SHV',      dr_confidence: 4,
+    status: 'consistent',
   },
   {
     asset_name: 'PCA-APP-01', tech_stack: 'vm', component: 'PCA Application Servers',
     prod_role: 'ACTIVE', prod_dc: 'IBB1', prod_confidence: 4,
     uat_role: 'ACTIVE',  uat_dc: 'GA-UAT', uat_confidence: 4,
+    dr_role: 'STANDBY',  dr_dc: 'SHV',      dr_confidence: 4,
     status: 'consistent',
   },
   {
     asset_name: 'pcadb_uat_primary', tech_stack: 'oracle', component: 'PCA Database Tier (UAT)',
     prod_role: undefined, prod_dc: undefined, prod_confidence: undefined,
     uat_role: 'PRIMARY',  uat_dc: 'GA-UAT',  uat_confidence: 2,
+    dr_role: undefined,   dr_dc: undefined,   dr_confidence: undefined,
     status: 'uat_only',
   },
 ];
@@ -728,19 +737,22 @@ const DUMPS_ENV_COMPARISON: EnvComparisonRow[] = [
     asset_name: 'az003-mongo-01', tech_stack: 'mongodb', component: 'DUMPS MongoDB Cluster',
     prod_role: 'PRIMARY',   prod_dc: 'AZ3', prod_confidence: 3,
     uat_role: 'PRIMARY',    uat_dc: 'AZ3',  uat_confidence: 3,
+    dr_role: 'SECONDARY',   dr_dc: 'AZ3',   dr_confidence: 3,
     status: 'consistent',
   },
   {
     asset_name: 'az003-mongo-02', tech_stack: 'mongodb', component: 'DUMPS MongoDB Cluster',
     prod_role: 'SECONDARY', prod_dc: 'AZ3', prod_confidence: 3,
     uat_role: 'PRIMARY',    uat_dc: 'AZ3',  uat_confidence: 3,
+    dr_role: 'SECONDARY',   dr_dc: 'AZ3',   dr_confidence: 3,
     status: 'inconsistent',
   },
   {
     asset_name: 'dumpsdb_primary', tech_stack: 'oracle', component: 'DUMPS Oracle DB',
     prod_role: 'PRIMARY', prod_dc: 'SHV', prod_confidence: 3,
     uat_role: undefined,  uat_dc: undefined, uat_confidence: undefined,
-    status: 'prod_only',
+    dr_role: 'PHYSICAL_STANDBY', dr_dc: 'SHV', dr_confidence: 3,
+    status: 'consistent',
   },
 ];
 

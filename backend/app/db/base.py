@@ -48,6 +48,18 @@ async def init_db():
             except Exception:
                 # Column probably already exists, which is fine
                 pass
+
+            # Add new audit log columns (Phase 11 persistence upgrade)
+            for col_def in [
+                "ALTER TABLE runtime_audit_logs ADD COLUMN asset_name VARCHAR;",
+                "ALTER TABLE runtime_audit_logs ADD COLUMN before_value VARCHAR;",
+                "ALTER TABLE runtime_audit_logs ADD COLUMN after_value VARCHAR;",
+            ]:
+                try:
+                    await conn.execute(text(col_def))
+                except Exception:
+                    pass  # Column already exists — fine
+
         logger.info("Database tables created/verified")
     except Exception as exc:
         logger.error(f"Failed to initialize database tables: {exc}")

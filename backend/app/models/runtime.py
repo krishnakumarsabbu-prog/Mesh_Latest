@@ -97,4 +97,7 @@ class RuntimeAuditLog(Base):
     actor = Column(String, default="operator")
     source = Column(String, nullable=True)
     application_id = Column(String, nullable=True)
+    asset_name = Column(String, nullable=True)
+    before_value = Column(String, nullable=True)
+    after_value = Column(String, nullable=True)
     occurred_at = Column(DateTime, default=datetime.utcnow)

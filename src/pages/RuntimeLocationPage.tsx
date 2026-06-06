@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Search, Upload, RefreshCw, Building2, Server,
   TriangleAlert as AlertTriangle, ChevronDown, CircleCheck as CheckCircle,
   Database, Zap, Siren, LayoutList, Play, History, CircleAlert as AlertCircle,
-  FileText, X, Clock,
+  FileText, X, Clock, Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -19,34 +19,90 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { useWsStore } from '@/store/wsStore';
 import { ConfidenceBadge } from '@/components/runtime/ConfidenceBadge';
 import { FreshnessIndicator } from '@/components/runtime/FreshnessIndicator';
+import { TechStackIcon, techStackLabel } from '@/components/runtime/TechStackIcon';
+import { getAppTechStacks } from '@/lib/runtimeLocationMock';
 import { IncidentModePanel } from '@/components/runtime/IncidentModePanel';
 import { DataDiscoveryPanel } from '@/components/runtime/DataDiscoveryPanel';
 import { DemoWalkthroughOverlay } from '@/components/runtime/DemoWalkthroughOverlay';
 import { detectSourceType } from '@/lib/csvParser';
-import type { ApplicationLocationSummary, DataSourceName } from '@/types';
+import type { ApplicationLocationSummary, DataSourceName, TechStack } from '@/types';
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
+
+function AnimatedCounter({ value }: { value: number }) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    let start = 0;
+    const end = value;
+    if (start === end) {
+      setDisplayValue(end);
+      return;
+    }
+    const duration = 1.0;
+    const startTime = performance.now();
+
+    function update(now: number) {
+      const elapsed = (now - startTime) / 1000;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = progress * (2 - progress);
+      const current = Math.floor(start + eased * (end - start));
+      setDisplayValue(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(update);
+      } else {
+        setDisplayValue(end);
+      }
+    }
+
+    requestAnimationFrame(update);
+  }, [value]);
+
+  return <>{displayValue}</>;
+}
 
 function StatCard({ label, value, icon: Icon, color }: {
   label: string; value: number | string; icon: React.ElementType; color?: string;
 }) {
   const c = color ?? 'var(--primary-500)';
+  const numericValue = typeof value === 'number' ? value : parseInt(value) || 0;
+  const isString = typeof value === 'string' && isNaN(Number(value));
+
+  // Determine glow card gradient background based on color
+  let cardGradient = 'linear-gradient(135deg, rgba(10, 132, 255, 0.02) 0%, rgba(20, 20, 25, 0.75) 100%)';
+  if (c === '#00E599') {
+    cardGradient = 'linear-gradient(135deg, rgba(0, 229, 153, 0.02) 0%, rgba(20, 20, 25, 0.75) 100%)';
+  } else if (c === '#FF9F0A') {
+    cardGradient = 'linear-gradient(135deg, rgba(255, 159, 10, 0.02) 0%, rgba(20, 20, 25, 0.75) 100%)';
+  } else if (c === '#FF453A') {
+    cardGradient = 'linear-gradient(135deg, rgba(255, 69, 58, 0.02) 0%, rgba(20, 20, 25, 0.75) 100%)';
+  }
+
   return (
     <div
-      className="rounded-2xl px-5 py-4 flex items-center gap-4"
-      style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
+      className="rounded-2xl px-5 py-4 flex items-center gap-4 relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border backdrop-blur-md"
+      style={{
+        background: cardGradient,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
+        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.15)',
+      }}
     >
       <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: `${c}18` }}
+        className="absolute left-0 top-0 bottom-0 w-1"
+        style={{ background: c }}
+      />
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border"
+        style={{ background: `${c}10`, borderColor: `${c}30` }}
       >
-        <Icon className="w-5 h-5" style={{ color: c }} strokeWidth={1.75} />
+        <Icon className="w-5 h-5" style={{ color: c }} strokeWidth={2} />
       </div>
       <div>
-        <p className="text-[22px] font-bold leading-none" style={{ color: 'var(--text-primary)' }}>
-          {value}
+        <p className="text-[24px] font-extrabold leading-none text-white tracking-tight">
+          {isString ? value : <AnimatedCounter value={numericValue} />}
         </p>
-        <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-[11px] mt-1.5 font-bold uppercase tracking-widest text-white/40">
           {label}
         </p>
       </div>
@@ -76,6 +132,29 @@ function DCBadge({ name, isPrimary }: { name: string; isPrimary?: boolean }) {
 
 function AppCard({ app }: { app: ApplicationLocationSummary }) {
   const navigate = useNavigate();
+  const [hovered, setHovered] = useState(false);
+
+  const confidenceColor =
+    app.overall_confidence === 4
+      ? '#30D158'
+      : app.overall_confidence === 3
+      ? '#FF9F0A'
+      : '#FF453A';
+
+  const envBg =
+    app.environment === 'PRODUCTION'
+      ? 'rgba(10,132,255,0.1)'
+      : app.environment === 'UAT'
+      ? 'rgba(255,159,10,0.1)'
+      : 'rgba(142,142,147,0.1)';
+  const envFg =
+    app.environment === 'PRODUCTION'
+      ? '#0A84FF'
+      : app.environment === 'UAT'
+      ? '#FF9F0A'
+      : '#8E8E93';
+
+  const stacks = app.tech_stacks || getAppTechStacks(app.application_id);
 
   return (
     <motion.div
@@ -84,101 +163,155 @@ function AppCard({ app }: { app: ApplicationLocationSummary }) {
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
       onClick={() => navigate(`/runtime-location/${app.application_id}?env=${app.environment}`)}
-      className="rounded-2xl p-5 cursor-pointer flex flex-col gap-3.5"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="rounded-2xl p-5 cursor-pointer flex flex-col gap-4 relative overflow-hidden transition-all duration-300 pl-7"
       style={{
-        background: 'var(--app-surface)',
-        border: '1px solid var(--app-border)',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-md)';
-        (e.currentTarget as HTMLElement).style.borderColor = 'var(--primary-500)';
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-sm)';
-        (e.currentTarget as HTMLElement).style.borderColor = 'var(--app-border)';
+        background: 'rgba(20, 20, 25, 0.65)',
+        border: '1px solid rgba(255, 255, 255, 0.06)',
+        boxShadow: hovered ? `0 0 25px ${confidenceColor}22` : '0 4px 15px rgba(0, 0, 0, 0.15)',
+        borderColor: hovered ? confidenceColor : 'rgba(255, 255, 255, 0.06)',
+        backdropFilter: 'blur(8px)',
       }}
     >
-      {/* Name + env */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[15px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>
-            {app.application_name}
-          </p>
-          <p className="text-[10px] font-semibold uppercase tracking-wider mt-0.5" style={{ color: 'var(--text-muted)' }}>
+      {/* Left indicator strip */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-1.5"
+        style={{ background: confidenceColor }}
+      />
+
+      {/* Main Row */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        
+        {/* Left: App Info */}
+        <div className="flex flex-col gap-1 min-w-[200px] max-w-[250px]">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[15px] font-extrabold text-white truncate">
+              {app.application_name}
+            </span>
+            <span
+              className="text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider"
+              style={{ background: envBg, color: envFg }}
+            >
+              {app.environment}
+            </span>
+          </div>
+          <span className="text-[10px] font-bold tracking-wider text-white/40 uppercase">
             {app.application_id}
-          </p>
+          </span>
         </div>
-        <span
-          className="flex-shrink-0 text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg"
-          style={{
-            background: app.environment === 'PRODUCTION' ? 'rgba(10,132,255,0.1)' :
-              app.environment === 'UAT' ? 'rgba(255,159,10,0.1)' : 'rgba(142,142,147,0.1)',
-            color: app.environment === 'PRODUCTION' ? '#0A84FF' :
-              app.environment === 'UAT' ? '#FF9F0A' : '#8E8E93',
-          }}
-        >
-          {app.environment}
-        </span>
+
+        {/* Center: Mini Distribution Bar */}
+        <div className="flex-1 flex flex-col gap-1 max-w-xs md:mx-auto min-w-[180px]">
+          <div className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest">
+            Asset Distribution
+          </div>
+          <div className="flex h-1.5 rounded-full overflow-hidden bg-white/5 w-full mt-1">
+            {app.data_centers.map((dc) => {
+              const isPrimary = dc === app.primary_write_dc;
+              const pct = isPrimary ? 60 : 40 / Math.max(1, app.data_centers.length - 1);
+              return (
+                <div
+                  key={dc}
+                  style={{ width: `${pct}%`, background: isPrimary ? '#30D158' : '#FF9F0A' }}
+                  title={`${dc}: ${isPrimary ? 'Primary' : 'Standby'}`}
+                />
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-2.5 mt-1 flex-wrap">
+            {app.data_centers.map((dc) => (
+              <span key={dc} className="text-[9px] font-extrabold flex items-center gap-1 text-white/70">
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: dc === app.primary_write_dc ? '#30D158' : '#FF9F0A' }}
+                />
+                {dc}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Right: Confidence, Primary DC, Freshness */}
+        <div className="flex items-center gap-6 text-right flex-shrink-0 flex-wrap md:flex-nowrap">
+          <div className="flex flex-col text-left md:text-right">
+            <span className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest">
+              Primary Authority
+            </span>
+            <span className="text-[12px] font-bold text-white mt-0.5 flex items-center gap-1 justify-start md:justify-end">
+              <span className="w-2 h-2 rounded-full bg-[#30D158] animate-pulse-soft" />
+              {app.primary_write_dc || 'N/A'}
+            </span>
+          </div>
+          <div className="flex flex-col items-start md:items-end">
+            <span className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest">
+              Confidence
+            </span>
+            <span
+              className="text-[15px] font-extrabold mt-0.5"
+              style={{ color: confidenceColor }}
+            >
+              {app.overall_confidence}/4
+            </span>
+          </div>
+          <div className="flex flex-col items-start md:items-end">
+            <span className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest">
+              Freshness
+            </span>
+            <div className="mt-1">
+              <FreshnessIndicator lastUpdated={app.last_updated} compact />
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      {/* Data centers */}
-      <div>
-        <p className="text-[9px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-muted)' }}>
-          Data Centers
-        </p>
-        <div className="flex flex-wrap gap-1">
-          {app.data_centers.map((dc) => (
-            <DCBadge key={dc} name={dc} isPrimary={dc === app.primary_write_dc} />
+      {/* Divider */}
+      <div className="h-px bg-white/5 -mx-5" />
+
+      {/* Bottom Row */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        {/* Tech Stack Icons */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest mr-1">
+            Engine Stack:
+          </span>
+          {stacks.map((stack) => (
+            <div
+              key={stack}
+              className="p-1 rounded bg-white/5 flex items-center justify-center border border-white/5"
+              title={techStackLabel(stack as TechStack)}
+            >
+              <TechStackIcon techStack={stack as TechStack} size={11} />
+            </div>
           ))}
         </div>
-      </div>
 
-      {/* Primary write */}
-      {app.primary_write_dc && (
-        <div className="flex items-center gap-1.5">
-          <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Primary write:</p>
-          <span className="text-[11px] font-semibold" style={{ color: '#30D158' }}>
-            {app.primary_write_dc}
+        {/* Counts & Alerts */}
+        <div className="flex items-center gap-3 text-[11px] font-medium text-white/60">
+          <span>
+            {app.component_count} component{app.component_count !== 1 ? 's' : ''}
           </span>
+          <span>
+            {app.asset_count} active resource{app.asset_count !== 1 ? 's' : ''}
+          </span>
+          {app.stale_source_count > 0 && (
+            <span
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FF9F0A]/10 text-[#FF9F0A] border border-[#FF9F0A]/20"
+            >
+              <AlertTriangle className="w-3 h-3" />
+              {app.stale_source_count} stale
+            </span>
+          )}
+          {app.missing_source_count != null && app.missing_source_count > 0 && (
+            <span
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 text-white/40"
+              title="Expected data sources that have not yet provided data"
+            >
+              {app.missing_source_count} missing signal{app.missing_source_count !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
-      )}
-
-      {/* Confidence + freshness divider row */}
-      <div
-        className="flex items-center justify-between gap-2 pt-2"
-        style={{ borderTop: '1px solid var(--app-border)' }}
-      >
-        <div className="flex items-center gap-1.5">
-          <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Confidence:</p>
-          <ConfidenceBadge level={app.overall_confidence} />
-        </div>
-        <FreshnessIndicator lastUpdated={app.last_updated} compact />
-      </div>
-
-      {/* Component / asset / stale counts */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-          {app.component_count} component{app.component_count !== 1 ? 's' : ''}
-        </span>
-        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-          {app.asset_count} asset{app.asset_count !== 1 ? 's' : ''}
-        </span>
-        {app.stale_source_count > 0 && (
-          <span className="flex items-center gap-1 text-[11px]" style={{ color: '#FF9F0A' }}>
-            <AlertTriangle className="w-3 h-3" />
-            {app.stale_source_count} stale
-          </span>
-        )}
-        {app.missing_source_count != null && app.missing_source_count > 0 && (
-          <span
-            className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-            style={{ background: 'rgba(142,142,147,0.12)', color: '#8E8E93' }}
-            title="Expected data sources that have not yet provided data"
-          >
-            {app.missing_source_count} missing signal{app.missing_source_count !== 1 ? 's' : ''}
-          </span>
-        )}
       </div>
     </motion.div>
   );
@@ -609,52 +742,88 @@ function SeedModal({ onClose }: { onClose: () => void }) {
 
 // ─── Time Simulation Slider ───────────────────────────────────────────────────
 
+export const STAGES = [
+  { step: 1, label: 'Baseline', offset: 0, desc: 'All telemetry sources aligned. Data centers reporting normal operations.', status: 'NORMAL', color: '#30D158' },
+  { step: 2, label: 'MongoDB UAT Failure', offset: 60, desc: 'Ingestion failure in MongoDB UAT. 1 source reporting stale data.', status: 'WARNING', color: '#FF9F0A' },
+  { step: 3, label: 'Secondary CMDB Failure', offset: 120, desc: 'Secondary CMDB failure in PRODUCTION. 2 sources reporting stale telemetry.', status: 'WARNING', color: '#FF9F0A' },
+  { step: 4, label: 'Split-Brain Drift Detected', offset: 180, desc: 'Primary DC mismatch: CMDB vs OpenShift active roles disagree.', status: 'ALERT', color: '#FF453A' },
+  { step: 5, label: 'Mitigation Failure (Critical)', offset: 240, desc: 'Incident state: Drift score critical, automated failover fails.', status: 'CRITICAL', color: '#FF453A' },
+];
+
 function TimeSimulatorSlider() {
   const { simulatedAgeOffset, setSimulatedAgeOffset } = useRuntimeLocationStore();
 
-  const label = simulatedAgeOffset === 0 ? 'Now (live)'
-    : simulatedAgeOffset < 60 ? `+${simulatedAgeOffset}m`
-    : `+${(simulatedAgeOffset / 60).toFixed(1)}h`;
+  const currentStep = simulatedAgeOffset === 0 ? 1
+    : simulatedAgeOffset === 60 ? 2
+    : simulatedAgeOffset === 120 ? 3
+    : simulatedAgeOffset === 180 ? 4
+    : 5;
 
-  const color = simulatedAgeOffset === 0 ? '#30D158'
-    : simulatedAgeOffset <= 30 ? '#FF9F0A'
-    : '#FF453A';
+  const currentStage = STAGES[currentStep - 1];
 
   return (
     <div
-      className="flex items-center gap-3 px-3 py-2 rounded-xl flex-shrink-0"
-      style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
+      className="flex items-center gap-4 px-4 py-2 rounded-2xl flex-shrink-0 relative group"
+      style={{
+        background: 'rgba(20, 20, 25, 0.6)',
+        border: `1px solid ${currentStage.color}35`,
+        boxShadow: `0 0 15px ${currentStage.color}08`,
+      }}
     >
-      <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color }} />
-      <div className="flex flex-col gap-0.5">
+      <div
+        className="w-2.5 h-2.5 rounded-full flex-shrink-0 animate-ping"
+        style={{ background: currentStage.color }}
+      />
+      
+      <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-            Simulate Time
+          <span className="text-[9px] font-extrabold uppercase tracking-widest text-white/50">
+            Simulate Timeline
           </span>
-          <span className="text-[11px] font-bold" style={{ color }}>
-            {label}
+          <span className="text-[10px] font-extrabold font-mono" style={{ color: currentStage.color }}>
+            Step {currentStep}/5: {currentStage.label}
           </span>
         </div>
         <input
           type="range"
-          min={0}
-          max={240}
-          step={15}
-          value={simulatedAgeOffset}
-          onChange={(e) => setSimulatedAgeOffset(Number(e.target.value))}
-          className="w-32 accent-current"
-          style={{ accentColor: color }}
+          min={1}
+          max={5}
+          step={1}
+          value={currentStep}
+          onChange={(e) => {
+            const step = Number(e.target.value);
+            const offset = STAGES[step - 1].offset;
+            setSimulatedAgeOffset(offset);
+          }}
+          className="w-36 accent-current cursor-pointer"
+          style={{ accentColor: currentStage.color }}
         />
       </div>
-      {simulatedAgeOffset > 0 && (
-        <button
-          onClick={() => setSimulatedAgeOffset(0)}
-          className="text-[10px] font-semibold px-2 py-0.5 rounded-lg flex-shrink-0 transition-opacity hover:opacity-70"
-          style={{ background: 'rgba(255,69,58,0.1)', color: '#FF453A' }}
-        >
-          Reset
-        </button>
-      )}
+
+      {/* Popover/Tooltip on hover of timeline slider */}
+      <div
+        className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col gap-2 p-3 rounded-2xl z-50 pointer-events-none w-72 text-left shadow-2xl backdrop-blur-md transition-all border"
+        style={{
+          background: 'rgba(15, 20, 28, 0.96)',
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-bold text-white/40 uppercase">Timeline Status</span>
+          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded" style={{ background: `${currentStage.color}15`, color: currentStage.color }}>
+            {currentStage.status}
+          </span>
+        </div>
+        <p className="text-[12px] font-extrabold text-white mt-1">
+          {currentStage.label}
+        </p>
+        <p className="text-[10px] text-white/60 leading-relaxed">
+          {currentStage.desc}
+        </p>
+        <div className="text-[9px] font-mono text-white/35 pt-1.5 border-t border-white/5">
+          Offset: +{currentStage.offset} mins
+        </div>
+      </div>
     </div>
   );
 }
@@ -681,14 +850,117 @@ const STACK_OPTIONS: { value: TechStackFilter; label: string }[] = [
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+interface LiveFeedEvent {
+  id: string;
+  timestamp: string;
+  type: 'import' | 'drift' | 'conflict' | 'failover' | 'info';
+  message: string;
+  application_id?: string;
+  environment?: string;
+  badgeColor?: string;
+}
+
+const getLiveEventsForStep = (step: number): LiveFeedEvent[] => {
+  const now = new Date();
+  const formatTime = (minutesAgo: number) => {
+    return new Date(now.getTime() - minutesAgo * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
+  const events: LiveFeedEvent[] = [];
+
+  // Step 1 events
+  events.push({
+    id: 'e1',
+    timestamp: formatTime(25),
+    type: 'import',
+    message: "Data source 'IBM MQ' imported 14 records (Freshness: 100%)",
+    application_id: 'PCA',
+    environment: 'PRODUCTION',
+    badgeColor: '#30D158'
+  });
+  events.push({
+    id: 'e2',
+    timestamp: formatTime(22),
+    type: 'import',
+    message: "Data source 'CMDB' imported 150 records (Freshness: 100%)",
+    application_id: 'PCA',
+    environment: 'PRODUCTION',
+    badgeColor: '#30D158'
+  });
+
+  if (step >= 2) {
+    events.push({
+      id: 'e3',
+      timestamp: formatTime(15),
+      type: 'info',
+      message: "UAT Data source 'CMDB' decay: 1 source reported stale (Freshness: 80%)",
+      application_id: 'PCA',
+      environment: 'UAT',
+      badgeColor: '#FF9F0A'
+    });
+  }
+
+  if (step >= 3) {
+    events.push({
+      id: 'e4',
+      timestamp: formatTime(10),
+      type: 'conflict',
+      message: "Conflict detected between CMDB and SCOM on PCA DB Primary roles",
+      application_id: 'PCA',
+      environment: 'PRODUCTION',
+      badgeColor: '#FF453A'
+    });
+  }
+
+  if (step >= 4) {
+    events.push({
+      id: 'e5',
+      timestamp: formatTime(5),
+      type: 'drift',
+      message: "Drift detected on PCA: Active primary in IBB1, intended primary in SHV",
+      application_id: 'PCA',
+      environment: 'PRODUCTION',
+      badgeColor: '#FF453A'
+    });
+  }
+
+  if (step >= 5) {
+    events.push({
+      id: 'e6',
+      timestamp: formatTime(1),
+      type: 'failover',
+      message: "Failover initiated for PCA: IBB1 -> SHV",
+      application_id: 'PCA',
+      environment: 'PRODUCTION',
+      badgeColor: '#0A84FF'
+    });
+    events.push({
+      id: 'e7',
+      timestamp: formatTime(0.5),
+      type: 'drift',
+      message: "Primary write on SHV — expected IBB1 (Failover Active)",
+      application_id: 'PCA',
+      environment: 'PRODUCTION',
+      badgeColor: '#FF453A'
+    });
+  }
+
+  return events.reverse();
+};
+
 export function RuntimeLocationPage() {
+  const navigate = useNavigate();
   const store = useRuntimeLocationStore();
   const {
     applications, dataCenters, isLoadingApplications, importHistory,
-    environmentFilter, techStackFilter, searchQuery,
+    environmentFilter, techStackFilter, searchQuery, simulatedAgeOffset, setSimulatedAgeOffset,
     loadApplications, loadDataCenters,
     setEnvironmentFilter, setTechStackFilter, setSearchQuery,
+    confidenceFilters, freshnessFilters, statusFilters,
+    setConfidenceFilters, setFreshnessFilters, setStatusFilters,
   } = store;
+
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'heatmap'>('list');
 
   const setGlobalStatus = useWsStore((s) => s.setGlobalStatus);
 
@@ -698,6 +970,16 @@ export function RuntimeLocationPage() {
   const [showDiscovery, setShowDiscovery] = useState(false);
   const [showDemo,      setShowDemo]      = useState(false);
   const [showHistory,   setShowHistory]   = useState(false);
+  const [showLiveFeed,  setShowLiveFeed]  = useState(true);
+  const [liveEvents,    setLiveEvents]    = useState<LiveFeedEvent[]>([]);
+
+  const currentStep = simulatedAgeOffset === 0 ? 1
+    : simulatedAgeOffset === 60 ? 2
+    : simulatedAgeOffset === 120 ? 3
+    : simulatedAgeOffset === 180 ? 4
+    : 5;
+
+  const currentStage = STAGES[currentStep - 1];
 
   const handleWsMessage = useCallback((data: unknown) => {
     const msg = data as { type?: string; application_id?: string; application_name?: string; drift_type?: string; detected_dc?: string; expected_dc?: string };
@@ -708,10 +990,42 @@ export function RuntimeLocationPage() {
         : msg.drift_type ?? 'Drift detected';
       notify.error(`Drift: ${appName}`, driftLabel);
       loadApplications();
+
+      // Add to live events feed
+      setLiveEvents(prev => [
+        {
+          id: `ws-${Date.now()}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          type: 'drift',
+          message: `Drift: ${appName} - ${driftLabel}`,
+          application_id: msg.application_id,
+          environment: 'PRODUCTION',
+          badgeColor: '#FF453A'
+        },
+        ...prev
+      ]);
     } else if (msg.type === 'asset_updated') {
       loadApplications();
+      setLiveEvents(prev => [
+        {
+          id: `ws-${Date.now()}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          type: 'info',
+          message: `Asset updated for ${msg.application_name || 'application'}`,
+          application_id: msg.application_id,
+          environment: 'PRODUCTION',
+          badgeColor: '#30D158'
+        },
+        ...prev
+      ]);
     }
   }, [loadApplications]);
+
+  const handleEventClick = useCallback((event: LiveFeedEvent) => {
+    if (event.application_id) {
+      navigate(`/runtime-location/detail/${event.application_id}?env=${event.environment || 'PRODUCTION'}`);
+    }
+  }, [navigate]);
 
   useWebSocket('/api/v1/runtime-location/ws', {
     onMessage: handleWsMessage,
@@ -723,12 +1037,93 @@ export function RuntimeLocationPage() {
     loadDataCenters();
   }, []);
 
-  const filtered = selectFilteredApplications(store);
-  const totalStale = applications.reduce((acc, a) => acc + a.stale_source_count, 0);
-  const uniqueDCs  = new Set(applications.flatMap((a) => a.data_centers)).size;
+  useEffect(() => {
+    setLiveEvents(getLiveEventsForStep(currentStep));
+  }, [currentStep]);
+
+  const simulatedApps = useMemo(() => {
+    return applications.map((app) => {
+      let staleCount = app.stale_source_count || 0;
+      if (simulatedAgeOffset >= 60 && app.environment === 'UAT' && app.application_id === 'PCA') {
+        staleCount += 1;
+      }
+      if (simulatedAgeOffset >= 120 && app.environment === 'PRODUCTION' && app.application_id === 'PCA') {
+        staleCount += 1;
+      }
+
+      let status = app.alignment_status;
+      if (simulatedAgeOffset >= 180 && app.application_id === 'PCA' && app.environment === 'PRODUCTION') {
+        status = 'DRIFTED';
+      }
+
+      return {
+        ...app,
+        alignment_status: status,
+        stale_source_count: staleCount,
+      };
+    });
+  }, [applications, simulatedAgeOffset]);
+
+  const filtered = useMemo(() => {
+    return simulatedApps.filter((app) => {
+      if (environmentFilter !== 'ALL' && app.environment !== environmentFilter) return false;
+      if (techStackFilter !== 'ALL') {
+        const realStacks = app.tech_stacks ?? [];
+        const mockStacks = realStacks.length === 0 ? getAppTechStacks(app.application_id) : [];
+        const stacks = realStacks.length > 0 ? realStacks : mockStacks;
+        if (stacks.length > 0 && !stacks.includes(techStackFilter)) return false;
+      }
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (!app.application_name.toLowerCase().includes(q) &&
+            !app.application_id.toLowerCase().includes(q)) return false;
+      }
+
+      // Confidence filters (multi-select)
+      if (confidenceFilters && confidenceFilters.length > 0) {
+        const label = app.overall_confidence === 4 ? 'HIGH'
+          : app.overall_confidence === 3 ? 'MEDIUM'
+          : app.overall_confidence === 2 ? 'LOW'
+          : 'UNKNOWN';
+        if (!confidenceFilters.includes(label)) return false;
+      }
+
+      // Freshness filters (multi-select)
+      if (freshnessFilters && freshnessFilters.length > 0) {
+        const freshLabel = app.stale_source_count === 0 ? 'FRESH'
+          : app.stale_source_count === 1 ? 'STALE'
+          : 'VERY_STALE';
+        if (!freshnessFilters.includes(freshLabel)) return false;
+      }
+
+      // Status filters (multi-select)
+      if (statusFilters && statusFilters.length > 0) {
+        const hasDrift = app.alignment_status === 'DRIFTED';
+        const hasConflict = app.confidence_label === 'CONFLICT';
+        
+        const matchesDrift = statusFilters.includes('DRIFTED') && hasDrift;
+        const matchesConflict = statusFilters.includes('CONFLICT') && hasConflict;
+        
+        if (!matchesDrift && !matchesConflict) return false;
+      }
+
+      return true;
+    });
+  }, [simulatedApps, environmentFilter, techStackFilter, searchQuery, confidenceFilters, freshnessFilters, statusFilters]);
+
+  const totalStale = useMemo(() => {
+    return simulatedApps.reduce((acc, a) => acc + (a.stale_source_count > 0 ? 1 : 0), 0);
+  }, [simulatedApps]);
+
+  const uniqueDCs  = useMemo(() => {
+    return new Set(simulatedApps.flatMap((a) => a.data_centers)).size;
+  }, [simulatedApps]);
 
   return (
-    <div className="flex flex-col gap-6 px-6 py-6 max-w-[1400px] mx-auto">
+    <div className="flex gap-6 px-6 py-6 max-w-[1600px] mx-auto min-h-[calc(100vh-100px)]">
+      
+      {/* Main Content Area */}
+      <div className="flex-1 min-w-0 flex flex-col gap-6">
 
       {/* Page header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -819,6 +1214,21 @@ export function RuntimeLocationPage() {
             Demo
           </button>
           <button
+            onClick={() => setShowLiveFeed((v) => !v)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all relative"
+            style={{
+              background: showLiveFeed ? 'rgba(10,132,255,0.08)' : 'var(--app-surface)',
+              border: `1px solid ${showLiveFeed ? 'rgba(10,132,255,0.3)' : 'var(--app-border)'}`,
+              color: showLiveFeed ? 'var(--primary-500)' : 'var(--text-secondary)',
+            }}
+          >
+            <Activity className="w-3.5 h-3.5" />
+            Live Feed
+            {currentStep >= 3 && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#FF453A] border-2 border-[#1E1E24] rounded-full animate-pulse animate-ping" />
+            )}
+          </button>
+          <button
             onClick={() => setShowSeed(true)}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold"
             style={{
@@ -843,14 +1253,14 @@ export function RuntimeLocationPage() {
 
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard label="Applications Tracked" value={applications.length}                                 icon={Server}        color="var(--primary-500)" />
-        <StatCard label="Data Centers"          value={dataCenters.length > 0 ? dataCenters.length : uniqueDCs} icon={Building2}     color="#0A84FF" />
+        <StatCard label="Applications" value={applications.length}                                 icon={Server}        color="var(--primary-500)" />
+        <StatCard label="Data Centers"          value={dataCenters.length > 0 ? dataCenters.length : uniqueDCs} icon={Building2}     color="#00E599" />
         <StatCard label="Stale Sources"         value={totalStale}                                         icon={AlertTriangle} color="#FF9F0A" />
         <StatCard
-          label="Environments"
-          value={new Set(applications.map((a) => a.environment)).size}
-          icon={MapPin}
-          color="#30D158"
+          label="Drifts Detected"
+          value={applications.filter((a) => a.alignment_status === 'DRIFTED').length}
+          icon={AlertCircle}
+          color="#FF453A"
         />
       </div>
 
@@ -882,6 +1292,146 @@ export function RuntimeLocationPage() {
           />
         </div>
         <TimeSimulatorSlider />
+
+        {/* View Switcher */}
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/5 flex-shrink-0">
+          {[
+            { id: 'list', label: 'List', icon: LayoutList },
+            { id: 'kanban', label: 'Kanban', icon: Server },
+            { id: 'heatmap', label: 'Heatmap', icon: MapPin },
+          ].map((mode) => {
+            const Icon = mode.icon;
+            return (
+              <button
+                key={mode.id}
+                onClick={() => setViewMode(mode.id as any)}
+                className="p-1.5 rounded-lg text-[11px] font-extrabold flex items-center gap-1.5 transition-all"
+                style={viewMode === mode.id ? {
+                  background: 'var(--primary-500)',
+                  color: '#fff',
+                } : {
+                  color: 'rgba(255,255,255,0.4)',
+                }}
+                title={`${mode.label} View`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{mode.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Advanced Filter Chips Row */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-1.5 py-1 mb-2">
+        
+        {/* Confidence Group */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-white/30">Confidence:</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {['HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'].map((lvl) => {
+              const active = confidenceFilters.includes(lvl);
+              const color = lvl === 'HIGH' ? '#30D158' : lvl === 'MEDIUM' ? '#FF9F0A' : lvl === 'LOW' ? '#FF453A' : '#8E8E93';
+              return (
+                <button
+                  key={lvl}
+                  onClick={() => {
+                    if (active) {
+                      setConfidenceFilters(confidenceFilters.filter(f => f !== lvl));
+                    } else {
+                      setConfidenceFilters([...confidenceFilters, lvl]);
+                    }
+                  }}
+                  className="px-2 py-0.5 rounded-lg text-[9px] font-bold border transition-all"
+                  style={{
+                    background: active ? `${color}15` : 'rgba(255,255,255,0.02)',
+                    borderColor: active ? `${color}60` : 'rgba(255,255,255,0.06)',
+                    color: active ? color : 'var(--text-muted)',
+                  }}
+                >
+                  {lvl}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Freshness Group */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-white/30">Freshness:</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {['FRESH', 'STALE', 'VERY_STALE'].map((lvl) => {
+              const active = freshnessFilters.includes(lvl);
+              const color = lvl === 'FRESH' ? '#30D158' : lvl === 'STALE' ? '#FF9F0A' : '#FF453A';
+              return (
+                <button
+                  key={lvl}
+                  onClick={() => {
+                    if (active) {
+                      setFreshnessFilters(freshnessFilters.filter(f => f !== lvl));
+                    } else {
+                      setFreshnessFilters([...freshnessFilters, lvl]);
+                    }
+                  }}
+                  className="px-2 py-0.5 rounded-lg text-[9px] font-bold border transition-all"
+                  style={{
+                    background: active ? `${color}15` : 'rgba(255,255,255,0.02)',
+                    borderColor: active ? `${color}60` : 'rgba(255,255,255,0.06)',
+                    color: active ? color : 'var(--text-muted)',
+                  }}
+                >
+                  {lvl.replace('_', ' ')}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Status Group */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-white/30">Status:</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {['DRIFTED', 'CONFLICT'].map((lvl) => {
+              const active = statusFilters.includes(lvl);
+              const color = lvl === 'DRIFTED' ? '#FF453A' : '#FF3B30';
+              return (
+                <button
+                  key={lvl}
+                  onClick={() => {
+                    if (active) {
+                      setStatusFilters(statusFilters.filter(f => f !== lvl));
+                    } else {
+                      setStatusFilters([...statusFilters, lvl]);
+                    }
+                  }}
+                  className="px-2 py-0.5 rounded-lg text-[9px] font-bold border transition-all"
+                  style={{
+                    background: active ? `${color}15` : 'rgba(255,255,255,0.02)',
+                    borderColor: active ? `${color}60` : 'rgba(255,255,255,0.06)',
+                    color: active ? color : 'var(--text-muted)',
+                  }}
+                >
+                  {lvl}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Reset Filters button if any are active */}
+        {(confidenceFilters.length > 0 || freshnessFilters.length > 0 || statusFilters.length > 0) && (
+          <button
+            onClick={() => {
+              setConfidenceFilters([]);
+              setFreshnessFilters([]);
+              setStatusFilters([]);
+            }}
+            className="text-[10px] font-semibold text-white/40 hover:text-white transition-colors ml-auto"
+          >
+            Clear Active Filters
+          </button>
+        )}
+
       </div>
 
       {/* Import history log */}
@@ -961,6 +1511,47 @@ export function RuntimeLocationPage() {
         )}
       </AnimatePresence>
 
+      {simulatedAgeOffset > 0 && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="rounded-2xl p-4 flex items-start gap-3 border relative overflow-hidden backdrop-blur-md mb-2"
+          style={{
+            background: `${currentStage.color}08`,
+            borderColor: `${currentStage.color}30`,
+          }}
+        >
+          <div
+            className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 animate-ping"
+            style={{ background: currentStage.color }}
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider" style={{ background: `${currentStage.color}15`, color: currentStage.color }}>
+                {currentStage.status}
+              </span>
+              <h4 className="text-[12px] font-bold text-white uppercase tracking-wider">
+                Simulation Step {currentStep}/5: {currentStage.label}
+              </h4>
+            </div>
+            <p className="text-[11px] text-white/70 mt-1">
+              {currentStage.desc}
+            </p>
+          </div>
+          <button
+            onClick={() => setSimulatedAgeOffset(0)}
+            className="text-[10px] font-bold px-2.5 py-1 rounded-lg border flex-shrink-0 hover:bg-white/5 transition-colors"
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              borderColor: 'rgba(255,255,255,0.08)',
+              color: '#fff',
+            }}
+          >
+            End Simulation
+          </button>
+        </motion.div>
+      )}
+
       {/* Results count when filtered */}
       {(environmentFilter !== 'ALL' || techStackFilter !== 'ALL' || searchQuery) && !isLoadingApplications && (
         <p className="text-[12px] -mt-3" style={{ color: 'var(--text-muted)' }}>
@@ -970,11 +1561,11 @@ export function RuntimeLocationPage() {
 
       {/* App grid */}
       {isLoadingApplications ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex flex-col gap-4">
           {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              className="rounded-2xl h-52 animate-pulse"
+              className="rounded-2xl h-24 animate-pulse"
               style={{ background: 'var(--app-surface)' }}
             />
           ))}
@@ -1037,12 +1628,133 @@ export function RuntimeLocationPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <AnimatePresence>
-            {filtered.map((app) => (
-              <AppCard key={`${app.application_id}-${app.environment}`} app={app} />
-            ))}
-          </AnimatePresence>
+        <div>
+          {viewMode === 'list' && (
+            <div className="flex flex-col gap-4">
+              <AnimatePresence>
+                {filtered.map((app) => (
+                  <AppCard key={`${app.application_id}-${app.environment}`} app={app} />
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {viewMode === 'kanban' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+              {(['PRODUCTION', 'UAT', 'DR'] as const).map((env) => {
+                const envApps = filtered.filter((a) => a.environment === env);
+                return (
+                  <div
+                    key={env}
+                    className="rounded-2xl p-4 flex flex-col gap-3.5"
+                    style={{
+                      background: 'rgba(20, 20, 25, 0.4)',
+                      border: '1px solid rgba(255,255,255,0.05)',
+                    }}
+                  >
+                    <div className="flex items-center justify-between px-1.5">
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-white/50">
+                        {env}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-white/60 font-mono font-bold">
+                        {envApps.length}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-3 max-h-[600px] overflow-y-auto pr-1">
+                      {envApps.map((app) => (
+                        <AppCard key={`${app.application_id}-${app.environment}`} app={app} />
+                      ))}
+                      {envApps.length === 0 && (
+                        <div className="text-center py-12 text-[11px] text-white/30 border border-dashed border-white/5 rounded-2xl bg-white/[0.01]">
+                          No deployments found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {viewMode === 'heatmap' && (
+            <div
+              className="rounded-2xl p-6 flex flex-col gap-4"
+              style={{
+                background: 'rgba(20, 20, 25, 0.65)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <div>
+                <h3 className="text-[14px] font-extrabold text-white uppercase tracking-wider">
+                  Confidence Heatmap Grid
+                </h3>
+                <p className="text-[11px] text-white/40 mt-1">
+                  A high-density health grid indicating relative confidence of all tracked application deployments.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3 pt-3">
+                {filtered.map((app) => {
+                  const conf = app.overall_confidence;
+                  const color = conf === 4 ? '#30D158' : conf === 3 ? '#FF9F0A' : '#FF453A';
+                  return (
+                    <motion.div
+                      key={`${app.application_id}-${app.environment}`}
+                      whileHover={{ scale: 1.1, zIndex: 10 }}
+                      onClick={() => navigate(`/runtime-location/${app.application_id}?env=${app.environment}`)}
+                      className="w-14 h-14 rounded-xl cursor-pointer relative group flex flex-col items-center justify-center border transition-all"
+                      style={{
+                        background: `${color}15`,
+                        borderColor: `${color}40`,
+                        boxShadow: `0 0 10px ${color}10`,
+                      }}
+                    >
+                      <span className="text-[10px] font-mono font-extrabold" style={{ color }}>
+                        {app.application_id.slice(0, 4).toUpperCase()}
+                      </span>
+                      <span className="text-[8px] font-bold opacity-60 text-white/70 uppercase">
+                        {app.environment.slice(0, 4)}
+                      </span>
+
+                      {/* Tooltip */}
+                      <div
+                        className="absolute bottom-full mb-2.5 hidden group-hover:flex flex-col gap-1.5 p-3 rounded-xl z-50 pointer-events-none w-52 text-left shadow-xl backdrop-blur-md"
+                        style={{
+                          background: 'rgba(15, 20, 28, 0.95)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                        }}
+                      >
+                        <p className="text-[11px] font-extrabold text-white truncate">
+                          {app.application_name}
+                        </p>
+                        <p className="text-[9px] text-white/50 font-bold uppercase tracking-wider">
+                          {app.application_id} · {app.environment}
+                        </p>
+                        <div className="flex justify-between items-center mt-1.5 pt-1.5 border-t border-white/5 text-[10px]">
+                          <span className="text-white/40">Confidence Level:</span>
+                          <span className="font-extrabold text-[11px]" style={{ color }}>
+                            {conf}/4
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-[10px]">
+                          <span className="text-white/40">Primary Authority:</span>
+                          <span className="font-bold text-white">
+                            {app.primary_write_dc || 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-[10px]">
+                          <span className="text-white/40">Active DCs:</span>
+                          <span className="font-medium text-white">
+                            {app.data_centers.join(', ')}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1066,6 +1778,90 @@ export function RuntimeLocationPage() {
               else { setShowIncident(false); setShowDiscovery(false); }
             }}
           />
+        )}
+      </AnimatePresence>
+      </div> {/* Close Main Content Area */}
+
+      {/* Sliding sidebar */}
+      <AnimatePresence>
+        {showLiveFeed && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 340, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            className="flex-shrink-0 hidden lg:flex flex-col rounded-2xl border overflow-hidden"
+            style={{
+              background: 'rgba(20, 20, 25, 0.45)',
+              borderColor: 'var(--app-border)',
+              height: 'calc(100vh - 120px)',
+              position: 'sticky',
+              top: '90px',
+            }}
+          >
+            {/* Sidebar Header */}
+            <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: 'var(--app-border)', background: 'var(--app-surface-raised)' }}>
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF453A] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF453A]"></span>
+                </span>
+                <span className="text-[12px] font-bold text-white uppercase tracking-wider">
+                  Live Operations Feed
+                </span>
+              </div>
+              <button
+                onClick={() => setShowLiveFeed(false)}
+                className="p-1 rounded hover:bg-white/5 text-white/40 hover:text-white transition-all"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Sidebar Feed Container */}
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 custom-scrollbar">
+              {liveEvents.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-48 gap-2 text-center text-white/30">
+                  <Activity className="w-6 h-6 animate-pulse" />
+                  <span className="text-[11px] font-semibold">No operational events yet</span>
+                </div>
+              ) : (
+                liveEvents.map((evt) => (
+                  <div
+                    key={evt.id}
+                    onClick={() => handleEventClick(evt)}
+                    className="p-3 rounded-xl border flex flex-col gap-1.5 cursor-pointer transition-all hover:translate-x-1"
+                    style={{
+                      background: 'rgba(255,255,255,0.02)',
+                      borderColor: 'rgba(255,255,255,0.05)',
+                    }}
+                    title={evt.application_id ? `Click to view detail for ${evt.application_id}` : undefined}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded"
+                        style={{
+                          background: evt.badgeColor ? `${evt.badgeColor}15` : 'rgba(255,255,255,0.05)',
+                          color: evt.badgeColor || 'var(--text-muted)',
+                        }}
+                      >
+                        {evt.type.toUpperCase()}
+                      </span>
+                      <span className="text-[9px] font-mono text-white/30">{evt.timestamp}</span>
+                    </div>
+                    <p className="text-[11px] leading-relaxed text-white/80 font-medium">
+                      {evt.message}
+                    </p>
+                    {evt.application_id && (
+                      <div className="flex items-center gap-1 mt-0.5 text-[9px] font-semibold text-[#0A84FF] group hover:underline transition-all">
+                        <span>Investigate {evt.application_id}</span>
+                        <span className="transition-transform group-hover:translate-x-0.5"> →</span>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
