@@ -130,7 +130,7 @@ function DCBadge({ name, isPrimary }: { name: string; isPrimary?: boolean }) {
 
 // ─── Application Card ─────────────────────────────────────────────────────────
 
-function AppCard({ app }: { app: ApplicationLocationSummary }) {
+function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: number }) {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
 
@@ -158,10 +158,10 @@ function AppCard({ app }: { app: ApplicationLocationSummary }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2 }}
-      transition={{ duration: 0.2 }}
+      transition={{ duration: 0.25, delay: index * 0.05 }}
       onClick={() => navigate(`/runtime-location/${app.application_id}?env=${app.environment}`)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -1632,8 +1632,8 @@ export function RuntimeLocationPage() {
           {viewMode === 'list' && (
             <div className="flex flex-col gap-4">
               <AnimatePresence>
-                {filtered.map((app) => (
-                  <AppCard key={`${app.application_id}-${app.environment}`} app={app} />
+                {filtered.map((app, i) => (
+                  <AppCard key={`${app.application_id}-${app.environment}`} app={app} index={i} />
                 ))}
               </AnimatePresence>
             </div>
@@ -1661,8 +1661,8 @@ export function RuntimeLocationPage() {
                       </span>
                     </div>
                     <div className="flex flex-col gap-3 max-h-[600px] overflow-y-auto pr-1">
-                      {envApps.map((app) => (
-                        <AppCard key={`${app.application_id}-${app.environment}`} app={app} />
+                      {envApps.map((app, i) => (
+                        <AppCard key={`${app.application_id}-${app.environment}`} app={app} index={i} />
                       ))}
                       {envApps.length === 0 && (
                         <div className="text-center py-12 text-[11px] text-white/30 border border-dashed border-white/5 rounded-2xl bg-white/[0.01]">

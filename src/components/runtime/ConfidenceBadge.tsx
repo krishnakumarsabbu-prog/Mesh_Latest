@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { CircleHelp as HelpCircle, TriangleAlert as AlertTriangle, Activity, CircleCheck as CheckCircle, Zap, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ConfidenceLevel } from '@/types';
@@ -62,8 +63,12 @@ export function ConfidenceBadge({
     ? `Confidence: ${cfg.label} — score ${score}/100`
     : `Confidence Level ${level}: ${cfg.label}`);
 
+  const shouldPulse = resolvedLabel === 'LOW' || resolvedLabel === 'UNKNOWN' || resolvedLabel === 'CONFLICT';
+
   return (
-    <span
+    <motion.span
+      animate={shouldPulse ? { scale: [1, 1.05, 1] } : {}}
+      transition={shouldPulse ? { repeat: Infinity, duration: 2, ease: 'easeInOut' } : {}}
       className={cn(
         'inline-flex items-center gap-1 rounded-full font-semibold',
         size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-[11px]',
@@ -74,7 +79,7 @@ export function ConfidenceBadge({
     >
       {showIcon && <Icon className={size === 'sm' ? 'w-2.5 h-2.5' : 'w-3 h-3'} strokeWidth={2.5} />}
       {showLabel && displayLabel}
-    </span>
+    </motion.span>
   );
 }
 
