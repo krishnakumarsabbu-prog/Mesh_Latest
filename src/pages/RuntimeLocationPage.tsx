@@ -130,6 +130,15 @@ function DCBadge({ name, isPrimary }: { name: string; isPrimary?: boolean }) {
 
 // ─── Application Card ─────────────────────────────────────────────────────────
 
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.05, duration: 0.3, ease: 'easeOut' },
+  }),
+};
+
 function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: number }) {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
@@ -158,10 +167,11 @@ function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: 
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      custom={index}
       whileHover={{ y: -2 }}
-      transition={{ duration: 0.25, delay: index * 0.05 }}
       onClick={() => navigate(`/runtime-location/${app.application_id}?env=${app.environment}`)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -408,6 +418,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
   const [detectedSource, setDetectedSource] = useState<DataSourceName | null>(null);
   const [previewLines, setPreviewLines] = useState<string[]>([]);
   const [manualSource, setManualSource] = useState<DataSourceName | null>(null);
+  const [importSuccess, setImportSuccess] = useState(false);
 
   function handleFileSelect(f: File) {
     setSelectedFile(f);
@@ -444,12 +455,13 @@ function ImportModal({ onClose }: { onClose: () => void }) {
         message: result.errors[0] ?? 'Could not parse the file.',
       });
     } else {
+      setImportSuccess(true);
       add({
         type: 'success',
         title: `Import ${result.status === 'PARTIAL' ? 'Partial' : 'Complete'}`,
         message: `${result.record_count} records imported from ${result.file_name}${result.errors.length > 0 ? ` (${result.errors.length} errors)` : ''}`,
       });
-      onClose();
+      setTimeout(() => onClose(), 900);
     }
   }
 
@@ -462,9 +474,10 @@ function ImportModal({ onClose }: { onClose: () => void }) {
         exit={{ opacity: 0, scale: 0.95 }}
         className="relative rounded-2xl p-6 w-full max-w-lg flex flex-col gap-5"
         style={{
-          background: 'var(--app-surface-raised)',
-          border: '1px solid var(--app-border)',
-          boxShadow: 'var(--shadow-xl)',
+          background: importSuccess ? 'rgba(48,209,88,0.08)' : 'var(--app-surface-raised)',
+          border: importSuccess ? '1px solid rgba(48,209,88,0.4)' : '1px solid var(--app-border)',
+          boxShadow: importSuccess ? '0 0 40px rgba(48,209,88,0.2)' : 'var(--shadow-xl)',
+          transition: 'background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
         }}
       >
         {/* Header */}
@@ -646,12 +659,25 @@ function ImportModal({ onClose }: { onClose: () => void }) {
           </button>
           <button
             onClick={handleImport}
-            disabled={!selectedFile || !activeSource || isImporting}
-            className="px-4 py-2 rounded-xl text-[13px] font-semibold text-white flex items-center gap-2 disabled:opacity-50"
-            style={{ background: 'var(--primary-500)' }}
+            disabled={!selectedFile || !activeSource || isImporting || importSuccess}
+            className="px-4 py-2 rounded-xl text-[13px] font-semibold text-white flex items-center gap-2 disabled:opacity-50 transition-all"
+            style={{
+              background: importSuccess ? 'rgba(48,209,88,0.85)' : 'var(--primary-500)',
+            }}
           >
-            {isImporting && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-            {isImporting ? 'Parsing & importing…' : 'Import'}
+            {importSuccess ? (
+              <>
+                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400 }}>
+                  ✓
+                </motion.span>
+                Imported!
+              </>
+            ) : isImporting ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                Parsing & importing…
+              </>
+            ) : 'Import'}
           </button>
         </div>
       </motion.div>

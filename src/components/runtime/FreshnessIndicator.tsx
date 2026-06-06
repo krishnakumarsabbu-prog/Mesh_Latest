@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { TriangleAlert as AlertTriangle, CircleAlert as AlertCircle, Clock, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getFreshnessStatus, formatRelativeTime, FRESHNESS_THRESHOLDS } from '@/lib/runtimeLocationMock';
@@ -47,7 +48,9 @@ export function FreshnessIndicator({
 
   if (status === 'STALE') {
     return (
-      <span
+      <motion.span
+        animate={{ opacity: [1, 0.55, 1] }}
+        transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
         className={cn('inline-flex items-center gap-1 text-[11px] font-medium', className)}
         style={{ color: '#FF9F0A' }}
         title={`Stale: Last telemetry import was between 30m and 2h ago (${relTime}). Some configuration details may have drifted.`}
@@ -55,13 +58,15 @@ export function FreshnessIndicator({
         <AlertTriangle className="w-3 h-3 flex-shrink-0" />
         {showRelativeTime && !compact && <span>{relTime} — may be stale</span>}
         {showRelativeTime && compact && <span>{relTime}</span>}
-      </span>
+      </motion.span>
     );
   }
 
   // VERY_STALE
   return (
-    <span
+    <motion.span
+      animate={{ opacity: [1, 0.35, 1], scale: [1, 1.03, 1] }}
+      transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
       className={cn('inline-flex items-center gap-1 text-[11px] font-medium', className)}
       style={{ color: '#FF453A' }}
       title={`Very Stale: Last telemetry import was over 2h ago (${relTime}). Observability state is unverified and at risk.`}
@@ -69,6 +74,6 @@ export function FreshnessIndicator({
       <AlertCircle className="w-3 h-3 flex-shrink-0" />
       {showRelativeTime && !compact && <span>Stale — {relTime}</span>}
       {showRelativeTime && compact && <span>{relTime}</span>}
-    </span>
+    </motion.span>
   );
 }

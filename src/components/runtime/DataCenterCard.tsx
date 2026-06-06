@@ -1,5 +1,6 @@
-import React from 'react';
-import { Server, Award, Crown } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Server, Award, Crown, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RuntimeDataCenter, RuntimeAsset } from '@/types';
 import { AssetStatusBadge } from './AssetStatusBadge';
@@ -189,6 +190,7 @@ function AssetRow({ asset, onSelectEvidence }: { asset: RuntimeAsset; onSelectEv
 }
 
 export function DataCenterCard({ dataCenter, assets, isPrimaryWrite = false, isFailed = false, onSelectEvidence }: DataCenterCardProps) {
+  const [expanded, setExpanded] = useState(true);
   // Aggregate tech stack distribution for the mini bar chart
   const techCounts = assets.reduce((acc, a) => {
     acc[a.tech_stack] = (acc[a.tech_stack] || 0) + 1;
@@ -284,6 +286,20 @@ export function DataCenterCard({ dataCenter, assets, isPrimaryWrite = false, isF
             Standby
           </span>
         )}
+
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="ml-1 flex-shrink-0 p-1 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+          title={expanded ? 'Collapse' : 'Expand'}
+        >
+          <motion.span
+            animate={{ rotate: expanded ? 0 : -90 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            style={{ display: 'flex' }}
+          >
+            <ChevronDown className="w-3.5 h-3.5" />
+          </motion.span>
+        </button>
       </div>
 
       {/* Mini Tech Stack Distribution Bar Chart */}
@@ -310,16 +326,29 @@ export function DataCenterCard({ dataCenter, assets, isPrimaryWrite = false, isF
       )}
 
       {/* Assets List */}
-      <div className="p-3 flex flex-col gap-2 flex-1">
-        {assets.length === 0 && (
-          <p className="text-[11px] text-center py-4 text-white/30">
-            No assets found
-          </p>
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            key="assets"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 280, damping: 28 }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="p-3 flex flex-col gap-2">
+              {assets.length === 0 && (
+                <p className="text-[11px] text-center py-4 text-white/30">
+                  No assets found
+                </p>
+              )}
+              {assets.map((asset) => (
+                <AssetRow key={asset.id} asset={asset} onSelectEvidence={onSelectEvidence} />
+              ))}
+            </div>
+          </motion.div>
         )}
-        {assets.map((asset) => (
-          <AssetRow key={asset.id} asset={asset} onSelectEvidence={onSelectEvidence} />
-        ))}
-      </div>
+      </AnimatePresence>
 
       {/* Footer count */}
       <div
