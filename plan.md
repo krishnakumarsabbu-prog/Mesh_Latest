@@ -1,766 +1,686 @@
-# Phase-Level Implementation Plan: Unified App -> Runtime -> Health Drilldown
-
-## Goal
-Create a single end-to-end experience where a user clicks an application card and the UI expands into a rich drill-down view showing:
-- application hierarchy
-- runtime locations
-- dependencies
-- source evidence
-- confidence and freshness
-- intent vs actual drift
-- health and incident signals
-- graphs and visuals for fast operator understanding
-
-This plan is designed to fit the current LiveLens structure, especially `RuntimeLocationPage`, `ApplicationLocationDetailPage`, the runtime store, and the runtime components already present.
+# HealthMesh: Application Runtime Location Visibility — Final Hackathon Plan
 
 ---
 
-## Phase 0 - Finalize the UX contract
+## EXECUTIVE SUMMARY
 
-### Outcome
-Define exactly what happens when a user clicks an app.
+**Problem:** Enterprises cannot reliably determine where an application is *actually* running, which data center owns authoritative state, and whether that matches design intent.
 
-### Behavior
-1. User lands on application list / runtime overview.
-2. User clicks one app card.
-3. The app card expands into a detail surface instead of feeling like a hard page jump.
-4. The expanded surface shows:
-   - overview strip
-   - data center map
-   - components table
-   - source evidence panel
-   - intent vs actual panel
-   - drift/conflict warnings
-   - snapshots / audit / compare tabs
-5. User can collapse back to the list without losing scroll/context.
+**Our answer:** A single operational surface that correlates multi-source signals into a clear, confidence-scored runtime location view — with explicit drift detection, blast radius simulation, and full source evidence.
 
-### UI contract
-- Keep summary cards compact.
-- Expand into a larger right panel, modal drawer, or inline accordion.
-- Preserve the selected app state in URL so refresh/share works.
-- Default tab on expand: `DC Distribution` or `Overview`.
-
-### Decision to lock
-- Use one of these patterns:
-   - inline expand
-   - full-width master/detail split
-   - right-side drawer
-
-Recommended: master/detail split on desktop + full-screen drilldown on mobile.
+**Winning edge:** The solution answers three questions judges will ask:
+1. **Where is this app?** — Data center map with primary write owner
+2. **How sure are you?** — Confidence + freshness scoring per source
+3. **Is it right?** — Intent vs Actual drift with severity classification
 
 ---
 
-## Phase 1 – Normalize the data model
+## JUDGE SCORING ESTIMATE
 
-### Outcome
-Every source contributes to one canonical application graph.
-
-### Tasks
-1. Standardize the application key:
-   - uppercase `app_id`
-   - consistent trimming and alias handling
-2. Introduce one canonical entity graph:
-   - Application
-   - Component
-   - Asset
-   - Data Center
-   - Source Evidence
-   - Intent
-   - Drift
-   - Audit Event
-3. Ensure every imported row maps to:
-   - application id when possible
-   - source name
-   - environment
-   - location candidate
-   - confidence score
-4. Add relation metadata for each asset:
-   - `application_id`
-   - `component_name`
-   - `source_name`
-   - `source_record_key`
-   - `evidence_fields`
-   - `location_source`
-
-### Deliverable
-A stable graph that can answer:
-- what app is this?
-- where is it running?
-- what depends on it?
-- what evidence supports that answer?
+| Dimension | Score | Justification |
+|-----------|-------|---------------|
+| Problem Fit | 10/10 | Directly addresses every stated requirement |
+| Technical Depth | 8/10 | Backend services, scoring engine, drift detection, LLM agents |
+| Data Coverage | 9/10 | 8+ source types, confidence matrix, WIP gaps surfaced |
+| UX Quality | 7/10 (→ 9/10 with improvements below) | Functional but needs visual wow factor |
+| Demo Readiness | 9/10 | Walkthrough overlay, incident mode, rich mock data |
+| Innovation | 8/10 | Blast radius, intent definition, collaborative discovery |
+| **Overall** | **~8.2/10** | **Strong submission. Apply UI upgrades to win.** |
 
 ---
 
-## Phase 2 – Build the app expansion model
+## CURRENT STATE ANALYSIS
 
-### Outcome
-Clicking an app reveals a richer hierarchy instead of just navigating away.
+### What Is Fully Implemented ✅
 
-### Tasks
-1. Add an `expandedApplicationId` state in the runtime store.
-2. Track whether the app is:
-   - collapsed
-   - expanded inline
-   - opened in detail view
-3. Preserve the selected app in the URL:
-   - `/runtime-location/:appId?env=PRODUCTION`
-4. On click, load detail data if not already loaded.
-5. Animate expansion with Framer Motion.
-6. Support keyboard navigation and back action.
-
-### Recommended interaction
-- App list page remains visible.
-- Selected app card transforms into a larger detail shell.
-- Detail shell shows summary first, then graph sections below.
-
-### Acceptance criteria
-- Click app -> app expands in place.
-- Click back/collapse -> returns to list.
-- Browser refresh retains selected app.
-
----
-
-## Phase 3 – Add the top-level visual hierarchy
-
-### Outcome
-The page visually communicates the app structure in a single glance.
-
-### Visuals to include
-1. **Application summary band**
-   - app name
-   - app id
-   - environment
-   - confidence
-   - freshness
-   - primary write DC
-2. **Location distribution chart**
-   - DC-wise bar chart or donut chart
-3. **Component hierarchy tree**
-   - application -> component -> asset
-4. **Dependency graph**
-   - app connected to MQ, DB, Kafka, OCP, LB
-5. **Evidence chips**
-   - source name
-   - file name
-   - row count
-   - confidence contribution
-
-### Recommended graph order
-- summary band
-- location graph
-- component tree
-- dependency graph
-- detail tabs
+| Feature | Quality | Location |
+|---------|---------|----------|
+| Runtime location list page | Excellent | RuntimeLocationPage.tsx |
+| Application detail drilldown | Excellent | ApplicationLocationDetailPage.tsx |
+| Data center card visualization | Excellent | DataCenterCard.tsx + LocationMap.tsx |
+| Confidence badge (1-4 levels) | Excellent | ConfidenceBadge.tsx |
+| Freshness indicator (FRESH/STALE/VERY_STALE) | Excellent | FreshnessIndicator.tsx |
+| Intent vs Actual drift detection | Very Good | IntentVsActualTab.tsx + drift_service.py |
+| Intent definition panel | Good | IntentDefinitionPanel.tsx |
+| Conflict detection & resolution | Good | ConflictAlert.tsx |
+| Blast radius / incident mode | Excellent | IncidentModePanel.tsx + blast_radius_service.py |
+| Data discovery + proposal workflow | Very Good | DataDiscoveryPanel.tsx |
+| Audit trail | Excellent | AuditLogTab.tsx |
+| Demo walkthrough overlay (11 steps) | Excellent | DemoWalkthroughOverlay.tsx |
+| Asset status badges (PRIMARY/SECONDARY/STANDBY) | Excellent | AssetStatusBadge.tsx |
+| Tech stack icons (11 stacks) | Good | TechStackIcon.tsx |
+| Confidence scoring engine | Excellent | confidence_service.py |
+| Drift detection service | Excellent | drift_service.py |
+| Blast radius service | Excellent | blast_radius_service.py |
+| LLM runtime agent | Good | runtime_agent.py |
+| Mock data (5 DCs, 4 apps, multi-stack) | Excellent | runtimeLocationMock.ts |
+| Full TypeScript types | Excellent | types/runtime.ts |
+| Zustand runtime store | Excellent | runtimeLocationStore.ts |
+| WebSocket drift alerts | Good | wsStore.ts + drift_service.py |
+| CSV import modal | Good | RuntimeLocationPage.tsx |
+| Time simulation slider (data aging) | Excellent | RuntimeLocationPage.tsx |
+| Splunk traffic connector | Good | splunk-traffic-service/main.py |
+| AppDynamics connector | Good | appdynamics-service/main.py |
+| Application health metrics page | Partial | ApplicationRuntimeMetricsPage.tsx |
 
 ---
 
-## Phase 4 – Implement the expansion layout
+### What Is Missing or Incomplete ⚠️
 
-### Outcome
-The expanded app feels like a mini command center.
-
-### Layout structure
-1. **Header row**
-   - app name
-   - app id
-   - environment pill
-   - collapse button
-2. **Quick summary row**
-   - where it runs
-   - which DC owns write state
-   - confidence score
-   - stale signals
-3. **Main content area**
-   - left: maps, graphs, components
-   - right: evidence, drift, audit, intent
-4. **Tabs / sections**
-   - DC Distribution
-   - Components
-   - OpenShift Console
-   - Intent vs Actual
-   - Data Quality
-   - Snapshots
-   - Compare Envs
-   - Audit Log
-
-### UX recommendation
-- On desktop, render as a two-column master/detail panel.
-- On mobile, use tabs with stacked sections.
+| Gap | Severity | Impact on Judges | Effort to Fix |
+|-----|----------|-----------------|---------------|
+| **Visual dependency graph** (node-link) | HIGH | Judges want to see "app → MQ → DB → OCP" | High |
+| **Interactive geographic DC map** | HIGH | "Where" means nothing without geography | Medium |
+| **CSV parser for all 11 source formats** | MEDIUM | Import feels hollow without real parsing | High |
+| **Backend API persistence** (in-memory only) | MEDIUM | Refresh loses all state | Medium |
+| **Compare Environments tab** (UI scaffolded) | MEDIUM | Tab exists but renders no content | Low |
+| **Confidence filter on list** | LOW | Search exists, confidence filter missing | Low |
+| **Mobile responsive detail tabs** | LOW | Tabs overflow on small screens | Low |
+| **Animated traffic flow lines** | LOW | Pure wow-factor visual | Medium |
+| **Health hierarchy cross-link** (bi-directional) | LOW | LOB → Project → App runtime path | Medium |
+| **Real-time live update feed** | LOW | WebSocket hooked but not surfaced in UI | Low |
 
 ---
 
-## Phase 5 – Add the graphs and visualizations
+### Data Signals Available vs Used
 
-### Outcome
-The app becomes explainable visually, not just textually.
-
-### Graphs to implement
-1. **DC Distribution chart**
-   - shows assets per data center
-   - highlight primary write DC
-2. **Component composition chart**
-   - DB / messaging / compute / storage breakdown
-3. **Confidence trend chart**
-   - confidence by data source or over snapshots
-4. **Freshness heatmap**
-   - fresh vs stale sources
-   - heatmap for freshness
-5. **Intent vs actual drift chart**
-   - intended DCs vs discovered DCs
-6. **Dependency graph**
-   - app center node with downstream infra nodes
-   - node-link graph for dependencies
-7. **Audit timeline**
-   - imports, drift detections, proposals, state changes
-
-### Suggested chart types
-- donut chart for component mix
-- stacked bar for DC distribution
-- timeline bars for snapshots
-
-### Implementation note
-Start with charts already easy to render with the current stack, then add node-link graphs only after the data model is stable.
+| Tech Stack | Topology Confidence | Traffic Confidence | Sample Available | Currently Used |
+|------------|--------------------|--------------------|-----------------|----------------|
+| Compute - VM | 4 (standardized) | 3 (not standardized) | CMDB / SPLOC | ✅ Partial |
+| Compute - OCP | 3 | 4 (standardized) | OCP_pod_info.csv | ✅ Model exists |
+| Database - MongoDB | 3 | 3 | mongodb_info.csv | ✅ Agent + model |
+| Database - Oracle | 3 | 2 (proprietary) | oem_db_role.csv | ✅ Connector |
+| Database - MS SQL | 3 | 3 | SCOM_Prod_ReplicaStatus.csv | ✅ Agent |
+| Messaging - Kafka | 3 | 3 | ibmmq_qmgr_status.csv | ✅ Partial |
+| Messaging - IBM MQ | 3 | 3 | ibmmq_qmgr_status.csv | ✅ Full agent |
+| Storage - Object | 3 | 2 (proprietary) | None | ❌ Gap surfaced |
+| Storage - File | 3 | 2 (proprietary) | None | ❌ Gap surfaced |
+| Batch - AutoSys | 2 (proprietary) | 2 (proprietary) | Batch.csv | ⚠️ Partial |
+| Network - AVI LB | 3 | 2 (proprietary) | load_balancer_report.csv | ✅ Connector |
 
 ---
 
-## Phase 6 – Build the app drilldown journey
+## WINNING PLAN — FINAL VERSION
 
-### Outcome
-Every click opens progressively deeper evidence.
+### Strategy
 
-### Drilldown flow
-1. Click app card
-2. Open app detail shell
-3. Expand to components
-4. Expand component to assets
-5. Expand asset to evidence
-6. Expand evidence to source record
+The current solution is **functionally complete at 8/10**. To win, two things must happen:
+1. **Close the visual gaps** — geographic map, dependency graph, animated flows
+2. **Sharpen the narrative** — make the demo story unmissable and the data confidence model explicit
 
-### Example drilldown chain
-- Application: `1AAT`
-   - Component: `DATABASE`
-      - Asset: Oracle DB primary in `IBB1`
-         - Evidence: `oem_db_role.xlsx`
-         - Fields: `target_name`, `role_name`
-
-### UX detail
-- Each row should support a caret or expand button.
-- Expanded rows should reveal:
-   - source file
-   - field values
-   - confidence score
-   - last updated time
-   - conflict marker
+The original plan phases 0–22 are well-structured. This final plan refines priorities, fills gaps, and adds the missing UI magic.
 
 ---
 
-## Phase 7 – Integrate intent vs actual
+## PHASE 0: LOCK THE DEMO NARRATIVE *(Already Done — Validate)*
 
-### Outcome
-Users can compare what should exist vs what actually exists.
+**Status: Complete**
 
-### Tasks
-1. Render intent panel inside detail page.
-2. Show intended active DCs.
-3. Show intended primary DC.
-4. Show required stacks.
-5. Detect drift types:
-   - missing DC
-   - extra DC
-   - wrong primary
-   - missing component
-6. Highlight drift severity.
+The 11-step DemoWalkthroughOverlay.tsx covers the core judge story. Validate it covers:
+1. Start on app list → immediately see confidence + primary DC per app ✅
+2. Click app → see where it's running, which DC owns writes ✅
+3. Show component hierarchy (MQ → IBM MQ in IBB1, DB → Oracle PRIMARY in IBB1) ✅
+4. Open Intent vs Actual → highlight drift (MISSING_DC severity HIGH) ✅
+5. Show evidence: "This is the Oracle OEM file. This row. This field." ✅
+6. Show confidence decay: "CMDB is 4h old → LOW confidence on topology" ✅
+7. Open Incident Mode: "If IBB1 fails, PAYROLL has no failover → CRITICAL" ✅
+8. Show Audit Log: "This state was detected at 09:14. Source imported at 09:00." ✅
+9. Open Data Discovery: "We found a new source — AVI LB pool JSON — sharing to chat" ✅
+10. Close: "This system doesn't just find apps — it verifies them against intent." ✅
 
-### Visuals
-- side-by-side intent vs actual table
-- drift badges
-- severity bars
-- mismatch count summary
-
-### Why it matters
-This is the strongest judge-facing story because it shows the system is not just discovering topology; it is verifying it against desired state.
+**Action:** Re-read DemoWalkthroughOverlay.tsx step text and ensure all 10 story beats are covered.
 
 ---
 
-## Phase 8 – Add source evidence and trust layers
+## PHASE 1: GEOGRAPHIC DATA CENTER MAP *(CRITICAL — Missing)*
 
-### Outcome
-Every answer has a reason.
+**Why it matters:** When judges ask "where is it running?" they expect geography. Text cards saying "IBB1" mean nothing without context.
 
-### Tasks
-1. Render source panels per asset.
-2. Show:
-   - source type
-   - source file
-   - import time
-   - record count
-   - freshness
-   - confidence contribution
-3. Add conflict display:
-   - text says one role
-   - integer says another role
-4. Add proposal workflow for new sources.
+**What to build:**
+- Replace or augment the text-based DC card row with an SVG-based US geography map
+- Each data center is a glowing dot (position hardcoded by DC shortname to approximate region)
+- Active DCs for the selected application pulse green
+- Primary write DC has a crown/star indicator and larger dot
+- Standby DCs are dimmer, amber
+- Hover shows: DC name, asset count, tech stack chips, write authority indicator
+- Lines animate between primary and secondary for replication direction
 
-### Visual treatment
-- green = verified
-- amber = inferred or stale
-- red = conflict
-- gray = missing
-
----
-
-## Phase 9 – Add hierarchy links from business to runtime
-
-### Outcome
-The health side and runtime side feel unified.
-
-### Tasks
-1. Add navigation from:
-   - LOB -> SubLOB -> Team -> Project -> Component -> Application
-2. Show runtime location data inside project/component pages.
-3. Show health status alongside runtime topology.
-4. Cross-link runtime app pages back into health pages.
-
-### Visuals
-- breadcrumb path
-- hierarchy tree
-- ownership map
-- status badges by layer
-
----
-
-## Phase 10 – Implement search, filter, and bulk discovery
-
-### Outcome
-Users can find apps quickly and compare estates.
-
-### Tasks
-1. Search by app name / id.
-2. Filter by environment.
-3. Filter by tech stack.
-4. Filter by confidence level.
-5. Filter by stale or conflict state.
-6. Add bulk selection for comparison.
-
-### Visuals
-- search bar
-- filter chips
-- selected apps comparison strip
-
----
-
-## Phase 11 – Add empty, partial, and corner states
-
-### Outcome
-The UI stays reliable when data is incomplete.
-
-### Corner states
-- app with only one source
-- app with no DC yet
-- app with conflicting sources
-- app with stale sources
-- app with missing intent
-- app with active/standby flip
-- app with multiple environments
-
-### Required behavior
-- do not hide missing data
-- show explicit “missing signal” badges
-- explain what is inferred vs confirmed
-
----
-
-## Phase 12 – Build the page-level implementation sequence
-
-### Recommended execution order
-1. Lock the drilldown UX contract.
-2. Normalize app-id and relation graph.
-3. Add selected-app expansion state.
-4. Wire app click to open expanded detail.
-5. Add summary band and DC chart.
-6. Add component table and evidence panel.
-7. Add intent vs actual panel.
-8. Add drift and conflict visualization.
-9. Add snapshots and audit timeline.
-10. Add comparison and compare-environments view.
-11. Add mobile adaptation.
-12. Add polish, transitions, and final QA.
-
----
-
-## Phase 13 – Validation and judge-readiness
-
-### Outcome
-The feature is demonstrably complete.
-
-### Validation checklist
-- click app expands correctly
-- collapse works
-- URL preserves selected app
-- graphs render with real data
-- evidence links match source docs
-- confidence and freshness are visible
-- drift is detectable and explainable
-- health and runtime are connected
-
-### Judge story
-When a judge asks “where is my app?”, the answer should be:
-- it is running here
-- primary write is here
-- backup/secondary is here
-- this is the evidence
-- this is how confident we are
-- this is what changed over time
-- this is what should be true vs what is true
-
----
-
-## Bottom line
-The implementation should not be just “open a detail page.” It should be a true drilldown system:
-click app -> expand app -> reveal hierarchy -> show evidence -> show graphs -> explain confidence -> compare intent vs actual -> audit changes
-
-That is the end-to-end structure I recommend before coding.
-
----
-
-## 14) File-mapped engineering checklist
-This is the practical build order mapped to the current codebase so implementation can happen without redesigning the whole app.
-
-### Phase A – Expand the runtime shell
-
-**Primary files**
-- `src/pages/RuntimeLocationPage.tsx`
-- `src/pages/ApplicationLocationDetailPage.tsx`
-- `src/store/runtimeLocationStore.ts`
-
-**Work items**
-1. Add selected-app expand/collapse state in the store.
-2. Make app click open an expanded master/detail shell instead of only navigating away.
-3. Keep URL state in sync with selected app and environment.
-4. Preserve list scroll position when returning from detail.
-5. Add a clear back/collapse action.
-
-**Acceptance criteria**
-- App card click expands the selected app.
-- Collapse restores the list.
-- Refresh reopens the same app detail.
-
-### Phase B – Build the hierarchy visuals
-
-**Primary files**
-- `src/pages/ApplicationLocationDetailPage.tsx`
-- `src/components/runtime/LocationMap.tsx`
-- `src/components/runtime/TechStackIcon.tsx`
-- `src/components/runtime/AssetStatusBadge.tsx`
-
-**Work items**
-1. Add a top summary band with app id, environment, confidence, freshness, and primary write DC.
-2. Add a DC distribution chart.
-3. Add a component breakdown chart.
-4. Add expand/collapse rows for component -> asset -> evidence.
-5. Add consistent color rules for primary, standby, stale, and conflict states.
-
-**Acceptance criteria**
-- User can visually see where the app runs.
-- User can visually see which component maps to which runtime asset.
-
-### Phase C – Connect data sources to evidence
-
-**Primary files**
-- `src/store/runtimeLocationStore.ts`
-- `src/lib/csvParser.ts`
-- `src/lib/api.ts`
-- `backend/app/api/v1/endpoints/runtime.py`
-
-**Work items**
-1. Normalize `app_id`, `site`, `zone`, `namespace`, `cluster`, `hostname`, `pool`, and `tenant` into a common evidence model.
-2. Persist source metadata per asset.
-3. Capture which fields created the location decision.
-4. Add missing-source counts for expected feeds not yet imported.
-5. Show evidence chips in the UI.
-
-**Acceptance criteria**
-- Every rendered asset can explain how it was discovered.
-- Every app summary can explain its location confidence.
-
-### Phase D – Add intent vs actual and drift
-
-**Primary files**
-- `src/store/runtimeLocationStore.ts`
-- `src/components/runtime/IntentVsActualTab.tsx`
-- `src/pages/ApplicationLocationDetailPage.tsx`
-- `backend/app/api/v1/endpoints/runtime.py`
-
-**Work items**
-1. Show intended active DCs and primary DC.
-2. Compare against observed DCs and write owner.
-3. Render drift types and severity.
-4. Update alignment status in summary cards.
-5. Keep backend drift and local drift consistent.
-
-**Acceptance criteria**
-- App detail makes intent mismatches obvious.
-- Drift is visible both in list and detail.
-
-### Phase E – Add graphs and timeline visuals
-
-**Primary files**
-- `src/pages/ApplicationLocationDetailPage.tsx`
-- `src/components/runtime/AuditLogTab.tsx`
-- `src/components/runtime/FreshnessIndicator.tsx`
-- `src/components/runtime/ConfidenceBadge.tsx`
-
-**Work items**
-1. Add confidence trend or snapshot timeline.
-2. Add freshness heat indicators by source.
-3. Add audit timeline for import / drift / proposal events.
-4. Add compare-environments chart.
-5. Add dependency graph if hierarchy data is sufficient.
-
-**Acceptance criteria**
-- Each key question has a visual answer.
-- The app page feels like an operational cockpit.
-
-### Phase F – Health + runtime integration
-
-**Primary files**
-- `src/pages/HealthPage.tsx`
-- `src/pages/ProjectHealthDashboardPage.tsx`
-- `src/pages/RuntimeLocationPage.tsx`
-- `src/App.tsx`
-
-**Work items**
-1. Link health hierarchy into runtime drilldown.
-2. Add a cross-navigation path from project/component to runtime app.
-3. Surface runtime confidence inside health views.
-4. Surface health status inside runtime views.
-
-**Acceptance criteria**
-- Users can move from business ownership to runtime truth without context loss.
-
----
-
-## 15) Recommended interaction diagrams
-
-### Click-to-expand flow
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant L as App List
-    participant S as Runtime Store
-    participant D as Detail View
-
-    U->{list page and detail page work together}L: Click application card
-    L->>S: set selectedApplicationId
-    S->>D: load detail + evidence
-    D->>U: Expand inline / drawer view
-    U->>D: Click collapse
-    D->>L: Restore list state
-
+**Data center coordinates (approximate US map):**
 ```
-### Data-to-visual pipeline
-```mermaid
-flowchart TD
-    A[Raw docs / telemetry] --> B[Source parser]
-    B --> C[Canonical runtime graph]
-    C --> D[Confidence + freshness engine]
-    C --> E[Intent vs actual engine]
-    C --> F[Location resolver]
-    D --> G[Summary cards]
-    E --> H[Drift panel]
-    F --> I[DC distribution map]
-    C --> J[Evidence / audit timeline]
-
-```
-### Expandable app shell
-```mermaid
-flowchart LR
-    A[App card in list] --> B[Expanded app shell]
-    B --> C[Summary band]
-    B --> D[Location charts]
-    B --> E[Components table]
-    B --> F[Source evidence]
-    B --> G[Intent vs actual]
-    B --> H[Audit timeline]
-
-```
-## 16) Final build sequence you can follow
- 1. Wire expand/collapse interaction in RuntimeLocationPage.tsx.
- 2. Persist selected app and environment in the route.
- 3. Ensure ApplicationLocationDetailPage.tsx loads the correct detail instantly.
- 4. Add hierarchy visuals and summary band.
- 5. Add source evidence rows and location reasoning.
- 6. Add intent vs actual and drift badges.
- 7. Add graphs for confidence, freshness, and snapshots.
- 8. Link runtime with health pages.
- 9. Polish empty states, conflicts, and stale-source warnings.
- 10. Validate the click-to-expand flow on desktop and mobile.
-## 17) Component-level implementation checklist
-This section breaks the plan into the exact UI building blocks that need to change.
-### App list shell
-**Files**
- * src/pages/RuntimeLocationPage.tsx
-**What to implement**
- 1. Convert app card click into a real expand action.
- 2. Preserve the list, but visually promote the selected app.
- 3. Add a selected state and animation for the active card.
- 4. Add a compact inline summary for primary DC and confidence.
-**Expected result**
- * The user sees a list of apps, then one app expands into focus.
-### Application detail shell
-**Files**
- * src/pages/ApplicationLocationDetailPage.tsx
-**What to implement**
- 1. Add a top summary header.
- 2. Add a main content grid with charts on one side and evidence on the other.
- 3. Show tabs for map, components, intent, quality, snapshots, compare, and audit.
- 4. Add a back/collapse button that restores the list.
-**Expected result**
- * The expanded app reads like a mini command center.
-### Data store and orchestration
-**Files**
- * src/store/runtimeLocationStore.ts
- * src/lib/api.ts
- * src/lib/csvParser.ts
-**What to implement**
- 1. Store selected app id, selected environment, and expanded state.
- 2. Cache loaded detail per app to avoid flicker.
- 3. Keep imports, intent, drift, and proposals in sync after each load.
- 4. Normalize source metadata for display and graph building.
-**Expected result**
- * The UI feels consistent and data-driven, not reloaded from scratch every click.
-### Summary and confidence widgets
-**Files**
- * src/components/runtime/ConfidenceBadge.tsx
- * src/components/runtime/FreshnessIndicator.tsx
- * src/components/runtime/AssetStatusBadge.tsx
-**What to implement**
- 1. Make confidence readable at a glance.
- 2. Show freshness clearly for each source and asset.
- 3. Make state badges consistent across list and detail.
-**Expected result**
- * The user instantly knows whether the data is strong, stale, or conflicting.
-### Location and topology visuals
-**Files**
- * src/components/runtime/LocationMap.tsx
- * src/components/runtime/TechStackIcon.tsx
- * src/components/runtime/DataCenterCard.tsx
-**What to implement**
- 1. Render data center distribution visually.
- 2. Highlight primary write DC and standby sites.
- 3. Use tech stack icons to show what each asset actually is.
-**Expected result**
- * The user can answer “where is it running?” in one glance.
-### Evidence and conflict panels
-**Files**
- * src/components/runtime/DataSourcePanel.tsx
- * src/components/runtime/ConflictAlert.tsx
- * src/components/runtime/IntentVsActualTab.tsx
-**What to implement**
- 1. Show source-by-source evidence for each app.
- 2. Highlight conflicts between source truth and inferred truth.
- 3. Show intended vs actual placements and components.
-**Expected result**
- * Every answer has a visible reason behind it.
-### Audit, snapshots, and trends
-**Files**
- * src/components/runtime/AuditLogTab.tsx
- * src/components/runtime/SnapshotTimeline inside ApplicationLocationDetailPage.tsx
-**What to implement**
- 1. Show a chronological trace of imports and state changes.
- 2. Add a visual timeline for confidence / role snapshots.
- 3. Make changes over time easy to compare.
-**Expected result**
- * The user can see not only current state, but also recent behavior.
-### Discovery and demo support
-**Files**
- * src/components/runtime/DataDiscoveryPanel.tsx
- * src/components/runtime/IncidentModePanel.tsx
- * src/components/runtime/DemoWalkthroughOverlay.tsx
-**What to implement**
- 1. Provide guided discovery for unclear apps.
- 2. Add incident-mode focus for high-priority failures.
- 3. Use demo walkthroughs to explain the story during judging.
-**Expected result**
- * The product is presentable in a live demo and easy to narrate.
-## 18) Hackathon-winning priority roadmap
-This is the end-to-end delivery order optimized for judging impact, clarity, and demo reliability.
-### P0 - Must ship first
-These are the non-negotiable pieces that make the solution feel complete.
- 1. App click expands into a rich detail view.
- 2. Summary band answers: where is it, which DC owns it, how confident are we.
- 3. Data center distribution and component hierarchy are visible.
- 4. Intent vs actual shows drift clearly.
- 5. Evidence panels explain how each location was derived.
- 6. Loading, empty, conflict, and stale states are handled gracefully.
-**Why this wins**
- * Judges see a complete operational story, not just a dashboard.
- * The app answers the core question immediately: where is my app?
-### P1 – High-value differentiators
-These features make the solution feel smarter and more real-world.
- 1. Confidence and freshness scoring across sources.
- 2. Audit timeline for imports, changes, and drift.
- 3. Compare environments view.
- 4. Better source explanation chips with file-level evidence.
- 5. Cross-link between health hierarchy and runtime truth.
- 6. Search/filter by app, stack, environment, and confidence.
-**Why this wins**
- * Judges see depth, trust, and explainability.
- * The product looks like a usable platform, not a prototype.
-### P2 – Polishing and demo boost
-These features increase wow-factor and presentation quality.
- 1. Animated expand/collapse transitions.
- 2. Visual dependency graph.
- 3. Snapshot timeline.
- 4. Guided walkthrough overlay.
- 5. Incident mode panel.
- 6. Beautiful responsive mobile fallback.
-**Why this wins**
- * The demo becomes memorable and polished.
- * The UI feels complete when shown live.
-## 19) End-to-end implementation order
-Follow this exact order to avoid rework.
- 1. Lock the UX contract for click-to-expand.
- 2. Finish canonical app and asset normalization.
- 3. Wire store state for selected app and expanded detail.
- 4. Make the list page and detail page work together.
- 5. Build summary, confidence, freshness, and primary DC display.
- 6. Add component and data center visuals.
- 7. Add evidence, source chips, and conflicts.
- 8. Add intent vs actual and drift scoring.
- 9. Add audit, snapshots, and compare views.
- 10. Link runtime views to health hierarchy.
- 11. Add search/filter and bulk compare.
- 12. Add animation, walkthrough, and final polish.
-## 20) Hackathon demo script
-Use this flow live in the presentation.
- 1. Start on the app list.
- 2. Click a known app.
- 3. Show expansion into runtime detail.
- 4. Point to where it runs and who owns primary write.
- 5. Show the component hierarchy and location distribution.
- 6. Open intent vs actual and highlight drift.
- 7. Open evidence panels and show source confidence.
- 8. Switch to audit or snapshots to prove history.
- 9. Jump into health hierarchy to show business linkage.
- 10. End with the statement: this system tells me where the app is, why it is there, and whether it matches intent.
-## 21) What judges should remember
- * One click reveals the full runtime truth.
- * The app is explainable through evidence, not guesses.
- * Health and runtime are unified.
- * Confidence, freshness, and drift are first-class.
- * The product answers a real operational pain point.
-## 22) Final execution promise
-If you build the P0 items first and keep the drilldown experience seamless, the solution will feel complete enough for a strong hackathon submission.
-The winning edge comes from:
- * instant app expansion
- * strong visual hierarchy
- * trustworthy evidence
- * clear drift detection
- * polished demo storytelling
- * unified health + runtime narrative
+IBB1 → Denver area (central)
+SHV  → Dallas area (south-central)
+GA-UAT → Atlanta area (southeast)
+MA-UAT → Boston area (northeast)
+AZ3  → Phoenix area (southwest)
 ```
 
+**Implementation approach:**
+- Use `<svg viewBox="0 0 1000 600">` with a simplified US outline path
+- Place `<circle>` elements for DCs, styled with Tailwind classes
+- Animate with framer-motion `animate={{ scale: [1, 1.3, 1] }}` for pulse
+- Add connecting `<line>` or `<path>` elements for replication arrows (dashed for async, solid for sync)
+
+**Files to modify:**
+- `src/components/runtime/LocationMap.tsx` → add SVGMap mode
+- `src/pages/ApplicationLocationDetailPage.tsx` → switch to map mode in DC Distribution tab
+
+---
+
+## PHASE 2: VISUAL DEPENDENCY GRAPH *(HIGH — Missing)*
+
+**Why it matters:** The problem statement explicitly asks about "protocol constraints, data consistency models, active/passive patterns." A graph showing `App → MongoDB(PRIMARY/SECONDARY) → IBM_MQ → OCP` makes this tangible.
+
+**What to build:**
+- React Flow (`@xyflow/react` already installed) node-link graph
+- Central app node with color based on confidence
+- Downstream component nodes (DB, MQ, compute, network) per DC
+- Edge labels: replication role, sync type (sync/async)
+- Color edges: green=healthy, amber=stale, red=conflict
+- Click a node → show source evidence panel in sidebar
+- Horizontal layout: App center → left DC (IBB1) / right DC (SHV) branch structure
+
+**Node types:**
+```
+AppNode (center, blue border, app name + confidence badge)
+├── DCNode (gray, DC name + environment)
+│   ├── AssetNode (color by role: primary=green, secondary=amber)
+│       └── source evidence tooltip on hover
+```
+
+**Why @xyflow/react (already installed):**
+- Dagre layout library already in package.json
+- `TopologyCanvas.tsx` already demonstrates usage pattern
+- Can reuse existing `ProjectNode`, `AssetNode`, `ConnectorNode` node types
+
+**Files to modify:**
+- Create `src/components/runtime/RuntimeDependencyGraph.tsx` (new)
+- `src/pages/ApplicationLocationDetailPage.tsx` → add "Dependency Graph" tab
+
+---
+
+## PHASE 3: UI DESIGN OVERHAUL *(HIGH — Visual Transformation)*
+
+**Current assessment:** The UI is functional and professional but lacks visual personality and "eye feast" quality.
+
+### 3.1 Color System Enhancement
+
+**Add to tailwind.config.js:**
+```
+dc-primary: neon green (#00E599) — active/live DC indicator
+dc-standby: amber (#F59E0B) — standby/secondary
+dc-critical: red (#EF4444) — conflict/offline
+confidence-high: green (#22C55E) — strong confidence
+confidence-medium: amber (#F59E0B) — partial confidence
+confidence-low: red (#EF4444) — weak confidence
+confidence-unknown: gray (#6B7280) — no data
+```
+
+### 3.2 Application Card Redesign
+
+**Current:** Simple card with name, status badge, DC list
+
+**Target:** Full-width card with:
+- Left: Color bar indicating confidence (green/amber/red strip)
+- App name + ID in bold, environment pill
+- Center: Mini horizontal bar: DC1 ████ DC2 ██ (asset distribution)
+- Right: Confidence score (large, colored), primary DC name, freshness dot
+- Bottom row: Tech stack icons + stale signal count
+- Hover: Card lifts with shadow, confidence glow effect
+
+### 3.3 Data Center Card Redesign
+
+**Current:** Flat card with asset list
+
+**Target:**
+- Frosted glass effect (`backdrop-blur-sm bg-white/5`)
+- Neon left border when this is the PRIMARY write DC
+- Pulsing green indicator for "live traffic"
+- Mini bar chart showing tech stack distribution
+- "Write authority" crown badge on primary
+- Animated replication arrows between adjacent DC cards
+
+### 3.4 Page-Level Visual Improvements
+
+**Runtime Location Page (list):**
+- Hero stat row with animated counters: "12 Applications | 5 Data Centers | 3 Stale Sources | 2 Drifted"
+- Color-coded stat cards (green/amber/red based on state)
+- Kanban-style columns option: group apps by environment
+- Confidence heatmap option: visual grid where each cell = one app, color = confidence
+
+**Application Detail Page:**
+- Full-bleed header with gradient background (dark blue → dark gray)
+- Summary band as a prominent "cockpit strip" with large metric values
+- Tab bar with colored indicators (drift tab shows red badge count)
+- Graph sections with subtle grid/axis styling (not plain white)
+
+### 3.5 Micro-interactions
 
 ```
+App card hover:      translateY(-2px), shadow-lg, 200ms ease
+Tab switch:          slide content left/right (framer-motion AnimatePresence)
+Confidence badge:    pulse once on mount if UNKNOWN/LOW
+DC card expand:      height animation, spring physics
+Drift badge:         shake animation for CRITICAL severity
+Import success:      confetti-style particle burst (subtle)
+Freshness STALE:     slow breathing red glow on indicator
+```
+
+---
+
+## PHASE 4: COMPLETE ENVIRONMENTS COMPARISON TAB *(Medium — Easy Win)*
+
+**Status:** Tab exists, data model exists (`EnvComparisonRow` type), mock data exists. Just needs rendering.
+
+**What to build:** Simple table showing PROD vs UAT vs DR for each component:
+
+```
+Component    | PROD (IBB1)      | UAT (GA-UAT)     | Difference
+Oracle DB    | PRIMARY (IBB1)   | PRIMARY (GA-UAT)  | ✅ Same role
+IBM MQ       | 3 queues (IBB1)  | 2 queues (MA-UAT) | ⚠️ Count diff
+OCP Pods     | 8 (IBB1/SHV)     | 3 (GA-UAT)        | ⚠️ Pod count diff
+```
+
+**Files to modify:**
+- `src/pages/ApplicationLocationDetailPage.tsx` → implement Compare Envs tab content (section currently renders nothing)
+
+---
+
+## PHASE 5: CONFIDENCE + STALE FILTERS ON LIST *(Low — Quick Win)*
+
+**Status:** Search + environment + tech stack filters exist. Confidence filter is missing.
+
+**Add to RuntimeLocationPage.tsx filter bar:**
+- Filter chips: `HIGH | MEDIUM | LOW | UNKNOWN` confidence (multi-select)
+- Filter chips: `FRESH | STALE | VERY_STALE` data freshness
+- Filter chip: `DRIFTED` — apps where intent != actual
+- Filter chip: `CONFLICT` — apps with conflicting source assertions
+
+**Implementation:** Add `confidenceFilter` and `freshnessFilter` to store, apply in filtered list computation.
+
+---
+
+## PHASE 6: REAL-TIME LIVE FEED SIDEBAR *(Medium — Wow Factor)*
+
+**Why it matters:** WebSocket is already connected. Surface it visually.
+
+**What to build:** A collapsible "Live Events" panel on the right side of the list page:
+- Shows last 10 WebSocket events as a feed (auto-scroll)
+- Event types with icons: DRIFT_DETECTED (red bell), IMPORT_COMPLETE (green cloud), STATE_CHANGE (blue arrow)
+- Clicking an event navigates to the affected application
+- Pulse animation on new events
+- "X new alerts" badge when panel is collapsed
+
+**Files to modify:**
+- `src/pages/RuntimeLocationPage.tsx` → add live events sidebar toggle
+- `src/store/wsStore.ts` → expose recent events array
+
+---
+
+## PHASE 7: DATA FRESHNESS HEATMAP *(Medium — Strong Visual)*
+
+**What to build:** In the Data Quality tab, replace the source list with a visual heatmap:
+
+```
+Source         | 0-30m | 30m-2h | 2h-24h | >24h
+AppDynamics    | ████  |        |        |      → FRESH
+IBM MQ         |       | ████   |        |      → STALE
+CMDB           |       |        | ████   |      → VERY_STALE
+Oracle OEM     |       |        |        | ████ → CRITICAL
+```
+
+Each cell colored green → amber → red by age. Time since last import shown numerically.
+
+---
+
+## PHASE 8: SNAPSHOT TIMELINE CHART *(Already Partial — Polish)*
+
+**Status:** Snapshot chart exists in detail page. Needs refinement.
+
+**Improvements:**
+- Use Recharts `AreaChart` instead of bar chart for smoother trend
+- Color fill under line: green when ALIGNED, red when DRIFTED
+- Clickable points to "replay" historical state
+- Tooltip showing: date, confidence score, drift count, primary DC at that time
+- "Now" marker at right edge
+
+---
+
+## PHASE 9: NARRATIVE & STORYTELLING LAYER *(Critical for Winning)*
+
+This is often what separates 1st from 2nd in hackathons: **how clearly the solution answers the problem**.
+
+### 9.1 Add Contextual Help Tooltips
+
+Every confidence badge, freshness indicator, and drift badge should have a tooltip explaining:
+- **Confidence HIGH:** "MongoDB PRIMARY assertion confirmed by 2 independent sources (Ops Manager + Prometheus). Data is 12 minutes old."
+- **STALE:** "Last CMDB update was 4 hours ago. Topology may not reflect current state."
+- **DRIFTED:** "Application should be active in AZ3 per intent definition. No assets found in AZ3."
+
+### 9.2 Operator Summary Band (Enhance)
+
+The existing "quick summary row" should become a "cockpit strip" that immediately answers 5 questions:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PCA-PAYMENTS            PRODUCTION          Last updated: 8 min ago     │
+│                                                                          │
+│  WHERE: IBB1 + SHV (2 DCs)     PRIMARY WRITE: IBB1     CONFIDENCE: HIGH │
+│  DRIFT: ALIGNED ✓              STALE SOURCES: 1         ASSETS: 14      │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 9.3 Evidence Chips
+
+For each data center in the location view, add small evidence chips showing:
+- Which source proved the asset was there: `[AppDyn] [SPLOC] [MongoDB]`
+- Clicking a chip opens the source record in a side drawer
+- Color: green=deterministic, amber=inferred, gray=CMDB
+
+### 9.4 The "Why" Button
+
+Every major assertion should have a small `(?)` button that expands a one-paragraph explanation:
+> "IBB1 is classified as PRIMARY because: MongoDB OPS Manager shows rs_state=1 (Primary) for cluster Cluster_0 on host ibm1dbprod. This was ingested 8 minutes ago. AppDynamics shows 94% of transaction load routed through IBB1 nodes. No conflicting signals detected."
+
+---
+
+## PHASE 10: MISSING DATA DISCOVERY — SHARE MECHANISM *(Bonus Credit)*
+
+The problem statement says teams must share newly discovered data sources in a common channel for extra credit.
+
+**What to add to DataDiscoveryPanel.tsx:**
+- "Submit Discovery" form prominently at the top
+- Pre-populate with discovered sources we've found (AVI LB pool JSON, batch Autosys jobs, OCP pod info)
+- Show a "Shared to hackathon channel" confirmation state
+- Add a "Discoveries by this team" section listing what we've contributed
+
+**Discoveries to document:**
+1. **AVI Load Balancer Pool JSON** — provides active/standby pool member status, traffic-weighted distribution across DCs
+2. **AutoSys Batch Job CSV** — shows which machine (`RUN_MACHINE`) executed each job, with DC derivable from FQDN prefix
+3. **IBM MQ QMgr Command Server Status** — identifies which queue managers are accepting commands (live vs passive)
+4. **MongoDB Replica State** (`rs_state=1` = primary, `rs_state=2` = secondary) — most deterministic single-field write authority indicator in the dataset
+
+---
+
+## PHASE 11: BACKEND PERSISTENCE *(Medium — Worth Doing)*
+
+**Current:** Zustand in-memory. Page refresh = data loss.
+
+**What to implement with Supabase:**
+```sql
+-- Core runtime tables
+runtime_applications (id, name, environment, confidence_level, primary_dc, last_updated)
+runtime_assets (id, app_id, component, tech_stack, data_center, role, write_authority, source_name, freshness)
+runtime_intents (id, app_id, intended_primary_dc, intended_active_dcs, replication_model)
+runtime_drifts (id, app_id, drift_type, severity, detected_at, resolved_at)
+runtime_audit_log (id, app_id, event_type, actor, description, timestamp)
+runtime_proposals (id, tech_stack, dimension, proposed_source, status, submitted_by)
+```
+
+**Priority:** If time allows, implement this. It makes the solution feel real, not demo-only.
+
+---
+
+## PHASE 12: UI ANIMATION POLISH
+
+### List Page Animations
+
+```tsx
+// Staggered card entrance
+variants={{
+  hidden: { opacity: 0, y: 20 },
+  visible: (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.05 } })
+}}
+```
+
+### Detail Page Tab Transitions
+
+```tsx
+<AnimatePresence mode="wait">
+  <motion.div
+    key={activeTab}
+    initial={{ opacity: 0, x: 20 }}
+    animate={{ opacity: 1, x: 0 }}
+    exit={{ opacity: 0, x: -20 }}
+    transition={{ duration: 0.2 }}
+  >
+    {renderTab()}
+  </motion.div>
+</AnimatePresence>
+```
+
+### Confidence Badge Pulse on LOW/UNKNOWN
+
+```tsx
+<motion.div
+  animate={confidence === 'LOW' ? { scale: [1, 1.05, 1] } : {}}
+  transition={{ repeat: Infinity, duration: 2 }}
+>
+  <ConfidenceBadge level={confidence} />
+</motion.div>
+```
+
+---
+
+## FINAL IMPLEMENTATION PRIORITY ORDER
+
+### P0 — Non-negotiable (do these first)
+
+1. **Verify end-to-end demo flow works** — click app → detail → intent → evidence → incident mode
+2. **Geographic map component** — US SVG with DC dots, pulse for active, lines for replication
+3. **Dependency graph (React Flow)** — app → component nodes → DC branches
+4. **Application card redesign** — confidence color bar, mini DC distribution bar, tech stack icons
+5. **Compare Environments tab** — implement the table (data already exists)
+6. **Confidence/stale filters** — add to list page filter bar
+
+### P1 — High-value additions
+
+7. **Data freshness heatmap** — in Data Quality tab
+8. **Cockpit strip enhancement** — 5 clear answers in the summary band
+9. **Evidence chips with source provenance** — per DC card
+10. **"Why" explanation tooltips** — on confidence badge, primary DC, drift badges
+11. **Snapshot timeline improvements** — area chart with drift coloring
+12. **Live events sidebar** — WebSocket feed made visible
+
+### P2 — Polish & wow factor
+
+13. **Micro-animations** — card hover lift, tab transitions, badge pulses
+14. **Animated replication arrows** — between DC cards in location map
+15. **Discovery submission form prominence** — position discoveries at top of Data Discovery panel
+16. **Mobile responsive tab bar** — scrollable tab names for small screens
+17. **Backend persistence** — Supabase tables if time allows
+
+---
+
+## UI DESIGN SPECIFICATIONS
+
+### Color Palette
+
+```
+Background:    #0A0E1A (near-black navy)
+Surface:       #111827 (card background)
+Surface-Hover: #1F2937 (hover state)
+Border:        #1E2A3A (subtle border)
+
+Primary:       #3B82F6 (blue — interactive elements)
+Primary-Glow:  #3B82F620 (glow effect)
+
+DC-Active:     #00E599 (neon green — live/primary DC)
+DC-Active-Glow:#00E59920
+
+DC-Standby:    #F59E0B (amber — secondary DC)
+Stale:         #EF4444 (red — stale/conflict)
+
+Confidence-HIGH:    #22C55E
+Confidence-MEDIUM:  #F59E0B
+Confidence-LOW:     #EF4444
+Confidence-UNKNOWN: #6B7280
+
+Text-Primary:  #F9FAFB
+Text-Secondary:#9CA3AF
+Text-Muted:    #6B7280
+```
+
+### Typography
+
+```
+Font: Inter (already loaded)
+App name:      text-xl font-bold tracking-tight
+DC name:       text-sm font-semibold uppercase tracking-wider
+Metric value:  text-3xl font-black tabular-nums
+Evidence:      text-xs font-mono text-muted
+```
+
+### Spacing System (8px grid)
+
+```
+xs: 4px
+sm: 8px
+md: 16px
+lg: 24px
+xl: 32px
+2xl: 48px
+```
+
+### Card Design Pattern
+
+```
+bg-[#111827]
+border border-[#1E2A3A]
+rounded-xl
+p-4 md:p-6
+hover:border-[#3B82F6]/40
+hover:shadow-lg hover:shadow-[#3B82F6]/5
+transition-all duration-200
+```
+
+---
+
+## DEMO SCRIPT — FINAL VERSION
+
+**Time: 5-7 minutes. Practice 3x.**
+
+### Opening (30s)
+> "Every incident, every failover, every DR test comes down to one question: where is my application actually running? Not where it's deployed — where it's *live*, where it owns writes, and whether that matches what we intended. HealthMesh answers this."
+
+### Act 1: Where is it? (90s)
+1. Open runtime location list → show 4 apps, confidence scores, DC tags
+2. "Notice PCA-PAYMENTS has MEDIUM confidence. Let's find out why."
+3. Click PCA-PAYMENTS → detail page opens
+4. Point to geographic map → "Active in IBB1 and SHV. Primary write authority is IBB1. You can see the replication arrow."
+5. "12 assets. 3 tech stacks. This is one application."
+
+### Act 2: How sure are we? (90s)
+1. Click Data Quality tab
+2. "MongoDB? Deterministic — we read the primary replica state directly. HIGH confidence."
+3. "CMDB? 4 hours old. LOW confidence on topology."
+4. "That's why the overall confidence is MEDIUM — two sources, one fresh, one stale."
+5. Show freshness heatmap
+
+### Act 3: Is it right? (90s)
+1. Click Intent vs Actual tab
+2. "PCA was designed to be active in IBB1, SHV, and AZ3. But we don't see any assets in AZ3."
+3. "MISSING_DC drift. HIGH severity. Flagged automatically."
+4. "Either AZ3 was decommissioned and intent wasn't updated, or a deployment failed. Either way, we found it."
+
+### Act 4: What's the blast radius? (60s)
+1. Open Incident Mode panel
+2. Select IBB1 as failed DC
+3. "PAYROLL has no failover configured → CRITICAL impact. 4 other apps have standby → WARNING."
+4. Show JSON export: "This goes into the incident ticket."
+
+### Act 5: How do we know? (30s)
+1. Open Audit Log
+2. "Every import, every state change, every drift detection — logged with timestamp and source."
+3. "This is auditable, explainable runtime truth."
+
+### Close (30s)
+> "HealthMesh doesn't just tell you where your app is. It tells you why it believes that, how confident it is, and whether it's right. In an incident, that's the difference between minutes and hours."
+
+---
+
+## DATA DISCOVERY FINDINGS (Share to Hackathon Chat)
+
+The following new data sources were identified during this project and should be shared:
+
+### Discovery 1: IBM MQ Queue Manager Command Server Status
+- **Source:** `ibmmq_qmgr_command_server_status.csv` / Prometheus ibm-mq exporter
+- **Signal:** Queue managers with `Value=2` are actively accepting commands. Combined with hostname FQDN, DC can be derived.
+- **Why deterministic:** A passive standby queue manager does not respond to commands. `Value=2` = definitively live.
+- **Confidence level:** HIGH (3 → can be 4 with FQDN→DC mapping standardized)
+
+### Discovery 2: MongoDB Replica State Field
+- **Source:** `mongodb_info.csv` — field `rs_state` (1=primary, 2=secondary, 0=startup)
+- **Signal:** `rs_state=1` is the single most authoritative field for identifying write authority in a MongoDB deployment
+- **Why deterministic:** The MongoDB RS protocol enforces exactly one primary per replica set at all times
+- **Confidence level:** 4 (Available and standardized — fully deterministic)
+
+### Discovery 3: AutoSys Batch Job Execution Location
+- **Source:** `Batch.csv` — fields `MACH_NAME`, `RUN_MACHINE`, `JOB_STATUS`, `STATUS_TIMESTAMP`
+- **Signal:** `RUN_MACHINE` FQDN prefix indicates which physical/virtual host executed the job. DC derivable from FQDN naming convention.
+- **Why useful:** Batch systems often reveal "dark" compute that never appears in CMDB or observability
+- **Confidence level:** 3 (machine name → DC mapping requires FQDN convention to be consistent)
+
+### Discovery 4: AVI Load Balancer Pool Member Status
+- **Source:** `pool member-2.json` / AVI Controller API
+- **Signal:** Pool members with `enabled=true` and `operational_state=OPER_UP` are actively receiving traffic. Site field maps directly to DC.
+- **Why deterministic:** Load balancer is the ingress truth. If traffic is flowing to a pool member, the application is live at that site.
+- **Confidence level:** 3 → 4 (requires AVI Controller API standardization)
+
+---
+
+## HACKATHON WINNER CHECKLIST
+
+Before presenting, verify:
+
+- [ ] Demo walkthrough overlay starts and advances correctly
+- [ ] Clicking any app opens detail with geographic map visible
+- [ ] MongoDB assets show PRIMARY/SECONDARY badges clearly
+- [ ] Intent vs Actual tab shows at least one drift
+- [ ] Incident Mode shows at least one CRITICAL impact
+- [ ] Data Quality tab shows at least one STALE source
+- [ ] Audit log has at least 5 events
+- [ ] Confidence badge tooltips explain the score
+- [ ] Data Discovery panel shows team's 4 discovered sources
+- [ ] Export from Incident Mode works and shows valid JSON
+- [ ] Browser refresh returns to same application detail (URL state)
+- [ ] Build passes: `npm run build`
+
+---
+
+## WHAT JUDGES WILL ASK — AND OUR ANSWERS
+
+| Judge Question | Where to Show It |
+|---------------|-----------------|
+| "Where is PCA-PAYMENTS running?" | Geographic map → IBB1 + SHV, primary write IBB1 |
+| "How do you know that?" | Data Quality tab → MongoDB PRIMARY from Ops Manager (8 min ago) |
+| "What if it's wrong?" | Confidence badge: MEDIUM because CMDB is 4h stale |
+| "Is this what was intended?" | Intent vs Actual → ALIGNED for IBB1/SHV, DRIFTED for AZ3 |
+| "What happens if IBB1 goes down?" | Incident Mode → PAYROLL CRITICAL, PCA WARNING (SHV failover) |
+| "What changed recently?" | Audit Log → last import at 09:14, drift detected at 09:22 |
+| "Can this scale?" | Confidence scoring engine, determinism model, WIP source matrix |
+| "What data is missing?" | Data Discovery panel → WIP sources, gaps explicitly surfaced |
+| "How is this different from a CMDB?" | Intent vs Actual, freshness decay, multi-source conflict resolution, blast radius |
+| "Is the UI responsive?" | Mobile tabs, responsive grid, touch-friendly buttons |
+
+---
+
+## BOTTOM LINE
+
+This solution is **the strongest possible answer to the hackathon problem** because:
+
+1. It solves BOTH dimensions the problem statement requires: where data is absent (gap surfacing) AND where data exists (correlation and simplification)
+2. It makes confidence and uncertainty **first-class citizens**, not afterthoughts
+3. It separates **design intent from actual state** (the bonus criterion)
+4. It shows **how the solution evolves** as better data arrives (proposal workflow + WIP matrix)
+5. The demo is narrated, guided, and covers every judge question
+
+**The gap between current state (8/10) and first place (10/10) is:**
+- Geographic DC map with pulse animation
+- React Flow dependency graph
+- Card and cockpit strip visual redesign
+- Compare Environments tab completion
+- Confidence/stale filter bar completion
+
+These are all achievable with the existing codebase and packages already installed.
+
+**Ship the P0 items. Win the hackathon.**
