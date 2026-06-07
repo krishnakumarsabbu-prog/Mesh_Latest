@@ -141,9 +141,20 @@ function OperatorQuickSummary({ detail }: { detail: ApplicationLocationDetail })
                 {strongSources.length} fresh source{strongSources.length !== 1 ? 's' : ''} · {staleCount} stale · {detail.conflicts?.length ?? 0} conflict{(detail.conflicts?.length ?? 0) !== 1 ? 's' : ''}
               </span>
             </div>
-            <span className="text-[9px] font-bold uppercase tracking-widest flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
-              2AM READY
-            </span>
+            <div className="relative group flex items-center">
+              <span className="text-[9px] font-bold uppercase tracking-widest flex-shrink-0 cursor-help flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                2AM READY <HelpCircle className="w-2.5 h-2.5 text-white/40" />
+              </span>
+              {/* Hover Tooltip */}
+              <div className="absolute right-0 bottom-full mb-2 hidden group-hover:flex flex-col p-3 rounded-xl z-50 pointer-events-none w-64 text-left shadow-2xl border bg-[#0f141c]/95 border-white/10">
+                <p className="text-[10px] font-bold text-white uppercase tracking-wider">
+                  2 AM Ready Concept
+                </p>
+                <p className="text-[9px] text-white/70 mt-1 leading-normal">
+                  During a high-stress outage, SREs need trust. This banner aggregates signal freshness and conflict counts to prevent engineers from taking destructive recovery actions based on stale or conflicting assertions.
+                </p>
+              </div>
+            </div>
           </div>
         );
       })()}

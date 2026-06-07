@@ -39,11 +39,54 @@ const DC_STATE_MAPPING: Record<string, string[]> = {
   'dc-az3': ['az']
 };
 
+function mapToMapDcId(idOrShortName: string | undefined): string | null {
+  if (!idOrShortName) return null;
+  const norm = idOrShortName.toLowerCase().replace(/^dc-/, '');
+  
+  if (
+    norm === 'ibb1' ||
+    norm === 'arv' ||
+    norm === 'gl' ||
+    norm === 'str' ||
+    norm === '1axm'
+  ) {
+    return 'dc-ibb1';
+  }
+  if (norm === 'shv' || norm === 'lew' || norm === 'wec') {
+    return 'dc-shv';
+  }
+  if (norm.includes('ga') || norm === 'atl') {
+    return 'dc-uat-ga';
+  }
+  if (
+    norm.includes('ma') ||
+    norm.includes('md') ||
+    norm === 'gar' ||
+    norm === 'man' ||
+    norm === 'oxm' ||
+    norm === 'uat'
+  ) {
+    return 'dc-uat-ma';
+  }
+  if (
+    norm.includes('az') ||
+    norm === 'cld' ||
+    norm === 'cloud' ||
+    norm === 'unk' ||
+    norm === 'tpe'
+  ) {
+    return 'dc-az3';
+  }
+  
+  return null;
+}
+
 function groupAssetsByDC(detail: ApplicationLocationDetail): Map<string, RuntimeAsset[]> {
   const map = new Map<string, RuntimeAsset[]>();
   for (const component of detail.components) {
     for (const asset of component.assets) {
-      const dcId = asset.data_center?.id ?? '__unknown__';
+      const rawDcId = asset.data_center?.id;
+      const dcId = (rawDcId ? mapToMapDcId(rawDcId) : null) ?? '__unknown__';
       if (!map.has(dcId)) map.set(dcId, []);
       map.get(dcId)!.push(asset);
     }
@@ -76,15 +119,15 @@ function getPrimaryWriteDC(detail: ApplicationLocationDetail): string | undefine
 
 function getStandbyDCForFailed(
   failedDcId: string,
-  dataCenters: RuntimeDataCenter[],
+  activeDcIds: Set<string>,
   assetsByDC: Map<string, RuntimeAsset[]>,
 ): string | undefined {
-  for (const dc of dataCenters) {
-    if (dc.id === failedDcId) continue;
-    const assets = assetsByDC.get(dc.id) ?? [];
-    if (assets.some((a) => a.write_authority)) return dc.id;
+  for (const dcId of activeDcIds) {
+    if (dcId === failedDcId) continue;
+    const assets = assetsByDC.get(dcId) ?? [];
+    if (assets.some((a) => a.write_authority)) return dcId;
   }
-  return dataCenters.find((d) => d.id !== failedDcId)?.id;
+  return Array.from(activeDcIds).find((id) => id !== failedDcId);
 }
 
 // Generates a curved quadratic Bezier path for replication lines
@@ -121,7 +164,11 @@ export function LocationMap({
 }: LocationMapProps) {
   const assetsByDC = groupAssetsByDC(detail);
   const dataCenters = getDCsFromDetail(detail);
-  const primaryWriteDCId = getPrimaryWriteDC(detail);
+  
+  const primaryWriteDCId = useMemo(() => {
+    const rawId = getPrimaryWriteDC(detail);
+    return rawId ? (mapToMapDcId(rawId) || rawId) : undefined;
+  }, [detail]);
   
   // Hovered state id or DC id for tooltips
   const [hoveredState, setHoveredState] = useState<string | null>(null);
@@ -133,7 +180,15 @@ export function LocationMap({
   const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
   const [isPaused, setIsPaused] = useState<boolean>(false);
 
-  const activeDcIds = new Set(dataCenters.map((d) => d.id));
+  const activeDcIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const d of dataCenters) {
+      const mapped = mapToMapDcId(d.id) || mapToMapDcId(d.short_name);
+      if (mapped) ids.add(mapped);
+    }
+    return ids;
+  }, [dataCenters]);
+
   const effectivePrimaryId = failoverComplete
     ? promotedDcId
     : simulatingFailover
@@ -151,7 +206,7 @@ export function LocationMap({
         const next = Math.min(prev + 2, 100);
         if (next === 100) {
           clearInterval(timer);
-          const standby = getStandbyDCForFailed(failedDcId ?? '', dataCenters, assetsByDC);
+          const standby = getStandbyDCForFailed(failedDcId ?? '', activeDcIds, assetsByDC);
           setPromotedDcId(standby ?? null);
           setFailoverComplete(true);
         }
@@ -160,7 +215,7 @@ export function LocationMap({
     }, stepDuration);
 
     return () => clearInterval(timer);
-  }, [simulatingFailover, failoverComplete, isPaused, simulationSpeed, failedDcId, dataCenters, assetsByDC, setPromotedDcId, setFailoverComplete]);
+  }, [simulatingFailover, failoverComplete, isPaused, simulationSpeed, failedDcId, activeDcIds, assetsByDC, setPromotedDcId, setFailoverComplete]);
 
   // Dynamic console log builder
   useEffect(() => {
@@ -168,7 +223,7 @@ export function LocationMap({
       setConsoleLogs([]);
       return;
     }
-    const failedDc = dataCenters.find((d) => d.id === failedDcId);
+    const failedDc = MOCK_DATA_CENTERS.find((d) => d.id === failedDcId);
     const failedDcName = failedDc?.name ?? failedDcId ?? 'Data Center';
     const logs: string[] = [];
     logs.push(`[${new Date().toLocaleTimeString()}] ALERT: Outage detected on data center: ${failedDcName}`);
@@ -188,13 +243,13 @@ export function LocationMap({
       logs.push(`[${new Date().toLocaleTimeString()}] CHECKING: Executing load balancer and node health checks.`);
     }
     if (failoverProgress >= 100) {
-      const standby = getStandbyDCForFailed(failedDcId ?? '', dataCenters, assetsByDC);
-      const standbyName = dataCenters.find((d) => d.id === standby)?.name ?? standby ?? 'Standby Node';
+      const standby = getStandbyDCForFailed(failedDcId ?? '', activeDcIds, assetsByDC);
+      const standbyName = MOCK_DATA_CENTERS.find((d) => d.id === standby)?.name ?? standby ?? 'Standby Node';
       logs.push(`[${new Date().toLocaleTimeString()}] SUCCESS: ${standbyName} promoted to Write Primary.`);
       logs.push(`[${new Date().toLocaleTimeString()}] INTEGRITY: Replication channels re-established.`);
     }
     setConsoleLogs(logs);
-  }, [failoverProgress, simulatingFailover, failedDcId, dataCenters, assetsByDC]);
+  }, [failoverProgress, simulatingFailover, failedDcId, activeDcIds, assetsByDC]);
 
   const currentLogMsg = useMemo(() => {
     if (failoverProgress >= 100) return 'Mitigation sequence completed successfully.';
@@ -367,8 +422,8 @@ export function LocationMap({
               <div>
                 <p className="text-[12px] font-bold" style={{ color: failoverComplete ? '#30D158' : '#FF453A' }}>
                   {failoverComplete
-                    ? `FAILOVER SUCCESSFUL — Standby node ${promotedDcId ? dataCenters.find((d) => d.id === promotedDcId)?.short_name ?? promotedDcId : 'standby'} promoted to authoritative WRITE PRIMARY.`
-                    : `CRITICAL ALERT — Simulating failure on ${dataCenters.find((d) => d.id === failedDcId)?.short_name ?? failedDcId}. Promoting standby write authority...`}
+                    ? `FAILOVER SUCCESSFUL — Standby node ${promotedDcId ? MOCK_DATA_CENTERS.find((d) => d.id === promotedDcId)?.short_name ?? promotedDcId : 'standby'} promoted to authoritative WRITE PRIMARY.`
+                    : `CRITICAL ALERT — Simulating failure on ${MOCK_DATA_CENTERS.find((d) => d.id === failedDcId)?.short_name ?? failedDcId}. Promoting standby write authority...`}
                 </p>
                 <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   Visualizing dynamic replication redirection and data consistency state.
@@ -712,9 +767,10 @@ export function LocationMap({
           
           <div className={cn("flex gap-4 pb-2", simulatingFailover ? "flex-col overflow-y-auto max-h-[420px] pr-1" : "overflow-x-auto")} style={{ scrollbarWidth: 'none' }}>
             {dataCenters.map((dc, index) => {
-              const isFailed = simulatingFailover && failedDcId === dc.id;
-              const isPromoted = simulatingFailover && failoverComplete && promotedDcId === dc.id;
-              const isEffectivePrimary = isPromoted || (dc.id === primaryWriteDCId && !isFailed);
+              const mapDcId = mapToMapDcId(dc.id) || dc.id;
+              const isFailed = simulatingFailover && failedDcId === mapDcId;
+              const isPromoted = simulatingFailover && failoverComplete && promotedDcId === mapDcId;
+              const isEffectivePrimary = isPromoted || (mapDcId === primaryWriteDCId && !isFailed);
 
               return (
                 <React.Fragment key={dc.id}>
@@ -736,7 +792,7 @@ export function LocationMap({
                     >
                       <DataCenterCard
                         dataCenter={dc}
-                        assets={assetsByDC.get(dc.id) ?? []}
+                        assets={assetsByDC.get(mapDcId) ?? []}
                         isPrimaryWrite={isEffectivePrimary}
                         isFailed={isFailed}
                         onSelectEvidence={onSelectEvidence}
@@ -746,7 +802,7 @@ export function LocationMap({
                     {/* Failover simulation trigger */}
                     {!simulatingFailover && (
                       <button
-                        onClick={() => startFailoverSimulation(dc.id)}
+                        onClick={() => startFailoverSimulation(mapDcId)}
                         className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all"
                         style={{
                           background: 'rgba(255,69,58,0.06)',

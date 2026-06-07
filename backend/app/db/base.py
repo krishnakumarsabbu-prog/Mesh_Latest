@@ -60,6 +60,25 @@ async def init_db():
                 except Exception:
                     pass  # Column already exists — fine
 
+            # Add new runtime asset columns (confidence upgrade)
+            for col_def in [
+                "ALTER TABLE runtime_assets ADD COLUMN confidence_label VARCHAR DEFAULT 'MEDIUM';",
+                "ALTER TABLE runtime_assets ADD COLUMN confidence_score INTEGER DEFAULT 65;",
+            ]:
+                try:
+                    await conn.execute(text(col_def))
+                except Exception:
+                    pass  # Column already exists — fine
+
+            # Add new application intent columns
+            for col_def in [
+                "ALTER TABLE application_intents ADD COLUMN alignment_status VARCHAR DEFAULT 'UNKNOWN';",
+            ]:
+                try:
+                    await conn.execute(text(col_def))
+                except Exception:
+                    pass  # Column already exists — fine
+
         logger.info("Database tables created/verified")
     except Exception as exc:
         logger.error(f"Failed to initialize database tables: {exc}")

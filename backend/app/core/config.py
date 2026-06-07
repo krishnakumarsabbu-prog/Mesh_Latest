@@ -3,11 +3,18 @@ from typing import Optional
 import secrets
 
 
+from pathlib import Path
+
+# Dynamically resolve default database path to the project root
+_ROOT_DIR = Path(__file__).resolve().parents[3]
+_DEFAULT_DB_PATH = (_ROOT_DIR / "healthmesh.db").as_posix()
+
+
 class Settings(BaseSettings):
     APP_NAME: str = "HealthMesh AI"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
-    DATABASE_URL: str = "sqlite+aiosqlite:///./healthmesh.db"
+    DATABASE_URL: str = f"sqlite+aiosqlite:///{_DEFAULT_DB_PATH}"
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24

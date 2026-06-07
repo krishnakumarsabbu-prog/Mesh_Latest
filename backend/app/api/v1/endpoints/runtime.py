@@ -46,11 +46,11 @@ def detect_source_type(file_name: str) -> str:
         return "mssql"
     if "kafka" in f:
         return "kafka"
-    if "avi" in f or "loadbalancer" in f or "load_balancer" in f:
+    if "avi" in f or "loadbalancer" in f or "load_balancer" in f or "gslb" in f or "virtual" in f:
         return "avi_loadbalancer"
     if "ocp" in f or "pod_info" in f or "openshift" in f:
         return "ocp"
-    if "batch" in f or "batch_processing" in f:
+    if "batch" in f or "batch_processing" in f or "jobs" in f:
         return "batch"
     if "appdynamics" in f or "appdynamic" in f or "node_inventory" in f:
         return "appdynamics"
@@ -442,7 +442,6 @@ async def get_datacenters(db: AsyncSession = Depends(get_db)):
             "asset_count": dc.asset_count
         } for dc in dcs
     ]
-
 @router.get("/imports", response_model=List[Dict[str, Any]])
 async def get_imports(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(DataSourceImport).order_by(DataSourceImport.imported_at.desc()))
@@ -459,23 +458,25 @@ async def get_imports(db: AsyncSession = Depends(get_db)):
         } for imp in imports
     ]
 
-@router.post("/import", response_model=Dict[str, Any])
-async def import_csv(
-    file: UploadFile = File(...),
-    source_type: Optional[str] = Form(None),
-    db: AsyncSession = Depends(get_db)
-):
-    content_bytes = await file.read()
-    content = content_bytes.decode("utf-8")
+async def parse_and_insert_csv(
+    filename: str,
+    content: str,
+    source_type: Optional[str],
+    db: AsyncSession
+) -> Dict[str, Any]:
+    import io
+    import csv
+    import uuid
+    import re
+    from datetime import datetime
     
-    source = source_type or detect_source_type(file.filename)
+    source = source_type or detect_source_type(filename)
     errors = []
     assets_created = 0
     
     f = io.StringIO(content)
     reader = csv.DictReader(f)
     
-    # Process rows based on source
     try:
         if source == "ibm_mq":
             for row in reader:
@@ -497,6 +498,16 @@ async def import_csv(
                 asset_env = "PRODUCTION" if env in ["PRODUCTION", "PROD"] else "DR" if env == "DR" else "UAT"
                 conf = 4 if cluster else 3
 
+                # Extract application_id
+                app_id = "MQ_INFRA"
+                app_name = "IBM MQ Shared Tier"
+                ref_name = qmgr or exported_qmgr or ""
+                if ref_name:
+                    match = re.search(r'[A-Z]{3,}', ref_name)
+                    if match:
+                        app_id = match.group(0)
+                        app_name = f"{app_id} Messaging Tier"
+
                 asset = RuntimeAsset(
                     id=str(uuid.uuid4()),
                     name=qmgr,
@@ -517,7 +528,9 @@ async def import_csv(
                         "cluster": cluster,
                         "exported_qmgr": exported_qmgr,
                         "mq_namespace": mq_namespace,
-                        "cluster_role": "CLUSTER_MEMBER" if cluster else "STANDALONE"
+                        "cluster_role": "CLUSTER_MEMBER" if cluster else "STANDALONE",
+                        "application_id": app_id,
+                        "application_name": app_name
                     }
                 )
                 db.add(asset)
@@ -536,6 +549,7 @@ async def import_csv(
                 version = row.get("mongodb_version") or ""
                 process_type = row.get("process_type") or ""
                 val_int = int(row.get("Value") or row.get("value") or "0")
+                job = row.get("job") or ""
 
                 if not hostname:
                     continue
@@ -555,6 +569,14 @@ async def import_csv(
 
                 is_primary = is_primary_int if has_conflict else is_primary_text
                 rep_role = "MONGOS" if is_mongos else "CONFIG_SVR" if is_config else "PRIMARY" if is_primary else "SECONDARY"
+
+                app_id = "MONGO_INFRA"
+                app_name = "MongoDB DB Tier"
+                if job:
+                    parts = re.split(r'[-_]', job)
+                    if parts and parts[0]:
+                        app_id = parts[0].upper()
+                        app_name = f"{app_id} Database Tier"
 
                 asset = RuntimeAsset(
                     id=str(uuid.uuid4()),
@@ -579,7 +601,9 @@ async def import_csv(
                         "mongodb_version": version,
                         "process_type": process_type,
                         "value_int": str(val_int),
-                        "internal_conflict": f"text={replica_state} vs int={val_int}" if has_conflict else ""
+                        "internal_conflict": f"text={replica_state} vs int={val_int}" if has_conflict else "",
+                        "application_id": app_id,
+                        "application_name": app_name
                     }
                 )
                 db.add(asset)
@@ -594,7 +618,6 @@ async def import_csv(
                 if not target_name:
                     continue
 
-                # Parse target
                 host = target_name
                 db_name = target_name
                 if "@" in target_name:
@@ -609,6 +632,14 @@ async def import_csv(
 
                 is_standby = "STANDBY" in role_name
                 asset_env = "PRODUCTION" if env in ["PRODUCTION", "PROD"] else "DR" if env == "DR" else "UAT"
+
+                app_id = "ORACLE_INFRA"
+                app_name = "Oracle Core databases"
+                if target_name:
+                    parts = target_name.split("_")
+                    if parts and parts[0]:
+                        app_id = parts[0].upper()
+                        app_name = f"{app_id} Database Services"
 
                 asset = RuntimeAsset(
                     id=str(uuid.uuid4()),
@@ -625,7 +656,12 @@ async def import_csv(
                     write_authority=not is_standby,
                     is_deterministic=True,
                     data_source="oracle_oem",
-                    metadata_json={"role_name": role_name, "target_name": target_name}
+                    metadata_json={
+                        "role_name": role_name,
+                        "target_name": target_name,
+                        "application_id": app_id,
+                        "application_name": app_name
+                    }
                 )
                 db.add(asset)
                 assets_created += 1
@@ -650,6 +686,12 @@ async def import_csv(
                 conf = 4 if is_sync else 3
                 asset_env = "PRODUCTION" if env in ["PRODUCTION", "PROD"] else "DR" if env == "DR" else "UAT"
 
+                app_id = "MSSQL_INFRA"
+                app_name = "MSSQL Core databases"
+                if db_name:
+                    app_id = db_name.replace("DB", "").upper()
+                    app_name = f"{app_id} Database Tier"
+
                 asset = RuntimeAsset(
                     id=str(uuid.uuid4()),
                     name=db_name,
@@ -668,7 +710,9 @@ async def import_csv(
                     metadata_json={
                         "ag_name": ag_name,
                         "sync_state": sync_state,
-                        "replica_role": replica_role
+                        "replica_role": replica_role,
+                        "application_id": app_id,
+                        "application_name": app_name
                     }
                 )
                 db.add(asset)
@@ -693,6 +737,9 @@ async def import_csv(
                 conf = 4 if urp == 0 else 2
                 asset_env = "PRODUCTION" if env in ["PRODUCTION", "PROD"] else "DR" if env == "DR" else "UAT"
 
+                app_id = "KAFKA_INFRA"
+                app_name = "Kafka Shared Cluster"
+
                 asset = RuntimeAsset(
                     id=str(uuid.uuid4()),
                     name=f"kafka-broker-{broker_id}",
@@ -711,7 +758,9 @@ async def import_csv(
                     metadata_json={
                         "broker_id": broker_id,
                         "is_controller": is_controller,
-                        "under_replicated_partitions": urp
+                        "under_replicated_partitions": urp,
+                        "application_id": app_id,
+                        "application_name": app_name
                     }
                 )
                 db.add(asset)
@@ -719,50 +768,68 @@ async def import_csv(
 
         elif source == "avi_loadbalancer":
             for row in reader:
-                hostname = row.get("hostname") or row.get("VIP_NAME") or "avi-vip"
-                vip_ip = row.get("vip_ip") or row.get("VIP_IP") or "10.0.0.1"
-                active_pool = row.get("active_pool") or row.get("ACTIVE_POOL") or "default-pool"
-                active_dc = row.get("active_dc") or row.get("ACTIVE_DC") or "IBB1"
+                name = row.get("name") or row.get("hostname") or row.get("VIP_NAME") or "avi-vip"
+                app_id = row.get("app_id") or row.get("APP_ID") or "AVI_INFRA"
+                
+                # Check for site (GSLB) or active_dc (standard)
+                site = row.get("site") or row.get("active_dc") or row.get("ACTIVE_DC") or "IBB1"
+                
+                # Check for controller (GSLB) or hostname (standard)
+                host = row.get("controller") or row.get("hostname") or row.get("VIP_NAME") or name
+                
+                pool = row.get("pool") or row.get("active_pool") or row.get("ACTIVE_POOL") or "default-pool"
                 health_score_str = str(row.get("health_score") or row.get("HEALTH_SCORE") or "100")
-                env = (row.get("env") or row.get("ENV") or "UAT").upper()
+                tenant = row.get("tenant") or ""
+                
+                env = "PRODUCTION"
+                if "uat" in tenant.lower() or "dev" in tenant.lower():
+                    env = "UAT"
+                elif "env" in row:
+                    env = row.get("env").upper()
 
-                if not hostname:
+                if not name:
                     continue
 
-                dc_info = resolve_dc_from_avi_hostname(hostname)
+                # Resolve DC
+                dc_info = {"name": f"DC {site.upper()}", "short_name": site.upper()}
+                if site.upper() in ["IBB1", "SHV", "GA-PRD", "MA-PRD"]:
+                    dc_info = resolve_dc_from_avi_hostname(host)
                 dc = await get_or_create_dc(db, dc_info)
 
                 health_score = int(health_score_str) if health_score_str.isdigit() else 100
                 conf = 4 if health_score >= 90 else 3
-                asset_env = "PRODUCTION" if env in ["PRODUCTION", "PROD"] else "DR" if env == "DR" else "UAT"
 
                 asset = RuntimeAsset(
                     id=str(uuid.uuid4()),
-                    name=hostname,
+                    name=name,
                     asset_type="LOAD_BALANCER",
                     tech_stack="avi",
-                    environment=asset_env,
-                    host=hostname,
+                    environment=env,
+                    host=host,
                     platform="LINUX",
                     data_center_short=dc.short_name,
                     latest_confidence_level=conf,
-                    latest_operational_state="DEGRADED" if health_score < 75 else "ACTIVE",
-                    latest_replication_role="ACTIVE" if active_dc.upper() == dc.short_name.upper() else "STANDBY",
+                    latest_operational_state="ACTIVE",
+                    latest_replication_role="ACTIVE",
                     write_authority=True,
                     is_deterministic=True,
                     data_source="avi_loadbalancer",
                     metadata_json={
-                        "vip_ip": vip_ip,
-                        "active_pool": active_pool,
-                        "active_dc": active_dc,
-                        "health_score": health_score
+                        "vip_ip": row.get("vip_ip") or "10.0.0.1",
+                        "active_pool": pool,
+                        "active_dc": dc.short_name,
+                        "health_score": health_score,
+                        "application_id": app_id,
+                        "application_name": f"{app_id} Services",
+                        "tenant": tenant,
+                        "zone": row.get("zone") or "",
+                        "neighborhood": row.get("neighborhood") or ""
                     }
                 )
                 db.add(asset)
                 assets_created += 1
 
         elif source == "scom":
-            # SCOM ReplicaStatus: columns ReplicaName, Role, HealthState
             for row in reader:
                 replica_name = row.get("ReplicaName") or row.get("replica_name") or ""
                 role = (row.get("Role") or row.get("role") or "Secondary").strip()
@@ -771,7 +838,6 @@ async def import_csv(
                 if not replica_name:
                     continue
 
-                # Parse host from replica name: "WMTOG_PROD\SQLINSTANCE" → hostname
                 host = replica_name.split("\\")[0] if "\\" in replica_name else replica_name
 
                 dc_info = resolve_dc_from_mssql_hostname(host)
@@ -780,6 +846,13 @@ async def import_csv(
                 is_primary = role.lower() in ["primary", "standalone"]
                 is_healthy = health_state.lower() in ["success", "healthy", "ok"]
                 conf = 4 if (is_primary and is_healthy) else 3 if is_healthy else 2
+
+                app_id = "SCOM_INFRA"
+                app_name = "SCOM SQL Services"
+                if replica_name and "\\" in replica_name:
+                    db_part = replica_name.split("\\")[1]
+                    app_id = db_part.split("_")[0].upper()
+                    app_name = f"{app_id} SQL Instance"
 
                 asset = RuntimeAsset(
                     id=str(uuid.uuid4()),
@@ -797,53 +870,50 @@ async def import_csv(
                     is_deterministic=True,
                     data_source="scom",
                     metadata_json={
-                        "replica_name": replica_name,
-                        "role": role,
                         "health_state": health_state,
-                        "scom_role": role
+                        "role": role,
+                        "application_id": app_id,
+                        "application_name": app_name
                     }
                 )
                 db.add(asset)
                 assets_created += 1
 
         elif source == "ocp":
-            # OCP pod info: columns cluster, env, lob, namespace, neighborhood, pod
             for row in reader:
-                pod = row.get("pod") or row.get("POD") or row.get("pod_name") or ""
+                pod = row.get("pod") or row.get("POD") or ""
                 namespace = row.get("namespace") or row.get("NAMESPACE") or ""
                 cluster = row.get("cluster") or row.get("CLUSTER") or ""
-                env_raw = (row.get("env") or row.get("ENV") or "prod").lower()
+                env = (row.get("env") or row.get("ENV") or "UAT").upper()
                 lob = row.get("lob") or row.get("LOB") or ""
-                neighborhood = row.get("neighborhood") or row.get("NEIGHBORHOOD") or ""
+                nh = row.get("neighborhood") or row.get("NEIGHBORHOOD") or ""
 
-                if not pod and not cluster:
+                if not pod:
                     continue
 
-                # Derive DC from cluster name: "dcglnh01ocp" → DCGL, or from neighborhood
-                dc_short = "UNK"
-                dc_name = "Unknown DC"
-                if cluster:
-                    # e.g. dcglnh01ocp → extract site prefix
-                    prefix = cluster[:4].upper()
-                    dc_short = prefix
-                    dc_name = f"DC {prefix}"
-                elif neighborhood:
-                    dc_short = neighborhood[:6].upper()
-                    dc_name = f"DC {neighborhood}"
+                # Determine DC from cluster name prefix (e.g. dcgl... -> GL, dcms... -> MS)
+                dc_prefix = "UNK"
+                if cluster.startswith("dc"):
+                    dc_prefix = cluster[2:4].upper()
+                elif cluster:
+                    dc_prefix = cluster[:3].upper()
 
-                dc_info = {"name": dc_name, "short_name": dc_short}
-                dc = await get_or_create_dc(db, dc_info)
+                dc = await get_or_create_dc(db, {"name": f"OCP Cluster {dc_prefix}", "short_name": dc_prefix})
+                asset_env = "PRODUCTION" if env in ["PRODUCTION", "PROD"] else "DR" if env == "DR" else "UAT"
 
-                asset_env = "PRODUCTION" if env_raw in ["prod", "production"] else "DR" if env_raw == "dr" else "UAT"
+                app_id = "OCP_INFRA"
+                app_name = "OpenShift Cluster Services"
+                if namespace:
+                    app_id = namespace.upper()
+                    app_name = f"{namespace.title()} Microservices"
 
-                name = pod or f"{namespace}-pod"
                 asset = RuntimeAsset(
                     id=str(uuid.uuid4()),
-                    name=name,
+                    name=pod,
                     asset_type="OCP_POD",
                     tech_stack="ocp",
                     environment=asset_env,
-                    host=cluster or name,
+                    host=cluster,
                     platform="LINUX",
                     data_center_short=dc.short_name,
                     latest_confidence_level=4,
@@ -854,190 +924,294 @@ async def import_csv(
                     data_source="ocp",
                     metadata_json={
                         "namespace": namespace,
-                        "cluster": cluster,
                         "lob": lob,
-                        "neighborhood": neighborhood
+                        "neighborhood": nh,
+                        "application_id": app_id,
+                        "application_name": app_name
                     }
                 )
                 db.add(asset)
                 assets_created += 1
 
         elif source == "appdynamics":
-            # AppDynamics node inventory: app_id, node_name, app_full_name, machine_name, tier_name
             for row in reader:
                 machine_name = row.get("machine_name") or row.get("MACHINE_NAME") or ""
                 app_full_name = row.get("app_full_name") or row.get("APP_FULL_NAME") or ""
                 app_id_val = row.get("app_id") or row.get("APP_ID") or ""
                 node_name = row.get("node_name") or row.get("NODE_NAME") or ""
                 tier_name = row.get("tier_name") or row.get("TIER_NAME") or ""
+                
+                metric_path = row.get("metric_path") or ""
+                if metric_path and not node_name:
+                    if "Individual Nodes|" in metric_path:
+                        parts = metric_path.split("Individual Nodes|")
+                        if len(parts) > 1:
+                            subparts = parts[1].split("|")
+                            node_name = subparts[0]
+                            machine_name = node_name
+                    elif "Component:" in metric_path:
+                        parts = metric_path.split("Component:")
+                        if len(parts) > 1:
+                            subparts = parts[1].split("|")
+                            node_name = f"comp-{subparts[0]}"
+                            machine_name = node_name
 
-                if not machine_name and not node_name:
-                    continue
+                if not node_name:
+                    node_name = row.get("id") or "appd-node"
+                    machine_name = node_name
 
-                host = machine_name or node_name
-                # Infer env from machine name: PROD-AZ → PRODUCTION, PROD-OCP → PRODUCTION
-                env_upper = host.upper()
-                asset_env = "PRODUCTION" if ("PROD" in env_upper) else "UAT"
-
-                # Infer DC from machine name patterns
-                dc_info = resolve_dc_from_oracle_hostname(host)
-                dc = await get_or_create_dc(db, dc_info)
-
+                # Infer DC from prefix
+                dc_short = "UNK"
+                if machine_name:
+                    m = machine_name.upper()
+                    if m.startswith("STR"): dc_short = "STR"
+                    elif m.startswith("GARD") or m.startswith("GAR"): dc_short = "GAR"
+                    elif m.startswith("MAN"): dc_short = "MAN"
+                    elif m.startswith("LEW"): dc_short = "LEW"
+                    elif m.startswith("ARV"): dc_short = "ARV"
+                    elif m.startswith("SHV"): dc_short = "SHV"
+                    elif m.startswith("TPE"): dc_short = "TPE"
+                    elif m.startswith("OXM"): dc_short = "OXM"
+                    elif "PROD-1" in m:
+                        parts = m.split("PROD")
+                        if parts[0]:
+                            dc_short = parts[0].replace("-", "").strip()[:4]
+                
+                dc = await get_or_create_dc(db, {"name": f"DC {dc_short}", "short_name": dc_short})
+                
                 asset = RuntimeAsset(
                     id=str(uuid.uuid4()),
-                    name=node_name or machine_name,
-                    asset_type="SERVER",
-                    tech_stack="vm",
-                    environment=asset_env,
-                    host=machine_name,
+                    name=node_name,
+                    asset_type="COMPUTE_NODE",
+                    tech_stack="appdynamics",
+                    environment="PRODUCTION",
+                    host=machine_name or node_name,
                     platform="LINUX",
                     data_center_short=dc.short_name,
-                    latest_confidence_level=3,
+                    latest_confidence_level=4,
                     latest_operational_state="ACTIVE",
                     latest_replication_role="NONE",
-                    write_authority=False,
-                    is_deterministic=False,
+                    write_authority=True,
+                    is_deterministic=True,
                     data_source="appdynamics",
                     metadata_json={
-                        "app_id": app_id_val,
-                        "app_full_name": app_full_name,
+                        "application_id": app_id_val,
+                        "application_name": app_full_name or f"{app_id_val} App",
+                        "node_name": node_name,
                         "tier_name": tier_name,
-                        "node_name": node_name
+                        "metric_name": row.get("metric_name") or "",
+                        "metric_value": row.get("value") or ""
                     }
                 )
                 db.add(asset)
                 assets_created += 1
 
         elif source == "batch":
-            # Batch processing: Instance, JOB_NAME, JOB_TYPE, AS_GROUP, AS_APPLICATION, MACH_NAME, STATUS
             for row in reader:
                 mach_name = row.get("MACH_NAME") or row.get("mach_name") or row.get("RUN_MACHINE") or ""
                 job_name = row.get("JOB_NAME") or row.get("job_name") or ""
                 instance = row.get("Instance") or row.get("INSTANCE") or ""
-                as_application = row.get("AS_APPLICATION") or row.get("as_application") or ""
-                job_status = (row.get("JOB_STATUS") or "").upper()
+                as_application = row.get("AS_APPLICATION") or row.get("as_application") or row.get("AS_APPLIC") or row.get("as_applic") or ""
+                job_status = (row.get("JOB_STATUS") or row.get("STATUS") or "").upper()
 
-                if not mach_name:
+                if not job_name:
                     continue
 
-                dc_info = resolve_dc_from_oracle_hostname(mach_name)
-                dc = await get_or_create_dc(db, dc_info)
+                # Determine DC from machine name if possible
+                dc_short = "UNK"
+                if mach_name:
+                    m = mach_name.upper()
+                    if "EPVRA" in m or "EPV" in m:
+                        dc_short = "EPV"
+                    elif "EDA" in m:
+                        dc_short = "EDA"
+                    elif "MRB" in m:
+                        dc_short = "MRB"
 
-                is_healthy = job_status in ["SUCCESS", "RUNNING", "ACTIVE"]
-                conf = 4 if is_healthy else 2
+                dc = await get_or_create_dc(db, {"name": f"DC {dc_short}", "short_name": dc_short})
+
+                app_id = as_application or "BATCH_INFRA"
+                app_name = f"{app_id} Batch Workloads"
 
                 asset = RuntimeAsset(
                     id=str(uuid.uuid4()),
-                    name=mach_name,
-                    asset_type="SERVER",
-                    tech_stack="vm",
+                    name=job_name,
+                    asset_type="BATCH_JOB",
+                    tech_stack="batch",
                     environment="PRODUCTION",
                     host=mach_name,
                     platform="LINUX",
                     data_center_short=dc.short_name,
-                    latest_confidence_level=conf,
-                    latest_operational_state="ACTIVE" if is_healthy else "UNKNOWN",
+                    latest_confidence_level=4,
+                    latest_operational_state="ACTIVE" if job_status == "SUCCESS" else "STANDBY",
                     latest_replication_role="NONE",
                     write_authority=False,
-                    is_deterministic=False,
+                    is_deterministic=True,
                     data_source="batch",
                     metadata_json={
                         "job_name": job_name,
                         "instance": instance,
                         "as_application": as_application,
-                        "job_status": job_status
-                    }
-                )
-                db.add(asset)
-                assets_created += 1
-
-        else:  # CMDB / fallback
-            for row in reader:
-                app_name = row.get("APPLICATION_NAME") or row.get("application_name") or ""
-                app_id = row.get("APPLICATION_ID") or row.get("application_id") or app_name.split(" ")[0].upper()
-                env = (row.get("ENVIRONMENT") or row.get("environment") or "UAT").upper()
-                device_name = row.get("DEVICE_NAME") or row.get("device_name")
-                device_type = row.get("DEVICE_TYPE") or row.get("device_type") or "SERVER"
-                dc_name = row.get("DATA_CENTER") or row.get("data_center") or "Unknown DC"
-
-                lvl1_name = row.get("DEVICE_LVL1_NAME") or ""
-                lvl1_type = row.get("DEVICE_LVL1_TYPE") or ""
-                lvl2_name = row.get("DEVICE_LVL2_NAME") or ""
-                lvl2_type = row.get("DEVICE_LVL2_TYPE") or ""
-                lvl3_name = row.get("DEVICE_LVL3_NAME") or ""
-                lvl3_type = row.get("DEVICE_LVL3_TYPE") or ""
-                lvl4_name = row.get("DEVICE_LVL4_NAME") or ""
-                lvl4_type = row.get("DEVICE_LVL4_TYPE") or ""
-
-                if not device_name or not app_name:
-                    continue
-
-                # Classify tech stack
-                t = device_type.upper()
-                stack = "vm"
-                if "MQ" in t or "QUEUE" in t:
-                    stack = "ibm_mq"
-                elif "MONGO" in t:
-                    stack = "mongodb"
-                elif "ORACLE" in t or "ORA" in t:
-                    stack = "oracle"
-                elif "SQL" in t:
-                    stack = "mssql"
-                elif "KAFKA" in t:
-                    stack = "kafka"
-                elif "OCP" in t or "POD" in t or "KUBE" in t:
-                    stack = "ocp"
-
-                # Classify asset type
-                asset_type = "SERVER"
-                if "MQ" in t:
-                    asset_type = "MQ_QMGR"
-                elif "MONGO" in t:
-                    asset_type = "MONGO_NODE"
-                elif "ORACLE" in t:
-                    asset_type = "ORACLE_DB"
-                elif "OCP" in t or "POD" in t:
-                    asset_type = "OCP_POD"
-
-                dc_short = dc_name.replace("DC ", "").replace(" ", "-").upper()[:8] or "UNK"
-                dc = await get_or_create_dc(db, {"name": dc_name, "short_name": dc_short})
-
-                asset_env = "PRODUCTION" if env in ["PRODUCTION", "PROD"] else "DR" if env == "DR" else "UAT"
-
-                asset = RuntimeAsset(
-                    id=str(uuid.uuid4()),
-                    name=device_name,
-                    asset_type=asset_type,
-                    tech_stack=stack,
-                    environment=asset_env,
-                    host=device_name,
-                    platform="LINUX",
-                    data_center_short=dc.short_name,
-                    latest_confidence_level=4,
-                    latest_operational_state="ACTIVE",
-                    latest_replication_role="NONE",
-                    write_authority=False,
-                    is_deterministic=True,
-                    data_source="cmdb",
-                    metadata_json={
+                        "job_status": job_status,
                         "application_id": app_id,
-                        "application_name": app_name,
-                        "device_type": device_type,
-                        "lvl1": f"{lvl1_name}({lvl1_type})" if lvl1_name else "",
-                        "lvl2": f"{lvl2_name}({lvl2_type})" if lvl2_name else "",
-                        "lvl3": f"{lvl3_name}({lvl3_type})" if lvl3_name else "",
-                        "lvl4": f"{lvl4_name}({lvl4_type})" if lvl4_name else "",
-                        "device_chain": " → ".join(filter(None, [lvl1_name, lvl2_name, lvl3_name, lvl4_name]))
+                        "application_name": app_name
                     }
                 )
                 db.add(asset)
                 assets_created += 1
+
+        else:  # CMDB / SPLOC / fallback
+            # Check if this is a SPLOC traffic file
+            is_sploc = "wf_dc" in reader.fieldnames and "app_id" in reader.fieldnames
+            if is_sploc:
+                for row in reader:
+                    app_id = row.get("app_id") or "UNKNOWN"
+                    app_name = f"{app_id} Application"
+                    dc_short = row.get("wf_dc") or "UNK"
+                    service = row.get("sf_service") or row.get("wf_acln") or "unknown-service"
+                    avg_value = row.get("avg_value") or "0"
+                    total_value = row.get("total_value") or "0"
+                    sample_count = row.get("sample_count") or "0"
+
+                    if not service or not app_id:
+                        continue
+
+                    dc = await get_or_create_dc(db, {"name": f"DC {dc_short}", "short_name": dc_short})
+
+                    asset = RuntimeAsset(
+                        id=str(uuid.uuid4()),
+                        name=service,
+                        asset_type="COMPUTE_NODE",
+                        tech_stack="java",
+                        environment="PRODUCTION",
+                        host=f"{service.lower()}.{dc_short.lower()}.healthmesh.ai",
+                        platform="LINUX",
+                        data_center_short=dc.short_name,
+                        latest_confidence_level=4,
+                        latest_operational_state="ACTIVE",
+                        latest_replication_role="NONE",
+                        write_authority=True,
+                        is_deterministic=True,
+                        data_source="sploc",
+                        metadata_json={
+                            "application_id": app_id,
+                            "application_name": app_name,
+                            "avg_latency_ms": avg_value,
+                            "request_count": total_value,
+                            "sample_count": sample_count,
+                            "service_name": service
+                        }
+                    )
+                    db.add(asset)
+                    assets_created += 1
+            else:
+                for row in reader:
+                    app_name = row.get("APPLICATION_NAME") or row.get("application_name") or ""
+                    app_id = row.get("APPLICATION_ID") or row.get("application_id") or app_name.split(" ")[0].upper()
+                    env = (row.get("ENVIRONMENT") or row.get("environment") or "UAT").upper()
+                    device_name = row.get("DEVICE_NAME") or row.get("device_name")
+                    device_type = row.get("DEVICE_TYPE") or row.get("device_type") or "SERVER"
+                    dc_name = row.get("DATA_CENTER") or row.get("data_center") or "Unknown DC"
+
+                    lvl1_name = row.get("DEVICE_LVL1_NAME") or ""
+                    lvl1_type = row.get("DEVICE_LVL1_TYPE") or ""
+                    lvl2_name = row.get("DEVICE_LVL2_NAME") or ""
+                    lvl2_type = row.get("DEVICE_LVL2_TYPE") or ""
+                    lvl3_name = row.get("DEVICE_LVL3_NAME") or ""
+                    lvl3_type = row.get("DEVICE_LVL3_TYPE") or ""
+                    lvl4_name = row.get("DEVICE_LVL4_NAME") or ""
+                    lvl4_type = row.get("DEVICE_LVL4_TYPE") or ""
+
+                    if not device_name or not app_name:
+                        continue
+
+                    # Classify tech stack
+                    t = device_type.upper()
+                    stack = "vm"
+                    if "MQ" in t or "QUEUE" in t:
+                        stack = "ibm_mq"
+                    elif "MONGO" in t:
+                        stack = "mongodb"
+                    elif "ORACLE" in t or "ORA" in t:
+                        stack = "oracle"
+                    elif "SQL" in t:
+                        stack = "mssql"
+                    elif "KAFKA" in t:
+                        stack = "kafka"
+                    elif "OCP" in t or "POD" in t or "KUBE" in t:
+                        stack = "ocp"
+
+                    # Classify asset type
+                    asset_type = "SERVER"
+                    if "MQ" in t:
+                        asset_type = "MQ_QMGR"
+                    elif "MONGO" in t:
+                        asset_type = "MONGO_NODE"
+                    elif "ORACLE" in t:
+                        asset_type = "ORACLE_DB"
+                    elif "OCP" in t or "POD" in t:
+                        asset_type = "OCP_POD"
+
+                    dc_short = dc_name.replace("DC ", "").replace(" ", "-").upper()[:8] or "UNK"
+                    dc = await get_or_create_dc(db, {"name": dc_name, "short_name": dc_short})
+
+                    asset_env = "PRODUCTION" if env in ["PRODUCTION", "PROD"] else "DR" if env == "DR" else "UAT"
+
+                    asset = RuntimeAsset(
+                        id=str(uuid.uuid4()),
+                        name=device_name,
+                        asset_type=asset_type,
+                        tech_stack=stack,
+                        environment=asset_env,
+                        host=device_name,
+                        platform="LINUX",
+                        data_center_short=dc.short_name,
+                        latest_confidence_level=4,
+                        latest_operational_state="ACTIVE",
+                        latest_replication_role="NONE",
+                        write_authority=False,
+                        is_deterministic=True,
+                        data_source="cmdb",
+                        metadata_json={
+                            "application_id": app_id,
+                            "application_name": app_name,
+                            "device_type": device_type,
+                            "lvl1": f"{lvl1_name}({lvl1_type})" if lvl1_name else "",
+                            "lvl2": f"{lvl2_name}({lvl2_type})" if lvl2_name else "",
+                            "lvl3": f"{lvl3_name}({lvl3_type})" if lvl3_name else "",
+                            "lvl4": f"{lvl4_name}({lvl4_type})" if lvl4_name else "",
+                            "device_chain": " → ".join(filter(None, [lvl1_name, lvl2_name, lvl3_name, lvl4_name]))
+                        }
+                    )
+                    db.add(asset)
+                    assets_created += 1
 
     except Exception as e:
-        logger.error(f"Error parsing CSV upload: {e}")
+        logger.error(f"Error parsing CSV content: {e}")
         errors.append(str(e))
 
     status = "FAILED" if errors else "SUCCESS"
+    return {
+        "assets_created": assets_created,
+        "errors": errors,
+        "source": source,
+        "status": status
+    }
+
+@router.post("/import", response_model=Dict[str, Any])
+async def import_csv(
+    file: UploadFile = File(...),
+    source_type: Optional[str] = Form(None),
+    db: AsyncSession = Depends(get_db)
+):
+    content_bytes = await file.read()
+    content = content_bytes.decode("utf-8")
+    
+    result = await parse_and_insert_csv(file.filename, content, source_type, db)
+    assets_created = result["assets_created"]
+    errors = result["errors"]
+    source = result["source"]
+    status = result["status"]
     
     # Save import history log
     imp = DataSourceImport(
@@ -1071,176 +1245,332 @@ async def import_csv(
         "errors": errors
     }
 
-@router.post("/seed", response_model=Dict[str, Any])
-async def seed_data(db: AsyncSession = Depends(get_db)):
-    # Clean first
+async def parse_and_insert_json_file(file_name: str, content: str, db: AsyncSession) -> Dict[str, Any]:
+    import json
+    import re
+    import uuid
+    
+    assets_created = 0
+    errors = []
+    source = "json_unsupported"
+    
+    try:
+        is_json = False
+        try:
+            data = json.loads(content)
+            is_json = True
+        except json.JSONDecodeError:
+            pass
+            
+        if is_json:
+            if isinstance(data, dict) and (data.get("style") == "flexvol" or "svm" in data):
+                source = "netapp"
+                name = data.get("name") or "datavol"
+                svm_name = data.get("svm", {}).get("name") or "vsdata"
+                state = data.get("state") or "online"
+                vol_type = data.get("type") or "rw"
+                uuid_str = data.get("uuid") or str(uuid.uuid4())
+                
+                dc = await get_or_create_dc(db, {"name": "DC Birmingham IBB1", "short_name": "IBB1"})
+                
+                asset = RuntimeAsset(
+                    id=str(uuid.uuid4()),
+                    name=name,
+                    asset_type="STORAGE_VOLUME",
+                    tech_stack="netapp",
+                    environment="PRODUCTION",
+                    host=svm_name,
+                    platform="ONTAP",
+                    data_center_short=dc.short_name,
+                    latest_confidence_level=4,
+                    latest_operational_state="ACTIVE" if state.lower() == "online" else "INACTIVE",
+                    latest_replication_role="NONE",
+                    write_authority=True if vol_type.lower() == "rw" else False,
+                    is_deterministic=True,
+                    data_source="netapp",
+                    metadata_json={
+                        "uuid": uuid_str,
+                        "comment": data.get("comment") or "",
+                        "size_bytes": data.get("size") or 0,
+                        "style": data.get("style") or "",
+                        "type": vol_type,
+                        "application_id": "NETAPP",
+                        "application_name": "NetApp Storage Infrastructure"
+                    }
+                )
+                db.add(asset)
+                assets_created += 1
+            else:
+                source = "generic_json"
+        else:
+            # Parse Prometheus exposition metrics
+            prometheus_lines = content.strip().split("\n")
+            resource_metrics = {}
+            for line in prometheus_lines:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                
+                match = re.match(r"^([a-zA-Z0-9_]+)\{(.*)\}\s+([0-9e\.\+\-]+)", line)
+                if not match:
+                    continue
+                
+                metric_name, label_str, val_str = match.groups()
+                val = float(val_str)
+                
+                labels = {}
+                for lbl_match in re.finditer(r'([a-zA-Z0-9_]+)="([^"]*)"', label_str):
+                    k, v = lbl_match.groups()
+                    labels[k] = v
+                
+                uuid_lbl = labels.get("uuid")
+                name_lbl = labels.get("name")
+                if not uuid_lbl or not name_lbl:
+                    continue
+                
+                server_lbl = labels.get("server") or ""
+                group_key = (uuid_lbl, server_lbl)
+                
+                if group_key not in resource_metrics:
+                    resource_metrics[group_key] = {
+                        "labels": labels,
+                        "metrics": {}
+                    }
+                resource_metrics[group_key]["metrics"][metric_name] = val
+                
+            if resource_metrics:
+                source = "avi_loadbalancer"
+                for (uuid_lbl, server_lbl), info in resource_metrics.items():
+                    labels = info["labels"]
+                    metrics = info["metrics"]
+                    
+                    name_lbl = labels.get("name")
+                    type_lbl = labels.get("type") or "pool"
+                    tenant = labels.get("tenant") or "adcs"
+                    
+                    health_score = metrics.get("avi_healthscore_health_score_value", 100.0)
+                    performance_score = metrics.get("avi_healthscore_performance_score", 100.0)
+                    
+                    if server_lbl:
+                        asset_name = f"{name_lbl}-{server_lbl}"
+                        host_part = server_lbl.split(":")[0] if ":" in server_lbl else server_lbl
+                        port_part = int(server_lbl.split(":")[1]) if ":" in server_lbl else None
+                    else:
+                        asset_name = name_lbl
+                        host_part = f"{name_lbl}.healthmesh.ai"
+                        port_part = 443
+                        
+                    dc_info = resolve_dc_from_avi_hostname(host_part)
+                    if host_part == "10.1.1.1":
+                        dc_info = {"name": "DC Birmingham IBB1", "short_name": "IBB1"}
+                    elif host_part == "30.0.60.109":
+                        dc_info = {"name": "DC Shoreview", "short_name": "SHV"}
+                        
+                    dc = await get_or_create_dc(db, dc_info)
+                    
+                    env = "PRODUCTION"
+                    if "uat" in tenant.lower() or "dev" in tenant.lower():
+                        env = "UAT"
+                        
+                    op_state = "ACTIVE"
+                    if health_score == 0.0:
+                        op_state = "DEGRADED"
+                        
+                    asset = RuntimeAsset(
+                        id=str(uuid.uuid4()),
+                        name=asset_name,
+                        asset_type="LOAD_BALANCER",
+                        tech_stack="avi",
+                        environment=env,
+                        host=host_part,
+                        port=port_part,
+                        platform="LINUX",
+                        data_center_short=dc.short_name,
+                        latest_confidence_level=4,
+                        latest_operational_state=op_state,
+                        latest_replication_role="ACTIVE" if type_lbl == "virtualservice" else "NONE",
+                        write_authority=True if type_lbl == "virtualservice" else False,
+                        is_deterministic=True,
+                        data_source="avi_loadbalancer",
+                        metadata_json={
+                            "uuid": uuid_lbl,
+                            "type": type_lbl,
+                            "tenant": tenant,
+                            "name": name_lbl,
+                            "server": server_lbl,
+                            "health_score": health_score,
+                            "performance_score": performance_score,
+                            "application_id": "ADCS",
+                            "application_name": "ADCS Load Balancing Services"
+                        }
+                    )
+                    db.add(asset)
+                    assets_created += 1
+                    
+    except Exception as e:
+        logger.error(f"Error parsing JSON/Metric file: {e}")
+        errors.append(str(e))
+        
+    return {
+        "assets_created": assets_created,
+        "errors": errors,
+        "source": source,
+        "status": "FAILED" if errors else "SUCCESS"
+    }
+
+@router.post("/import-all-docs", response_model=Dict[str, Any])
+async def import_all_docs(db: AsyncSession = Depends(get_db)):
+    import os
+    from fastapi import HTTPException
+    
+    # 1. Clean all data
     await db.execute(delete(RuntimeAsset))
     await db.execute(delete(RuntimeDataCenter))
     await db.execute(delete(DataSourceImport))
     await db.execute(delete(RuntimeAuditLog))
     await db.execute(delete(SourceProposal))
     await db.execute(delete(ApplicationIntent))
-
-    # Add default data centers
-    dcs = [
-        {"name": "DC Birmingham IBB1", "short_name": "IBB1", "region": "UK-Midlands", "zone": "AZ1"},
-        {"name": "DC Shoreview", "short_name": "SHV", "region": "US-Midwest", "zone": "AZ2"},
-        {"name": "DC Georgia Production", "short_name": "GA-PRD", "region": "US-East", "zone": "AZ1"},
-        {"name": "DC Maryland Production", "short_name": "MA-PRD", "region": "US-East", "zone": "AZ2"}
-    ]
-    for d in dcs:
-        dc = RuntimeDataCenter(
-            id=str(uuid.uuid4()),
-            name=d["name"],
-            short_name=d["short_name"],
-            region=d["region"],
-            zone=d["zone"],
-            asset_count=0
-        )
-        db.add(dc)
-    
-    await db.flush()
-
-    # Add mock assets (representing high-fidelity hackathon scenario)
-    # PCA: Primary in IBB1, standby in SHV (Oracle and MongoDB)
-    assets_data = [
-        # PCA App Assets
-        {"name": "pcadb_prod@ibb1", "asset_type": "ORACLE_DB", "tech_stack": "oracle", "env": "PRODUCTION", "host": "ibb1-ora-01.healthmesh.ai", "port": 1521, "dc": "IBB1", "conf": 4, "state": "ACTIVE", "role": "PRIMARY", "write": True, "source": "oracle_oem", "app_id": "PCA", "app_name": "Patient Care Portal (PCA)"},
-        {"name": "pcadb_prod@shv", "asset_type": "ORACLE_DB", "tech_stack": "oracle", "env": "PRODUCTION", "host": "shv-ora-01.healthmesh.ai", "port": 1521, "dc": "SHV", "conf": 4, "state": "STANDBY", "role": "PHYSICAL_STANDBY", "write": False, "source": "oracle_oem", "app_id": "PCA", "app_name": "Patient Care Portal (PCA)"},
-        
-        {"name": "pca-mongo-primary", "asset_type": "MONGO_NODE", "tech_stack": "mongodb", "env": "PRODUCTION", "host": "ibb1-mongo-01.healthmesh.ai", "port": 27017, "dc": "IBB1", "conf": 4, "state": "ACTIVE", "role": "PRIMARY", "write": True, "source": "mongodb", "app_id": "PCA", "app_name": "Patient Care Portal (PCA)"},
-        {"name": "pca-mongo-secondary", "asset_type": "MONGO_NODE", "tech_stack": "mongodb", "env": "PRODUCTION", "host": "shv-mongo-01.healthmesh.ai", "port": 27017, "dc": "SHV", "conf": 3, "state": "STANDBY", "role": "SECONDARY", "write": False, "source": "mongodb", "app_id": "PCA", "app_name": "Patient Care Portal (PCA)", "internal_conflict": "text=PRIMARY vs int=2"}, # Intentionally seeded internal mismatch
-        
-        {"name": "MQ4UPRDGA01", "asset_type": "MQ_QMGR", "tech_stack": "ibm_mq", "env": "PRODUCTION", "host": "mq4uprdga01.healthmesh.ai", "port": 1414, "dc": "GA-PRD", "conf": 4, "state": "ACTIVE", "role": "NONE", "write": True, "source": "ibm_mq", "app_id": "BILLING", "app_name": "Billing Operations (BILLING)"},
-        {"name": "MQ4UPRDMA01", "asset_type": "MQ_QMGR", "tech_stack": "ibm_mq", "env": "PRODUCTION", "host": "mq4uprdma01.healthmesh.ai", "port": 1414, "dc": "MA-PRD", "conf": 4, "state": "STANDBY", "role": "NONE", "write": False, "source": "ibm_mq", "app_id": "BILLING", "app_name": "Billing Operations (BILLING)"},
-
-        {"name": "claims-pod-01", "asset_type": "OCP_POD", "tech_stack": "ocp", "env": "PRODUCTION", "host": "ibb1-ocp-node-a.healthmesh.ai", "port": None, "dc": "IBB1", "conf": 4, "state": "ACTIVE", "role": "NONE", "write": False, "source": "cmdb", "app_id": "CLAIMS", "app_name": "Claims Processing (CLAIMS)"},
-
-        # New high-fidelity technical stacks seeded to showcase specific parser classifiers
-        {"name": "billing-mssql-primary", "asset_type": "DATABASE_INSTANCE", "tech_stack": "mssql", "env": "PRODUCTION", "host": "ibb1-sql-01.healthmesh.ai", "port": 1433, "dc": "IBB1", "conf": 4, "state": "ACTIVE", "role": "PRIMARY", "write": True, "source": "mssql", "app_id": "BILLING", "app_name": "Billing Operations (BILLING)"},
-        {"name": "billing-mssql-standby", "asset_type": "DATABASE_INSTANCE", "tech_stack": "mssql", "env": "PRODUCTION", "host": "shv-sql-01.healthmesh.ai", "port": 1433, "dc": "SHV", "conf": 4, "state": "STANDBY", "role": "SECONDARY", "write": False, "source": "mssql", "app_id": "BILLING", "app_name": "Billing Operations (BILLING)"},
-
-        {"name": "kafka-broker-1", "asset_type": "MESSAGING_NODE", "tech_stack": "kafka", "env": "PRODUCTION", "host": "ibb1-kafka-01.healthmesh.ai", "port": 9092, "dc": "IBB1", "conf": 4, "state": "ACTIVE", "role": "CONTROLLER", "write": True, "source": "kafka", "app_id": "CLAIMS", "app_name": "Claims Processing (CLAIMS)"},
-        {"name": "kafka-broker-2", "asset_type": "MESSAGING_NODE", "tech_stack": "kafka", "env": "PRODUCTION", "host": "shv-kafka-01.healthmesh.ai", "port": 9092, "dc": "SHV", "conf": 4, "state": "ACTIVE", "role": "BROKER", "write": True, "source": "kafka", "app_id": "CLAIMS", "app_name": "Claims Processing (CLAIMS)"},
-
-        {"name": "avi-loadbalancer-vip", "asset_type": "LOAD_BALANCER", "tech_stack": "avi", "env": "PRODUCTION", "host": "ibb1-avi-vip.healthmesh.ai", "port": 443, "dc": "IBB1", "conf": 4, "state": "ACTIVE", "role": "ACTIVE", "write": True, "source": "avi_loadbalancer", "app_id": "PCA", "app_name": "Patient Care Portal (PCA)"}
-    ]
-
-    for a in assets_data:
-        asset = RuntimeAsset(
-            id=str(uuid.uuid4()),
-            name=a["name"],
-            asset_type=a["asset_type"],
-            tech_stack=a["tech_stack"],
-            environment=a["env"],
-            host=a["host"],
-            port=a["port"],
-            platform="LINUX",
-            data_center_short=a["dc"],
-            latest_confidence_level=a["conf"],
-            latest_operational_state=a["state"],
-            latest_replication_role=a["role"],
-            write_authority=a["write"],
-            is_deterministic=True,
-            data_source=a["source"],
-            metadata_json={
-                "application_id": a["app_id"],
-                "application_name": a["app_name"],
-                "internal_conflict": a.get("internal_conflict", "")
-            }
-        )
-        db.add(asset)
-
-    # Seed mock history
-    histories = [
-        {"source": "cmdb", "file": "business_application_topology.csv", "records": 48},
-        {"source": "ibm_mq", "file": "ibmma_qmgr_sever_status.csv", "records": 12},
-        {"source": "mongodb", "file": "mongodb_info.csv", "records": 8},
-        {"source": "oracle_oem", "file": "oem_db_role.csv", "records": 16}
-    ]
-    for h in histories:
-        imp = DataSourceImport(
-            id=str(uuid.uuid4()),
-            source_name=h["source"],
-            file_name=h["file"],
-            record_count=h["records"],
-            status="SUCCESS",
-            errors=[]
-        )
-        db.add(imp)
-
-    # Seed mock proposals
-    proposals = [
-        {
-            "name": "IBM MQ cluster column",
-            "system": "Prometheus / IBM MQ Exporter",
-            "signal": "Topology — cluster membership",
-            "stack": "ibm_mq",
-            "rationale": "The cluster field in Prometheus MQ metrics identifies multi-DC cluster membership. Previously undocumented. Confidence 4 for cluster topology when set.",
-            "det": True,
-            "by": "Team HealthMesh",
-            "status": "ACCEPTED"
-        },
-        {
-            "name": "MongoDB Value integer field",
-            "system": "Prometheus / MongoDB Exporter (Ops Manager)",
-            "signal": "Replication state — integer authoritative flag",
-            "stack": "mongodb",
-            "rationale": "The Value column (1=primary, 2=secondary) is a deterministic integer replication state. Cross-validating against replica_state_name text enables internal conflict detection.",
-            "det": True,
-            "by": "Team HealthMesh",
-            "status": "ACCEPTED"
-        },
-        {
-            "name": "Oracle CMDB DEVICE_LVL hierarchy",
-            "system": "CMDB — ServiceNow",
-            "signal": "Topology — Oracle catalog/instance/server chain",
-            "stack": "oracle",
-            "rationale": "DEVICE_LVL1-4 columns in CMDB encode the full Oracle device chain (catalog → instance → Linux server). Combined with OEM role data, enables HA topology inference at confidence 4.",
-            "det": True,
-            "by": "Team HealthMesh",
-            "status": "PENDING"
-        }
-    ]
-
-    for p in proposals:
-        prop = SourceProposal(
-            id=str(uuid.uuid4()),
-            source_name=p["name"],
-            system=p["system"],
-            signal_type=p["signal"],
-            tech_stack=p["stack"],
-            rationale=p["rationale"],
-            is_deterministic_claim=p["det"],
-            proposed_by=p["by"],
-            status=p["status"]
-        )
-        db.add(prop)
-
-    # Seed an default intent for PCA
-    intent = ApplicationIntent(
-        application_id="PCA",
-        application_name="Patient Care Portal (PCA)",
-        intended_active_dcs=["IBB1", "SHV"],
-        intended_primary_dc="IBB1",
-        intended_environments=["PRODUCTION"],
-        failover_type="MANUAL",
-        replication_model="READ_REPLICA",
-        required_tech_stacks=["oracle", "mongodb"]
-    )
-    db.add(intent)
-
-    # Audit Entry
-    aud = RuntimeAuditLog(
-        id=str(uuid.uuid4()),
-        event_type="SEED_LOADED",
-        description="Sample database seed loaded: 3 applications across 4 data centers"
-    )
-    db.add(aud)
-
     await db.commit()
+    
+    # Locate docs directory
+    docs_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../docs"))
+    if not os.path.exists(docs_dir):
+        docs_dir = os.path.abspath(os.path.join(os.getcwd(), "backend", "docs"))
+        if not os.path.exists(docs_dir):
+            docs_dir = os.path.abspath(os.path.join(os.getcwd(), "docs"))
+            
+    if not os.path.exists(docs_dir):
+        raise HTTPException(status_code=404, detail=f"Documentation directory not found. Checked: {docs_dir}")
+        
+    imported_files = []
+    total_assets = 0
+    errors = []
+    
+    # Get all CSV and JSON files in docs
+    files = [f for f in os.listdir(docs_dir) if f.endswith(".csv") or f.endswith(".json")]
+    
+    # Sort files
+    for fname in sorted(files):
+        fpath = os.path.join(docs_dir, fname)
+        try:
+            with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            
+            if fname.endswith(".json"):
+                result = await parse_and_insert_json_file(fname, content, db)
+            else:
+                result = await parse_and_insert_csv(fname, content, None, db)
+                
+            assets_created = result["assets_created"]
+            status = result["status"]
+            file_errors = result["errors"]
+            source = result["source"]
+            
+            if file_errors:
+                errors.extend(file_errors)
+                
+            # Log individual imports
+            imp = DataSourceImport(
+                id=str(uuid.uuid4()),
+                source_name=source,
+                file_name=fname,
+                record_count=assets_created,
+                status=status,
+                errors=file_errors
+            )
+            db.add(imp)
+            total_assets += assets_created
+            imported_files.append({
+                "file": fname,
+                "source": source,
+                "count": assets_created,
+                "status": status
+            })
+        except Exception as file_exc:
+            logger.error(f"Failed to import file {fname}: {file_exc}")
+            errors.append(f"{fname}: {str(file_exc)}")
+            
+    # 2. Automatically generate design intents for all discovered applications!
+    result = await db.execute(select(RuntimeAsset))
+    all_assets = result.scalars().all()
+    
+    apps_metadata = {}
+    for asset in all_assets:
+        app_id = "INFRASTRUCTURE"
+        app_name = "Infrastructure Services"
+        if asset.metadata_json and asset.metadata_json.get("application_id"):
+            app_id = asset.metadata_json["application_id"]
+            app_name = asset.metadata_json.get("application_name", app_id)
+            
+        if app_id not in apps_metadata:
+            apps_metadata[app_id] = {
+                "id": app_id,
+                "name": app_name,
+                "dcs": set(),
+                "stacks": set()
+            }
+        
+        if asset.data_center_short:
+            apps_metadata[app_id]["dcs"].add(asset.data_center_short)
+        if asset.tech_stack:
+            apps_metadata[app_id]["stacks"].add(asset.tech_stack)
+            
+    # Create an ApplicationIntent for each discovered application
+    for app_id, meta in apps_metadata.items():
+        if app_id in ["INFRASTRUCTURE", "MQ_INFRA", "MONGO_INFRA", "ORACLE_INFRA", "SCOM_INFRA", "OCP_INFRA", "BATCH_INFRA"]:
+            continue
+            
+        dcs_list = list(meta["dcs"])
+        primary_dc = dcs_list[0] if dcs_list else "UNK"
+        
+        write_assets = [a for a in all_assets if a.metadata_json and a.metadata_json.get("application_id") == app_id and a.write_authority]
+        if write_assets and write_assets[0].data_center_short:
+            primary_dc = write_assets[0].data_center_short
+            
+        intent = ApplicationIntent(
+            application_id=app_id,
+            application_name=meta["name"],
+            intended_active_dcs=dcs_list,
+            intended_primary_dc=primary_dc,
+            intended_environments=["PRODUCTION"],
+            failover_type="AUTOMATIC",
+            replication_model="SINGLE_WRITER" if len(dcs_list) > 1 else "STANDALONE",
+            required_tech_stacks=list(meta["stacks"]),
+            alignment_status="UNKNOWN"
+        )
+        db.add(intent)
+        
+    await db.commit()
+    
+    # 3. Compute alignment status for all applications by running drift detection
+    result_intents = await db.execute(select(ApplicationIntent))
+    intents = result_intents.scalars().all()
+    for intent in intents:
+        drifts = await run_drift_detection(db, intent.application_id, environment="PRODUCTION", persist_critical=True)
+        intent.alignment_status = compute_alignment_status(drifts)
+        db.add(intent)
+        
+    # Audit log
+    audit = RuntimeAuditLog(
+        id=str(uuid.uuid4()),
+        event_type="BULK_IMPORT",
+        description=f"Operator executed one-shot bulk import from docs folder. Processed {len(imported_files)} files. Created {total_assets} assets, {len(intents)} application design intents."
+    )
+    db.add(audit)
+    await db.commit()
+    
+    return {
+        "status": "SUCCESS" if not errors else "PARTIAL",
+        "message": f"Successfully processed {len(imported_files)} documentation files.",
+        "imported_files": imported_files,
+        "total_assets": total_assets,
+        "total_intents": len(intents),
+        "errors": errors
+    }
 
-    return {"status": "SUCCESS", "message": "Database successfully seeded with Mock Hackathon records."}
+@router.post("/seed", response_model=Dict[str, Any])
+async def seed_data(db: AsyncSession = Depends(get_db)):
+    return await import_all_docs(db)
 
 @router.post("/reset", response_model=Dict[str, Any])
 async def reset_data(db: AsyncSession = Depends(get_db)):

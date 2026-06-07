@@ -408,13 +408,18 @@ export function IncidentModePanel({ onClose }: Props) {
           className="px-5 py-3 flex items-center justify-between gap-3 flex-shrink-0"
           style={{ borderTop: '1px solid var(--app-border)' }}
         >
-          <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-            Simulation only — no changes are made
-          </p>
+          <div className="flex flex-col">
+            <p className="text-[10px] font-bold text-white/50">
+              Simulation only — no changes are made.
+            </p>
+            <p className="text-[9px] text-white/35 mt-0.5 leading-normal max-w-[280px]">
+              Production runs in a decoupled, transaction-isolated sandbox memory layer (no database mutations).
+            </p>
+          </div>
           <button
             onClick={exportReport}
             disabled={impacts.length === 0}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12px] font-semibold disabled:opacity-40"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12px] font-semibold disabled:opacity-40 flex-shrink-0"
             style={{
               background: 'var(--app-surface)',
               border: '1px solid var(--app-border)',

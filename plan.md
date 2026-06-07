@@ -562,39 +562,38 @@ transition-all duration-200
 ### Opening (30s)
 > "Every incident, every failover, every DR test comes down to one question: where is my application actually running? Not where it's deployed — where it's *live*, where it owns writes, and whether that matches what we intended. HealthMesh answers this."
 
-### Act 1: Where is it? (90s)
-1. Open runtime location list → show 4 apps, confidence scores, DC tags
-2. "Notice PCA-PAYMENTS has MEDIUM confidence. Let's find out why."
-3. Click PCA-PAYMENTS → detail page opens
-4. Point to geographic map → "Active in IBB1 and SHV. Primary write authority is IBB1. You can see the replication arrow."
-5. "12 assets. 3 tech stacks. This is one application."
+### Act 1: Where is it? & The "2 AM Ready" Trust Banner (90s)
+1. Open runtime location list → show 4 apps, confidence scores, DC tags.
+2. "Notice PCA-PAYMENTS has MEDIUM confidence. Let's drill into it."
+3. Click PCA-PAYMENTS → detail page opens.
+4. Point to the "2AM READY" trust banner at the top → "This is our '2 AM Ready' trust banner. During a high-stress 2 AM outage, SREs cannot afford to act on stale or conflicting data. This banner aggregates signal freshness and conflict counts to prevent engineers from executing destructive recovery steps based on outdated assumptions."
+5. Point to the geographic map → "Active in IBB1 and SHV. Primary write authority is IBB1. You can see the replication arrow."
 
-### Act 2: How sure are we? (90s)
-1. Click Data Quality tab
-2. "MongoDB? Deterministic — we read the primary replica state directly. HIGH confidence."
-3. "CMDB? 4 hours old. LOW confidence on topology."
-4. "That's why the overall confidence is MEDIUM — two sources, one fresh, one stale."
-5. Show freshness heatmap
+### Act 2: Conflict Resolution & How Sure Are We? (90s)
+1. Point to the Conflict Alert → "Here, when sources disagree (e.g. CMDB says SHV, but routing says ASH), we surface a Conflict Alert. Operators can resolve the conflict directly by choosing which source to trust, recording the action in the audit trail."
+2. Click Data Quality tab.
+3. "MongoDB? Deterministic — we read the primary replica state directly. HIGH confidence."
+4. "CMDB? 4 hours old. LOW confidence on topology."
+5. "That's why the overall confidence is MEDIUM — two sources, one fresh, one stale."
 
 ### Act 3: Is it right? (90s)
-1. Click Intent vs Actual tab
+1. Click Intent vs Actual tab.
 2. "PCA was designed to be active in IBB1, SHV, and AZ3. But we don't see any assets in AZ3."
 3. "MISSING_DC drift. HIGH severity. Flagged automatically."
 4. "Either AZ3 was decommissioned and intent wasn't updated, or a deployment failed. Either way, we found it."
 
-### Act 4: What's the blast radius? (60s)
-1. Open Incident Mode panel
-2. Select IBB1 as failed DC
+### Act 4: What's the blast radius? Decoupled Simulation Sandbox (60s)
+1. Open Incident Mode panel.
+2. Select IBB1 as failed DC.
 3. "PAYROLL has no failover configured → CRITICAL impact. 4 other apps have standby → WARNING."
-4. Show JSON export: "This goes into the incident ticket."
+4. "Importantly, this failover simulator operates in a decoupled, transaction-isolated sandbox memory layer in production rather than writing destructive mutations directly to the telemetry database. This keeps our production metrics safe and untainted while testing scenarios."
+5. Show JSON export: "This goes into the incident ticket."
 
-### Act 5: How do we know? (30s)
-1. Open Audit Log
-2. "Every import, every state change, every drift detection — logged with timestamp and source."
-3. "This is auditable, explainable runtime truth."
-
-### Close (30s)
-> "HealthMesh doesn't just tell you where your app is. It tells you why it believes that, how confident it is, and whether it's right. In an incident, that's the difference between minutes and hours."
+### Act 5: Collaborative Discovery Model & Close (60s)
+1. Open Data Discovery panel.
+2. "To earn extra innovation points, we pitched the Collaborative Discovery Model: the Data Discovery Hub acts as a crowdsourced enterprise wiki where application teams help security/observability teams populate dark infrastructure (like AutoSys batch jobs and legacy IBM MQ networks) to resolve blindspots."
+3. "Every import, state change, conflict resolution, and discovery is logged in our Audit Log with full source provenance."
+4. Close: "HealthMesh doesn't just tell you where your app is. It tells you why it believes that, how confident it is, and whether it's right. In an incident, that's the difference between minutes and hours."
 
 ---
 
@@ -607,6 +606,7 @@ The following new data sources were identified during this project and should be
 - **Signal:** Queue managers with `Value=2` are actively accepting commands. Combined with hostname FQDN, DC can be derived.
 - **Why deterministic:** A passive standby queue manager does not respond to commands. `Value=2` = definitively live.
 - **Confidence level:** HIGH (3 → can be 4 with FQDN→DC mapping standardized)
+- **Collaborative wiki role:** Fills critical MQ visibility gaps that app teams typically run as dark infrastructure.
 
 ### Discovery 2: MongoDB Replica State Field
 - **Source:** `mongodb_info.csv` — field `rs_state` (1=primary, 2=secondary, 0=startup)

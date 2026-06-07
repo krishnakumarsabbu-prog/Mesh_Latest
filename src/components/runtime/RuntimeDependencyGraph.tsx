@@ -198,6 +198,48 @@ const nodeTypes = {
 
 // ─── Main Graph Component ────────────────────────────────────────────────────
 
+function mapToMapDcId(idOrShortName: string | undefined): string | null {
+  if (!idOrShortName) return null;
+  const norm = idOrShortName.toLowerCase().replace(/^dc-/, '');
+  
+  if (
+    norm === 'ibb1' ||
+    norm === 'arv' ||
+    norm === 'gl' ||
+    norm === 'str' ||
+    norm === '1axm'
+  ) {
+    return 'dc-ibb1';
+  }
+  if (norm === 'shv' || norm === 'lew' || norm === 'wec') {
+    return 'dc-shv';
+  }
+  if (norm.includes('ga') || norm === 'atl') {
+    return 'dc-uat-ga';
+  }
+  if (
+    norm.includes('ma') ||
+    norm.includes('md') ||
+    norm === 'gar' ||
+    norm === 'man' ||
+    norm === 'oxm' ||
+    norm === 'uat'
+  ) {
+    return 'dc-uat-ma';
+  }
+  if (
+    norm.includes('az') ||
+    norm === 'cld' ||
+    norm === 'cloud' ||
+    norm === 'unk' ||
+    norm === 'tpe'
+  ) {
+    return 'dc-az3';
+  }
+  
+  return null;
+}
+
 export function RuntimeDependencyGraph({
   detail,
   simulatingFailover = false,
@@ -260,7 +302,8 @@ export function RuntimeDependencyGraph({
       dcs.forEach((dc) => {
         const dcId = dc.id;
         const assets = assetsByDC.get(dcId) || [];
-        const isDcFailed = simulatingFailover && failedDcId === dcId;
+        const mapDcId = mapToMapDcId(dcId) || dcId;
+        const isDcFailed = simulatingFailover && failedDcId === mapDcId;
 
         // Position DC Node
         nodesList.push({
@@ -289,8 +332,9 @@ export function RuntimeDependencyGraph({
         // Position Asset Nodes surrounding parent DC Node
         let assetY = currentY - ((assets.length - 1) * 130) / 2;
         assets.forEach((asset) => {
-          const isAssetFailed = simulatingFailover && failedDcId === dcId;
-          const isAssetPromoted = simulatingFailover && failoverComplete && promotedDcId === dcId;
+          const mapAssetDcId = mapToMapDcId(dcId) || dcId;
+          const isAssetFailed = simulatingFailover && failedDcId === mapAssetDcId;
+          const isAssetPromoted = simulatingFailover && failoverComplete && promotedDcId === mapAssetDcId;
           const isAssetPrimary = isAssetPromoted || (asset.write_authority && !isAssetFailed);
 
           nodesList.push({
@@ -332,8 +376,10 @@ export function RuntimeDependencyGraph({
 
       // Find primary write node (taking failover simulation into account)
       const primaryAsset = componentAssets.find((asset) => {
-        const isFailed = simulatingFailover && failedDcId === asset.data_center?.id;
-        const isPromoted = simulatingFailover && failoverComplete && promotedDcId === asset.data_center?.id;
+        const assetDcId = asset.data_center?.id;
+        const mapDcId = assetDcId ? (mapToMapDcId(assetDcId) || assetDcId) : '';
+        const isFailed = simulatingFailover && failedDcId === mapDcId;
+        const isPromoted = simulatingFailover && failoverComplete && promotedDcId === mapDcId;
         return isPromoted || (asset.write_authority && !isFailed);
       });
 
@@ -343,8 +389,13 @@ export function RuntimeDependencyGraph({
       componentAssets.forEach((standbyAsset) => {
         if (standbyAsset.id === primaryAsset.id) return;
 
-        const isStandbyFailed = simulatingFailover && failedDcId === standbyAsset.data_center?.id;
-        const isPrimaryFailed = simulatingFailover && failedDcId === primaryAsset.data_center?.id;
+        const standbyDcId = standbyAsset.data_center?.id;
+        const mapStandbyDcId = standbyDcId ? (mapToMapDcId(standbyDcId) || standbyDcId) : '';
+        const isStandbyFailed = simulatingFailover && failedDcId === mapStandbyDcId;
+
+        const primaryDcId = primaryAsset.data_center?.id;
+        const mapPrimaryDcId = primaryDcId ? (mapToMapDcId(primaryDcId) || primaryDcId) : '';
+        const isPrimaryFailed = simulatingFailover && failedDcId === mapPrimaryDcId;
         const isFlowActive = !isStandbyFailed && !isPrimaryFailed;
 
         // Custom edge labelling

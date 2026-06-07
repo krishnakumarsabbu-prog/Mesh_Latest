@@ -709,7 +709,7 @@ export function DataDiscoveryPanel({ onClose }: Props) {
                 Data Discovery Hub
               </h2>
               <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                Share discoveries · Coverage matrix · Gap analysis
+                A crowdsourced enterprise wiki for mapping dark infrastructure and resolving blindspots
               </p>
             </div>
           </div>
@@ -749,6 +749,23 @@ export function DataDiscoveryPanel({ onClose }: Props) {
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Collaborative Discovery Wiki Model Callout Banner */}
+        <div className="mx-5 mt-4 rounded-2xl p-4 border flex gap-3 items-start"
+             style={{ background: 'rgba(191,90,242,0.06)', borderColor: 'rgba(191,90,242,0.2)' }}>
+          <Trophy className="w-5 h-5 mt-0.5 flex-shrink-0 animate-bounce" style={{ color: '#BF5AF2' }} />
+          <div className="flex-1">
+            <h4 className="text-[12px] font-bold text-white flex items-center gap-1.5">
+              Collaborative Discovery Model (Crowdsourced Wiki)
+              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-[#BF5AF2]/15 text-[#BF5AF2] uppercase tracking-wider">
+                Innovation Point
+              </span>
+            </h4>
+            <p className="text-[11px] text-white/75 mt-1 leading-relaxed">
+              Rather than treating dark infrastructure as a permanent blindspot, HealthMesh frames this hub as a crowdsourced enterprise wiki. Application teams actively help security and observability teams map dark systems (like batch AutoSys workflows and legacy IBM MQ networks) to secure decentralized visibility.
+            </p>
           </div>
         </div>
 

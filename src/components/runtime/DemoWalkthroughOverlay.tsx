@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, ChevronRight, ChevronLeft, MapPin, Server, Database,
-  CircleCheck as CheckCircle, RefreshCw, Zap, LayoutList, Siren, Target,
+  CircleCheck as CheckCircle, RefreshCw, Zap, LayoutList, Siren, Target, ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -56,6 +56,15 @@ const STEPS: DemoStep[] = [
   },
   {
     id: 5,
+    title: '2 AM Ready & Trust Banner',
+    narration: 'During a 2 AM outage, SREs cannot afford to act on stale data. The "2AM READY" trust banner at the top aggregates signal freshness and counts of unresolved conflicts. If there is a source conflict or stale data, the banner immediately flags caution or warning (e.g. "DO NOT ACT WITHOUT MANUAL CHECK"), preventing destructive recovery steps.',
+    icon: ShieldCheck,
+    iconColor: '#30D158',
+    iconBg: 'rgba(48,209,88,0.12)',
+    highlight: 'Notice the "2AM READY" banner and the "Source Conflict Detected" box below it, designed to keep SRE operations safe.',
+  },
+  {
+    id: 6,
     title: 'Data Quality Tab',
     narration: 'The Data Quality tab shows the freshness and confidence of each data source. CMDB data is over 2 hours old — a staleness warning appears. IBM MQ and Oracle OEM are fresh (under 30 minutes).',
     icon: RefreshCw,
@@ -64,7 +73,7 @@ const STEPS: DemoStep[] = [
     tip: 'Freshness thresholds: Fresh < 30min, Stale 30-120min, Very Stale > 120min.',
   },
   {
-    id: 6,
+    id: 7,
     title: 'Deterministic vs Inferred',
     narration: 'Each asset carries a verification flag. A green checkmark means the role was read directly from the source control plane (deterministic). An orange branch icon means it was inferred from hostname patterns — verify manually.',
     icon: CheckCircle,
@@ -73,25 +82,25 @@ const STEPS: DemoStep[] = [
     highlight: 'MongoDB replica state = PRIMARY is deterministic. IBM MQ hostname-derived DC assignment is inferred.',
   },
   {
-    id: 7,
-    title: 'Incident Mode — DC Failover',
-    narration: 'Click "Incident Mode" to simulate taking a data center offline. The panel shows exactly which applications are impacted, which have failover sites, and which will be completely offline.',
+    id: 8,
+    title: 'Incident Mode — Decoupled Failover',
+    narration: 'Click "Incident Mode" to simulate taking a data center offline. The panel shows exactly which applications are impacted, which have failover sites, and which will be completely offline. In production, this simulator operates in a decoupled, transaction-isolated sandbox memory layer rather than writing destructive mutations directly to the telemetry database.',
     icon: Siren,
     iconColor: '#FF453A',
     iconBg: 'rgba(255,69,58,0.12)',
     highlight: 'IBB1 offline: CLAIMS has NO failover — it will be offline. PCA has STANDBY in SHV (manual promotion required).',
   },
   {
-    id: 8,
-    title: 'Data Discovery Panel',
-    narration: 'Click "Data Coverage" to see the full tech stack coverage matrix. Gaps are highlighted: Kafka has no topology or traffic source. Use "Propose New Data Source" to share discoveries with the team.',
+    id: 9,
+    title: 'Collaborative Discovery Model',
+    narration: 'The Data Discovery Hub acts as a crowdsourced enterprise wiki where application teams help security and observability teams populate dark infrastructure (e.g., AutoSys, MQ) to resolve visibility gaps. Teams submit newly found endpoints here for extra innovation points, promoting collaborative ownership of application topology.',
     icon: LayoutList,
     iconColor: '#0A84FF',
     iconBg: 'rgba(10,132,255,0.12)',
-    tip: 'This panel directly supports the hackathon\'s collaborative data discovery requirement.',
+    tip: 'This crowdsourced model turns black-box infrastructure discovery into a collaborative, gamified effort for extra innovation points.',
   },
   {
-    id: 9,
+    id: 10,
     title: 'Intent vs Actual State',
     narration: 'Open any application card and click the "Intent vs Actual" tab. Define your intended topology — active DCs, primary write site, replication model, required stacks — then run drift detection to see where reality diverges from design.',
     icon: Target,
@@ -100,7 +109,7 @@ const STEPS: DemoStep[] = [
     highlight: 'Drift items surface CRITICAL issues: e.g., an app intends to be PRIMARY in IBB1 but is actually PRIMARY in SHV after an unrecorded failover.',
   },
   {
-    id: 10,
+    id: 11,
     title: 'Staleness Time Simulation',
     narration: 'Use the time slider to fast-forward the simulated clock. Freshness indicators aging from FRESH → STALE → VERY STALE show exactly how your team would detect data degradation during an extended incident.',
     icon: RefreshCw,
@@ -109,7 +118,7 @@ const STEPS: DemoStep[] = [
     tip: 'The slider is in the Filters bar on the main Runtime Location page. Drag it to +3 hours to see stale warnings appear across all applications.',
   },
   {
-    id: 11,
+    id: 12,
     title: 'Audit Trail',
     narration: 'Every import, state change, conflict detection, and intent update is recorded in the per-application Audit Log tab. This satisfies the provenance requirement: you can always answer "when did we know this, and from which source?"',
     icon: Siren,

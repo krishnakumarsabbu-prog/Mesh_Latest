@@ -564,6 +564,7 @@ export const runtimeApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
   seedData: () => apiClient.post('/runtime-location/seed'),
+  importAllDocs: () => apiClient.post('/runtime-location/import-all-docs'),
   resetData: () => apiClient.post('/runtime-location/reset'),
   getAuditLogs: (appId?: string) =>
     apiClient.get('/runtime-location/audit-logs', { params: { application_id: appId } }),

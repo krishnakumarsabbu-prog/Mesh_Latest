@@ -176,6 +176,7 @@ interface RuntimeLocationState {
   setStatusFilters: (filters: string[]) => void;
   importCsv: (file: File, sourceType?: DataSourceName) => Promise<DataSourceImport>;
   seedSampleData: () => Promise<void>;
+  importAllDocs: () => Promise<void>;
   clearDetail: () => void;
   resetToEmpty: () => Promise<void>;
 
@@ -353,6 +354,18 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
       await get().loadApplications();
     } catch (err) {
       console.error('Failed to seed database:', err);
+    } finally {
+      set({ isSeeding: false });
+    }
+  },
+
+  importAllDocs: async () => {
+    set({ isSeeding: true });
+    try {
+      await runtimeApi.importAllDocs();
+      await get().loadApplications();
+    } catch (err) {
+      console.error('Failed to import all docs:', err);
     } finally {
       set({ isSeeding: false });
     }

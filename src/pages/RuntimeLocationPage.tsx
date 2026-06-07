@@ -410,7 +410,7 @@ const SOURCE_DESCRIPTIONS: Partial<Record<DataSourceName, string>> = {
 // ─── CSV Import Modal ─────────────────────────────────────────────────────────
 
 function ImportModal({ onClose }: { onClose: () => void }) {
-  const { importCsv, isImporting } = useRuntimeLocationStore();
+  const { importCsv, isImporting, importAllDocs, isSeeding } = useRuntimeLocationStore();
   const { add } = useNotificationStore();
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -419,6 +419,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
   const [previewLines, setPreviewLines] = useState<string[]>([]);
   const [manualSource, setManualSource] = useState<DataSourceName | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
+  const [bulkImporting, setBulkImporting] = useState(false);
 
   function handleFileSelect(f: File) {
     setSelectedFile(f);
@@ -462,6 +463,28 @@ function ImportModal({ onClose }: { onClose: () => void }) {
         message: `${result.record_count} records imported from ${result.file_name}${result.errors.length > 0 ? ` (${result.errors.length} errors)` : ''}`,
       });
       setTimeout(() => onClose(), 900);
+    }
+  }
+
+  async function handleBulkImport() {
+    setBulkImporting(true);
+    try {
+      await importAllDocs();
+      setImportSuccess(true);
+      add({
+        type: 'success',
+        title: 'Bulk Ingestion Complete',
+        message: 'Successfully ingested all telemetry and CMDB files from backend/docs/ folder, and generated design intents.',
+      });
+      setTimeout(() => onClose(), 900);
+    } catch (err) {
+      add({
+        type: 'error',
+        title: 'Bulk Ingestion Failed',
+        message: 'Could not load files from docs folder.',
+      });
+    } finally {
+      setBulkImporting(false);
     }
   }
 
@@ -630,13 +653,13 @@ function ImportModal({ onClose }: { onClose: () => void }) {
                   style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
                 >
                   {previewLines.map((line, i) => (
-                    <p
-                      key={i}
-                      className="text-[10px] font-mono truncate"
-                      style={{ color: i === 0 ? '#0A84FF' : 'var(--text-secondary)' }}
-                    >
-                      {line}
-                    </p>
+                     <p
+                       key={i}
+                       className="text-[10px] font-mono truncate"
+                       style={{ color: i === 0 ? '#0A84FF' : 'var(--text-secondary)' }}
+                     >
+                       {line}
+                     </p>
                   ))}
                 </div>
               </div>
@@ -645,7 +668,30 @@ function ImportModal({ onClose }: { onClose: () => void }) {
         )}
 
         {/* Actions */}
-        <div className="flex gap-3 justify-end">
+        <div className="flex gap-3 justify-end items-center">
+          {!selectedFile && (
+            <button
+              onClick={handleBulkImport}
+              disabled={isSeeding || bulkImporting}
+              className="mr-auto px-4 py-2 rounded-xl text-[13px] font-semibold text-white flex items-center gap-2 disabled:opacity-50 transition-all border border-dashed border-[#30D158]/50 hover:border-[#30D158]"
+              style={{
+                background: 'rgba(48,209,88,0.1)',
+                color: '#30D158',
+              }}
+            >
+              {bulkImporting || isSeeding ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  Ingesting docs/…
+                </>
+              ) : (
+                <>
+                  <Database className="w-3.5 h-3.5" />
+                  Bulk Ingest docs/
+                </>
+              )}
+            </button>
+          )}
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-[13px] font-medium"
