@@ -189,3 +189,22 @@ export interface SourceProposal {
   proposed_at: string;
   status: ProposalStatus;
 }
+
+export type EnvComparisonStatus = 'consistent' | 'inconsistent' | 'prod_only' | 'uat_only' | 'dr_only';
+
+export interface EnvComparisonRow {
+  asset_name: string;
+  tech_stack: string;
+  component: string;
+  prod_role?: string;
+  prod_dc?: string;
+  prod_confidence?: number;
+  uat_role?: string;
+  uat_dc?: string;
+  uat_confidence?: number;
+  dr_role?: string;
+  dr_dc?: string;
+  dr_confidence?: number;
+  status: EnvComparisonStatus;
+}
+

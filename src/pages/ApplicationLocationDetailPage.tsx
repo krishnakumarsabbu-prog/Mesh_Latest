@@ -19,9 +19,9 @@ import { AuditLogTab } from '@/components/runtime/AuditLogTab';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, AreaChart, Area, ReferenceLine
 } from 'recharts';
-import { formatRelativeTime, getEnvComparison, type EnvComparisonRow } from '@/lib/runtimeLocationMock';
+import { formatRelativeTime } from '@/lib/runtimeLocationMock';
 import type {
-  ApplicationComponent, AssetEnvironment, RuntimeSnapshot, TechStack, ApplicationLocationDetail,
+  ApplicationComponent, AssetEnvironment, RuntimeSnapshot, TechStack, ApplicationLocationDetail, EnvComparisonRow,
 } from '@/types';
 
 type TabId = 'map' | 'graph' | 'components' | 'openshift' | 'intent' | 'quality' | 'snapshots' | 'compare' | 'audit';
@@ -647,8 +647,8 @@ function EnvCell({ role, dc, confidence }: { role?: string; dc?: string; confide
 }
 
 function CompareEnvsTab({ appId }: { appId: string }) {
-  const baseRows = getEnvComparison(appId);
-  const { simulatedAgeOffset } = useRuntimeLocationStore();
+  const { envComparison, simulatedAgeOffset } = useRuntimeLocationStore();
+  const baseRows = envComparison;
   const currentStep = simulatedAgeOffset === 0 ? 1 : Math.min(5, Math.floor(simulatedAgeOffset / 2) + 1);
 
   const rows = useMemo(() => {

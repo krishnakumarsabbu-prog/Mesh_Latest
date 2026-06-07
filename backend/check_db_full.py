@@ -1,6 +1,6 @@
 import sqlite3, json
 
-db = 'backend/healthmesh.db'
+db = 'healthmesh.db'
 conn = sqlite3.connect(db)
 conn.row_factory = sqlite3.Row
 cur = conn.cursor()

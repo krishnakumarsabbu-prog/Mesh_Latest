@@ -18,6 +18,7 @@ import {
   SourceProposal,
   ProposalStatus,
   SourceConflict,
+  EnvComparisonRow,
 } from '@/types';
 import {
   getMockSnapshots,
@@ -135,6 +136,7 @@ interface RuntimeLocationState {
   importHistory: DataSourceImport[];
   selectedDetail: ApplicationLocationDetail | null;
   snapshots: RuntimeSnapshot[];
+  envComparison: EnvComparisonRow[];
 
   // Intent vs Actual
   intents: ApplicationIntent[];
@@ -206,6 +208,7 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
   importHistory: [],
   selectedDetail: null,
   snapshots: [],
+  envComparison: [],
   intents: [],
   drifts: [],
   auditLog: [],
@@ -252,7 +255,16 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
     try {
       const env = environment && environment !== 'ALL' ? environment : 'PRODUCTION';
       const res = await runtimeApi.getApplicationDetail(appId, env);
-      set({ selectedDetail: res.data });
+
+      let compData: EnvComparisonRow[] = [];
+      try {
+        const compRes = await runtimeApi.compareEnvs(appId);
+        compData = compRes.data;
+      } catch (err) {
+        console.error("Failed to load environment comparison:", err);
+      }
+
+      set({ selectedDetail: res.data, envComparison: compData });
 
       // Load drift from backend if intent exists
       const intents = get().intents;
@@ -371,7 +383,7 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
     }
   },
 
-  clearDetail: () => set({ selectedDetail: null, snapshots: [] }),
+  clearDetail: () => set({ selectedDetail: null, snapshots: [], envComparison: [] }),
 
   resetToEmpty: async () => {
     try {
@@ -382,6 +394,7 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
         importHistory: [],
         selectedDetail: null,
         snapshots: [],
+        envComparison: [],
         intents: [],
         drifts: [],
         auditLog: [],

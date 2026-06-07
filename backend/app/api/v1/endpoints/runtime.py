@@ -1446,20 +1446,49 @@ async def import_all_docs(db: AsyncSession = Depends(get_db)):
     total_assets = 0
     errors = []
     
-    # Get all CSV and JSON files in docs
-    files = [f for f in os.listdir(docs_dir) if f.endswith(".csv") or f.endswith(".json")]
+    # Get all CSV, JSON, and XLSX files in docs
+    files = [f for f in os.listdir(docs_dir) if f.endswith(".csv") or f.endswith(".json") or f.endswith(".xlsx")]
     
     # Sort files
     for fname in sorted(files):
         fpath = os.path.join(docs_dir, fname)
         try:
-            with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
-                content = f.read()
-            
-            if fname.endswith(".json"):
-                result = await parse_and_insert_json_file(fname, content, db)
+            if fname.endswith(".xlsx"):
+                # Convert XLSX to CSV in-memory using openpyxl
+                try:
+                    import openpyxl
+                    wb = openpyxl.load_workbook(fpath, read_only=True, data_only=True)
+                    ws = wb.active
+                    rows_list = list(ws.iter_rows(values_only=True))
+                    wb.close()
+                    if len(rows_list) < 2:
+                        logger.info(f"Skipping empty XLSX file: {fname}")
+                        continue
+                    headers = [str(h or '').strip() for h in rows_list[0]]
+                    csv_buf = io.StringIO()
+                    writer = csv.writer(csv_buf)
+                    writer.writerow(headers)
+                    for data_row in rows_list[1:]:
+                        writer.writerow([str(c or '') for c in data_row])
+                    content = csv_buf.getvalue()
+                    csv_fname = fname.replace(".xlsx", ".csv")
+                    result = await parse_and_insert_csv(csv_fname, content, None, db)
+                except ImportError:
+                    logger.warning(f"openpyxl not installed — skipping XLSX file: {fname}")
+                    errors.append(f"{fname}: openpyxl not installed")
+                    continue
+                except Exception as xlsx_exc:
+                    logger.error(f"Failed to parse XLSX file {fname}: {xlsx_exc}")
+                    errors.append(f"{fname}: {str(xlsx_exc)}")
+                    continue
             else:
-                result = await parse_and_insert_csv(fname, content, None, db)
+                with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
+                
+                if fname.endswith(".json"):
+                    result = await parse_and_insert_json_file(fname, content, db)
+                else:
+                    result = await parse_and_insert_csv(fname, content, None, db)
                 
             assets_created = result["assets_created"]
             status = result["status"]
@@ -2169,3 +2198,114 @@ async def get_snapshots(
     # Sort most-recent first
     snapshots.sort(key=lambda x: x["snapshot_time"], reverse=True)
     return snapshots
+
+
+# ─── Cross-Environment Comparison ─────────────────────────────────────────────
+
+@router.get("/compare-envs/{app_id}", response_model=List[Dict[str, Any]])
+async def compare_environments(
+    app_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    GET /api/v1/runtime-location/compare-envs/{app_id}
+    Compares the same application across PRODUCTION, UAT, and DR environments.
+    Returns a list of comparison rows showing role, DC, and confidence per env.
+    """
+    result = await db.execute(select(RuntimeAsset))
+    all_assets = result.scalars().all()
+
+    # Filter to assets matching this application across ALL environments
+    app_assets = []
+    for a in all_assets:
+        is_match = False
+        if a.metadata_json and a.metadata_json.get("application_id") == app_id:
+            is_match = True
+        elif app_id == "MQ_INFRA" and a.data_source == "ibm_mq":
+            is_match = True
+        elif app_id == "MONGO_INFRA" and a.data_source == "mongodb":
+            is_match = True
+        elif app_id == "ORACLE_INFRA" and a.data_source == "oracle_oem":
+            is_match = True
+        elif app_id == "INFRASTRUCTURE" and not (a.metadata_json and a.metadata_json.get("application_id")):
+            is_match = True
+        if is_match:
+            app_assets.append(a)
+
+    if not app_assets:
+        return []
+
+    # Group assets by a normalized name key to match across environments
+    # Normalize: strip environment suffixes, lowercase
+    def normalize_asset_name(asset):
+        name = asset.name.lower().strip()
+        # Remove common env suffixes for grouping
+        for suffix in ["_primary", "_standby", "-primary", "-standby"]:
+            if name.endswith(suffix):
+                name = name[: -len(suffix)]
+        return name
+
+    name_groups = {}
+    for a in app_assets:
+        key = normalize_asset_name(a)
+        if key not in name_groups:
+            name_groups[key] = {}
+        env = a.environment
+        # Store the best (highest confidence) asset per env
+        if env not in name_groups[key] or a.latest_confidence_level > name_groups[key][env].latest_confidence_level:
+            name_groups[key][env] = a
+
+    comparison_rows = []
+    for norm_name, env_map in name_groups.items():
+        # Pick a representative asset for display name / tech_stack / component
+        rep = next(iter(env_map.values()))
+        comp_name = f"{rep.tech_stack.replace('_', ' ').upper()} Layer"
+
+        prod = env_map.get("PRODUCTION")
+        uat = env_map.get("UAT")
+        dr = env_map.get("DR")
+
+        # Determine consistency status
+        present_envs = [e for e in ["PRODUCTION", "UAT", "DR"] if e in env_map]
+        roles = list(set(
+            env_map[e].latest_replication_role
+            for e in present_envs
+            if env_map[e].latest_replication_role
+        ))
+
+        if len(present_envs) == 1:
+            env_key = present_envs[0]
+            status = "prod_only" if env_key == "PRODUCTION" else "uat_only" if env_key == "UAT" else "dr_only"
+        elif len(roles) <= 1:
+            status = "consistent"
+        else:
+            # Different roles across environments is expected (PRIMARY in prod, STANDBY in DR)
+            # Only flag as inconsistent if same-role expectations conflict
+            has_multi_primary = sum(
+                1 for e in present_envs
+                if env_map[e].latest_replication_role in ["PRIMARY", "ACTIVE"]
+            ) > 1
+            status = "inconsistent" if has_multi_primary else "consistent"
+
+        row = {
+            "asset_name": rep.name,
+            "tech_stack": rep.tech_stack,
+            "component": comp_name,
+            "prod_role": prod.latest_replication_role if prod else None,
+            "prod_dc": prod.data_center_short if prod else None,
+            "prod_confidence": prod.latest_confidence_level if prod else None,
+            "uat_role": uat.latest_replication_role if uat else None,
+            "uat_dc": uat.data_center_short if uat else None,
+            "uat_confidence": uat.latest_confidence_level if uat else None,
+            "dr_role": dr.latest_replication_role if dr else None,
+            "dr_dc": dr.data_center_short if dr else None,
+            "dr_confidence": dr.latest_confidence_level if dr else None,
+            "status": status,
+        }
+        comparison_rows.append(row)
+
+    # Sort: inconsistent first, then by asset name
+    status_order = {"inconsistent": 0, "prod_only": 1, "uat_only": 2, "dr_only": 3, "consistent": 4}
+    comparison_rows.sort(key=lambda r: (status_order.get(r["status"], 5), r["asset_name"]))
+
+    return comparison_rows

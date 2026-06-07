@@ -589,6 +589,8 @@ export const runtimeApi = {
     apiClient.post('/runtime-location/failback', data),
   getSnapshots: (appId: string, environment?: string) =>
     apiClient.get(`/runtime-location/snapshots/${appId}`, { params: { environment } }),
+  compareEnvs: (appId: string) =>
+    apiClient.get(`/runtime-location/compare-envs/${appId}`),
 };
 
 export const proxySettingsApi = {
