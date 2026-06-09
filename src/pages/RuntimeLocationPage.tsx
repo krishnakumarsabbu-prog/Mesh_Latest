@@ -60,8 +60,8 @@ function AnimatedCounter({ value }: { value: number }) {
   return <>{displayValue}</>;
 }
 
-function StatCard({ label, value, icon: Icon, color }: {
-  label: string; value: number | string; icon: React.ElementType; color?: string;
+function StatCard({ label, value, icon: Icon, color, onClick, isActive }: {
+  label: string; value: number | string; icon: React.ElementType; color?: string; onClick?: () => void; isActive?: boolean;
 }) {
   const c = color ?? 'var(--primary-500)';
   const numericValue = typeof value === 'number' ? value : parseInt(value) || 0;
@@ -79,11 +79,15 @@ function StatCard({ label, value, icon: Icon, color }: {
 
   return (
     <div
-      className="rounded-2xl px-5 py-4 flex items-center gap-4 relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border backdrop-blur-md"
+      onClick={onClick}
+      className={cn(
+        "rounded-2xl px-5 py-4 flex items-center gap-4 relative overflow-hidden transition-all duration-300 border backdrop-blur-md",
+        onClick && "hover:scale-[1.02] hover:shadow-lg cursor-pointer"
+      )}
       style={{
-        background: cardGradient,
-        borderColor: 'var(--app-border)',
-        boxShadow: 'var(--shadow-md)',
+        background: isActive ? `${c}08` : cardGradient,
+        borderColor: isActive ? c : 'var(--app-border)',
+        boxShadow: isActive ? `0 0 12px ${c}20` : 'var(--shadow-md)',
       }}
     >
       <div
@@ -1062,14 +1066,54 @@ export function RuntimeLocationPage() {
 
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard label="Applications" value={applications.length}                                 icon={Server}        color="var(--primary-500)" />
-        <StatCard label="Data Centers"          value={dataCenters.length > 0 ? dataCenters.length : uniqueDCs} icon={Building2}     color="#00E599" />
-        <StatCard label="Stale Sources"         value={totalStale}                                         icon={AlertTriangle} color="#FF9F0A" />
+        <StatCard
+          label="Applications"
+          value={applications.length}
+          icon={Server}
+          color="var(--primary-500)"
+          onClick={clearAllFilters}
+          isActive={!hasActiveFilters}
+        />
+        <StatCard
+          label="Data Centers"
+          value={dataCenters.length > 0 ? dataCenters.length : uniqueDCs}
+          icon={Building2}
+          color="#00E599"
+          onClick={() => {
+            const el = document.getElementById('dc-filter-select');
+            if (el) {
+              el.focus();
+            }
+          }}
+          isActive={dcFilter !== 'ALL'}
+        />
+        <StatCard
+          label="Stale Sources"
+          value={totalStale}
+          icon={AlertTriangle}
+          color="#FF9F0A"
+          onClick={() => {
+            if (freshnessFilters.includes('STALE') || freshnessFilters.includes('VERY_STALE')) {
+              setFreshnessFilters([]);
+            } else {
+              setFreshnessFilters(['STALE', 'VERY_STALE']);
+            }
+          }}
+          isActive={freshnessFilters.includes('STALE') || freshnessFilters.includes('VERY_STALE')}
+        />
         <StatCard
           label="Drifts Detected"
           value={applications.filter((a) => a.alignment_status === 'DRIFTED').length}
           icon={AlertCircle}
           color="#FF453A"
+          onClick={() => {
+            if (statusFilters.includes('DRIFTED')) {
+              setStatusFilters([]);
+            } else {
+              setStatusFilters(['DRIFTED']);
+            }
+          }}
+          isActive={statusFilters.includes('DRIFTED')}
         />
       </div>
 
@@ -1116,6 +1160,7 @@ export function RuntimeLocationPage() {
         {dcOptions.length > 0 && (
           <div className="relative">
             <select
+              id="dc-filter-select"
               value={dcFilter}
               onChange={(e) => setDcFilter(e.target.value)}
               className="appearance-none rounded-xl pl-3 pr-8 py-2 text-[12px] font-medium cursor-pointer"

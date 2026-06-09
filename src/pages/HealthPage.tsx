@@ -251,7 +251,7 @@ export function HealthPage() {
 
                   return (
                     <div
-                      key={app.application_id}
+                      key={`${app.application_id}-${app.environment}`}
                       className="rounded-2xl p-4 flex flex-col justify-between transition-all duration-150 hover:-translate-y-0.5"
                       style={{
                         background: alertBg,

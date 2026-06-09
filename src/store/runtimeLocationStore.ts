@@ -32,16 +32,6 @@ import { runtimeApi } from '@/lib/api';
 export type EnvironmentFilter = AssetEnvironment | 'ALL';
 export type TechStackFilter = TechStack | 'ALL';
 
-// ─── Staleness simulation offset (in minutes) ────────────────────────────────
-// Allows demo to "age" data without real time passing
-let simulatedAgeMinutes = 0;
-export function getSimulatedNow(): Date {
-  return new Date(Date.now() + simulatedAgeMinutes * 60 * 1000);
-}
-export function setSimulatedAge(minutes: number) {
-  simulatedAgeMinutes = minutes;
-}
-
 function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -148,9 +138,6 @@ interface RuntimeLocationState {
   // Source discovery proposals (in-memory)
   proposals: SourceProposal[];
 
-  // Staleness time simulation offset (minutes added to "now")
-  simulatedAgeOffset: number;
-
   // Loading flags
   isLoadingApplications: boolean;
   isLoadingDetail: boolean;
@@ -192,9 +179,6 @@ interface RuntimeLocationState {
   submitProposal: (p: Omit<SourceProposal, 'id' | 'proposed_at' | 'status'>) => Promise<void>;
   updateProposalStatus: (id: string, status: ProposalStatus) => Promise<void>;
 
-  // Simulation
-  setSimulatedAgeOffset: (minutes: number) => void;
-
   // Failover / Failback operations
   executeFailover: (appId: string, failedDc: string, promotedDc: string, environment?: string) => Promise<void>;
   executeFailback: (appId: string, environment?: string) => Promise<void>;
@@ -213,7 +197,6 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
   drifts: [],
   auditLog: [],
   proposals: [],
-  simulatedAgeOffset: 0,
   isLoadingApplications: false,
   isLoadingDetail: false,
   isImporting: false,
@@ -320,10 +303,6 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
   setConfidenceFilters: (filters) => set({ confidenceFilters: filters }),
   setFreshnessFilters: (filters) => set({ freshnessFilters: filters }),
   setStatusFilters: (filters) => set({ statusFilters: filters }),
-  setSimulatedAgeOffset: (minutes) => {
-    setSimulatedAge(minutes);
-    set({ simulatedAgeOffset: minutes });
-  },
 
   // ─── Real CSV import ───────────────────────────────────────────────────────
   importCsv: async (file, sourceType) => {

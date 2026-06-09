@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, MapPin, CircleCheck as CheckCircle, GitBranch, Server, Database, MessageSquare, Layers, Network, History, Clock, GitCompare, CircleAlert as AlertCircle, CircleHelp as HelpCircle, Target, ClipboardList, ShieldCheck, CircleHelp as UnknownIcon, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRuntimeLocationStore } from '@/store/runtimeLocationStore';
-import { STAGES } from './RuntimeLocationPage';
 import { ConfidenceBadge } from '@/components/runtime/ConfidenceBadge';
 import { FreshnessIndicator } from '@/components/runtime/FreshnessIndicator';
 import { AssetStatusBadge } from '@/components/runtime/AssetStatusBadge';
@@ -358,80 +357,16 @@ const ROLE_COLOR: Record<string, string> = {
 function SnapshotTimeline({ snapshots }: { snapshots: RuntimeSnapshot[] }) {
   if (snapshots.length === 0) return null;
 
-  const { simulatedAgeOffset, setSimulatedAgeOffset } = useRuntimeLocationStore();
-  const currentStep = simulatedAgeOffset === 0 ? 1
-    : simulatedAgeOffset === 60 ? 2
-    : simulatedAgeOffset === 120 ? 3
-    : simulatedAgeOffset === 180 ? 4
-    : 5;
-
   const data = useMemo(() => {
-    // 8 points from 105m ago to 0m (now)
-    const points = [
-      { offset: 0,   timeLabel: '105m ago', confidence: 4, drifts: 0, status: 'ALIGNED',   primaryDc: 'IBB1', step: 1 },
-      { offset: 15,  timeLabel: '90m ago',  confidence: 4, drifts: 0, status: 'ALIGNED',   primaryDc: 'IBB1', step: 1 },
-      { offset: 30,  timeLabel: '75m ago',  confidence: 4, drifts: 0, status: 'ALIGNED',   primaryDc: 'IBB1', step: 1 },
-      { offset: 45,  timeLabel: '60m ago',  confidence: 4, drifts: 0, status: 'ALIGNED',   primaryDc: 'IBB1', step: 2 },
-      { offset: 60,  timeLabel: '45m ago',  confidence: 3, drifts: 0, status: 'ALIGNED',   primaryDc: 'IBB1', step: 2 },
-      { offset: 75,  timeLabel: '30m ago',  confidence: 3, drifts: 1, status: 'DRIFTED',   primaryDc: 'IBB1', step: 3 },
-      { offset: 90,  timeLabel: '15m ago',  confidence: 2, drifts: 1, status: 'DRIFTED',   primaryDc: 'IBB1', step: 4 },
-      { offset: 105, timeLabel: 'Now',      confidence: 1, drifts: 2, status: 'DRIFTED',   primaryDc: 'IBB1', step: 5 },
-    ];
-
-    const isUat = snapshots.some((s) => s.asset_id.toLowerCase().includes('uat'));
-    const basePrimaryDc = isUat ? 'GA-UAT' : 'IBB1';
-
-    return points.map((p) => {
-      let conf = 4;
-      let drifts = 0;
-      let status = 'ALIGNED';
-      let primaryDc = basePrimaryDc;
-
-      if (p.step <= currentStep) {
-        if (p.step === 1) {
-          conf = 4; drifts = 0; status = 'ALIGNED';
-        } else if (p.step === 2) {
-          conf = 4; drifts = 0; status = 'ALIGNED';
-        } else if (p.step === 3) {
-          conf = 3; drifts = 1; status = 'DRIFTED';
-        } else if (p.step === 4) {
-          conf = 2; drifts = 1; status = 'DRIFTED';
-        } else {
-          conf = 1; drifts = 2; status = 'DRIFTED';
-        }
-      } else {
-        // Future simulated points will still show expected future state in dashed/faded color
-        if (p.step === 3) {
-          conf = 3; drifts = 1; status = 'DRIFTED';
-        } else if (p.step === 4) {
-          conf = 2; drifts = 1; status = 'DRIFTED';
-        } else {
-          conf = 1; drifts = 2; status = 'DRIFTED';
-        }
-      }
-
-      return {
-        ...p,
-        confidence: conf,
-        drifts: drifts,
-        status: status,
-        primaryDc: primaryDc,
-      };
-    });
-  }, [currentStep, snapshots]);
-
-  const handlePointClick = (chartData: any) => {
-    if (chartData && chartData.activePayload && chartData.activePayload[0]) {
-      const clickedPoint = chartData.activePayload[0].payload;
-      const step = clickedPoint.step;
-      const offsetVal = step === 1 ? 0
-        : step === 2 ? 60
-        : step === 3 ? 120
-        : step === 4 ? 180
-        : 240;
-      setSimulatedAgeOffset(offsetVal);
-    }
-  };
+    const sorted = [...snapshots].sort((a, b) => new Date(a.snapshot_time).getTime() - new Date(b.snapshot_time).getTime());
+    return sorted.map((snap) => ({
+      timeLabel: new Date(snap.snapshot_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      confidence: snap.confidence_level,
+      status: snap.operational_state === 'DRIFTED' ? 'DRIFTED' : 'ALIGNED',
+      drifts: snap.operational_state === 'DRIFTED' ? 1 : 0,
+      primaryDc: snap.replication_role || 'UNKNOWN',
+    }));
+  }, [snapshots]);
 
   const currentStatus = data[data.length - 1]?.status ?? 'ALIGNED';
   const strokeColor = currentStatus === 'ALIGNED' ? 'var(--success)' : 'var(--danger)';
@@ -459,9 +394,8 @@ function SnapshotTimeline({ snapshots }: { snapshots: RuntimeSnapshot[] }) {
           <div className="text-[11px] text-[var(--text-secondary)] mt-1 flex flex-col gap-1">
             <div>Confidence Score: <span className="font-mono font-semibold" style={{ color: confColor }}>{confText}</span></div>
             <div>Drift Count: <span className="font-mono font-semibold text-[var(--text-primary)]">{pData.drifts}</span></div>
-            <div>Primary DC: <span className="font-mono font-semibold text-[var(--text-primary)]">{pData.primaryDc}</span></div>
+            <div>Primary DC Role: <span className="font-mono font-semibold text-[var(--text-primary)]">{pData.primaryDc}</span></div>
           </div>
-          <p className="text-[9px] text-[var(--text-muted)] mt-1 italic">Click point to replay this state</p>
         </div>
       );
     }
@@ -476,7 +410,7 @@ function SnapshotTimeline({ snapshots }: { snapshots: RuntimeSnapshot[] }) {
             Historical Snapshots & Alignment Trend
           </p>
           <p className="text-[10px] text-[var(--text-muted)]">
-            Interactive Area Chart · Click nodes to replay historical drift events
+            Historical telemetry checkpoints ingestion trend line
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -493,7 +427,7 @@ function SnapshotTimeline({ snapshots }: { snapshots: RuntimeSnapshot[] }) {
 
       <div style={{ height: 160 }} className="mt-2">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }} onClick={handlePointClick}>
+          <AreaChart data={data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
             <defs>
               <linearGradient id="snapshotColorGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={strokeColor} stopOpacity={0.25}/>
@@ -513,7 +447,6 @@ function SnapshotTimeline({ snapshots }: { snapshots: RuntimeSnapshot[] }) {
               fill="url(#snapshotColorGrad)"
               activeDot={{ r: 5, strokeWidth: 1, stroke: 'var(--text-primary)' }}
             />
-            <ReferenceLine x="Now" stroke="var(--text-muted)" strokeDasharray="2 2" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -649,59 +582,15 @@ function EnvCell({ role, dc, confidence }: { role?: string; dc?: string; confide
 }
 
 function CompareEnvsTab({ appId }: { appId: string }) {
-  const { envComparison, simulatedAgeOffset } = useRuntimeLocationStore();
-  const baseRows = envComparison;
-  const currentStep = simulatedAgeOffset === 0 ? 1 : Math.min(5, Math.floor(simulatedAgeOffset / 2) + 1);
+  const { envComparison } = useRuntimeLocationStore();
+  const rows = envComparison;
 
-  const rows = useMemo(() => {
-    return baseRows.map((row) => {
-      const cloned = { ...row };
-      
-      // Decay confidence scores based on simulation steps
-      if (currentStep >= 2) {
-        if (cloned.tech_stack === 'mongodb' && cloned.uat_confidence) {
-          cloned.uat_confidence = Math.max(1, cloned.uat_confidence - 1);
-        }
-      }
-      if (currentStep >= 3) {
-        if (cloned.prod_confidence) {
-          cloned.prod_confidence = Math.max(1, cloned.prod_confidence - 1);
-        }
-        if (cloned.dr_confidence) {
-          cloned.dr_confidence = Math.max(1, cloned.dr_confidence - 1);
-        }
-      }
-      if (currentStep >= 4) {
-        if (cloned.asset_name === 'pcadb_primary') {
-          cloned.prod_role = 'PHYSICAL_STANDBY';
-          cloned.status = 'inconsistent';
-        }
-        if (cloned.asset_name === 'pcadb_standby') {
-          cloned.prod_role = 'PRIMARY';
-          cloned.status = 'inconsistent';
-        }
-      }
-      if (currentStep >= 5) {
-        if (cloned.asset_name === 'MQ.PCA.GA') {
-          cloned.prod_role = 'STANDBY';
-          cloned.status = 'inconsistent';
-        }
-        if (cloned.asset_name === 'pcadb_primary') {
-          cloned.dr_role = 'PRIMARY';
-          cloned.status = 'inconsistent';
-        }
-      }
-
-      return cloned;
-    });
-  }, [baseRows, currentStep]);
-
-  const counts = {
+  const counts = useMemo(() => ({
     consistent:   rows.filter((r) => r.status === 'consistent').length,
     inconsistent: rows.filter((r) => r.status === 'inconsistent').length,
     prod_only:    rows.filter((r) => r.status === 'prod_only').length,
     uat_only:     rows.filter((r) => r.status === 'uat_only').length,
-  };
+  }), [rows]);
 
   if (rows.length === 0) {
     return (
@@ -1166,85 +1055,13 @@ function OpenShiftTab({ detail }: { detail: ApplicationLocationDetail }) {
 
 const ENV_OPTIONS: AssetEnvironment[] = ['PRODUCTION', 'UAT', 'DR'];
 
-function TimeSimulatorSlider() {
-  const { simulatedAgeOffset, setSimulatedAgeOffset } = useRuntimeLocationStore();
-
-  const currentStep = simulatedAgeOffset === 0 ? 1
-    : simulatedAgeOffset === 60 ? 2
-    : simulatedAgeOffset === 120 ? 3
-    : simulatedAgeOffset === 180 ? 4
-    : 5;
-
-  const currentStage = STAGES[currentStep - 1];
-
-  return (
-    <div
-      className="flex items-center gap-3 px-3 py-1.5 rounded-2xl flex-shrink-0 relative group border bg-[var(--app-surface)] border-[var(--app-border)]"
-      style={{
-        borderColor: `${currentStage.color}25`,
-        boxShadow: `0 0 10px ${currentStage.color}05`,
-      }}
-    >
-      <div
-        className="w-2 h-2 rounded-full flex-shrink-0 animate-ping"
-        style={{ background: currentStage.color }}
-      />
-      
-      <div className="flex flex-col gap-0.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[8px] font-extrabold uppercase tracking-widest text-[var(--text-muted)]">
-            Timeline Step
-          </span>
-          <span className="text-[9px] font-extrabold font-mono" style={{ color: currentStage.color }}>
-            Step {currentStep}/5: {currentStage.label}
-          </span>
-        </div>
-        <input
-          type="range"
-          min={1}
-          max={5}
-          step={1}
-          value={currentStep}
-          onChange={(e) => {
-            const step = Number(e.target.value);
-            const offset = STAGES[step - 1].offset;
-            setSimulatedAgeOffset(offset);
-          }}
-          className="w-28 accent-current cursor-pointer"
-          style={{ accentColor: currentStage.color }}
-        />
-      </div>
-
-      {/* Popover/Tooltip on hover of timeline slider */}
-      <div
-        className="absolute bottom-full mb-3 right-1/2 translate-x-1/2 hidden group-hover:flex flex-col gap-2 p-3 rounded-2xl z-50 pointer-events-none w-64 text-left shadow-2xl backdrop-blur-md transition-all border"
-        style={{
-          background: 'var(--app-surface-raised)',
-          borderColor: 'var(--app-border)',
-        }}
-      >
-        <div className="flex items-center justify-between">
-          <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase">Timeline Status</span>
-          <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded" style={{ background: `${currentStage.color}15`, color: currentStage.color }}>
-            {currentStage.status}
-          </span>
-        </div>
-        <p className="text-[11px] font-extrabold text-[var(--text-primary)] mt-1">
-          {currentStage.label}
-        </p>
-        <p className="text-[9px] text-[var(--text-secondary)] leading-relaxed">
-          {currentStage.desc}
-        </p>
-      </div>
-    </div>
-  );
-}
+// TimeSimulatorSlider removed
 
 export function ApplicationLocationDetailPage() {
   const { appId } = useParams<{ appId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { selectedDetail, isLoadingDetail, loadDetail, clearDetail, snapshots, loadSnapshots, simulatedAgeOffset, setSimulatedAgeOffset } = useRuntimeLocationStore();
+  const { selectedDetail, isLoadingDetail, loadDetail, clearDetail, snapshots, loadSnapshots } = useRuntimeLocationStore();
   const [activeTab, setActiveTab] = useState<TabId>('map');
 
   // Lifted Simulation States for shared Map and Dependency Graph
@@ -1273,74 +1090,11 @@ export function ApplicationLocationDetailPage() {
     setSearchParams({ env });
   }
 
-  const currentStep = simulatedAgeOffset === 0 ? 1
-    : simulatedAgeOffset === 60 ? 2
-    : simulatedAgeOffset === 120 ? 3
-    : simulatedAgeOffset === 180 ? 4
-    : 5;
+  const detail = selectedDetail;
 
-  const currentStage = STAGES[currentStep - 1];
-
-  const simulatedDetail = useMemo(() => {
-    if (!selectedDetail) return null;
-    const app = selectedDetail;
-    const modifiedSources = app.data_sources.map((src) => {
-      if (simulatedAgeOffset >= 60 && src.source_name.toLowerCase().includes('mongodb') && app.environment === 'UAT') {
-        return { ...src, status: 'STALE' as const, last_import: new Date(Date.now() - 4 * 3600 * 1000).toISOString() };
-      }
-      if (simulatedAgeOffset >= 120 && src.source_name.toLowerCase().includes('cmdb') && app.environment === 'PRODUCTION') {
-        return { ...src, status: 'VERY_STALE' as const, last_import: new Date(Date.now() - 26 * 3600 * 1000).toISOString() };
-      }
-      return src;
-    });
-
-    let conflicts = app.conflicts;
-    if (simulatedAgeOffset >= 180 && app.application_id === 'PCA' && app.environment === 'PRODUCTION') {
-      conflicts = [
-        ...app.conflicts,
-        {
-          asset_name: 'pca-web-portal',
-          source_a: { name: 'CMDB Design Registry', says: 'Active in SHV' },
-          source_b: { name: 'OpenShift pod routing', says: 'Active in ASH (Primary Mismatch)' },
-          last_checked: new Date().toISOString(),
-        }
-      ];
-    }
-
-    return {
-      ...app,
-      data_sources: modifiedSources,
-      conflicts,
-    };
-  }, [selectedDetail, simulatedAgeOffset]);
-
-  const appDriftsRaw = useRuntimeLocationStore((s) => s.drifts).filter(
+  const appDrifts = useRuntimeLocationStore((s) => s.drifts).filter(
     (d) => d.application_id === appId && d.environment === envParam
   );
-
-  const appDrifts = useMemo(() => {
-    let list = appDriftsRaw;
-    if (simulatedAgeOffset >= 180 && appId === 'PCA' && envParam === 'PRODUCTION') {
-      const hasSimDrift = list.some(d => d.drift_type === 'ROLE_MISMATCH');
-      if (!hasSimDrift) {
-        list = [
-          ...list,
-          {
-            id: 'drift-simulated',
-            application_id: 'PCA',
-            environment: 'PRODUCTION',
-            drift_type: 'ROLE_MISMATCH',
-            description: 'Primary DC mismatch: CMDB indicates write authority on SHV, but OpenShift active routing points to ASH.',
-            severity: 'CRITICAL',
-            detected_at: new Date().toISOString(),
-            intended: 'SHV',
-            actual: 'ASH',
-          }
-        ];
-      }
-    }
-    return list;
-  }, [appDriftsRaw, simulatedAgeOffset, appId, envParam]);
 
   if (isLoadingDetail) {
     return (
@@ -1351,7 +1105,7 @@ export function ApplicationLocationDetailPage() {
     );
   }
 
-  if (!simulatedDetail) {
+  if (!detail) {
     return (
       <div className="px-6 py-16 flex flex-col items-center gap-4">
         <MapPin className="w-10 h-10" style={{ color: 'var(--text-muted)' }} strokeWidth={1.5} />
@@ -1369,7 +1123,6 @@ export function ApplicationLocationDetailPage() {
     );
   }
 
-  const detail = simulatedDetail;
   const staleCount = detail.data_sources.filter(
     (s) => s.status === 'STALE' || s.status === 'VERY_STALE',
   ).length;
@@ -1448,9 +1201,8 @@ export function ApplicationLocationDetailPage() {
           </div>
         </div>
 
-        {/* Environment switcher + Time Simulator on right of header */}
+        {/* Environment switcher on right of header */}
         <div className="flex flex-col md:flex-row items-center gap-4 flex-shrink-0">
-          <TimeSimulatorSlider />
           <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[var(--app-surface-raised)] border border-[var(--app-border)]">
             {ENV_OPTIONS.map((env) => (
               <button
@@ -1473,48 +1225,6 @@ export function ApplicationLocationDetailPage() {
           </div>
         </div>
       </div>
-
-      {/* Simulation alert banner */}
-      {simulatedAgeOffset > 0 && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          className="rounded-2xl p-4 flex items-start gap-3 border relative overflow-hidden backdrop-blur-md"
-          style={{
-            background: `${currentStage.color}08`,
-            borderColor: `${currentStage.color}30`,
-          }}
-        >
-          <div
-            className="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 animate-ping"
-            style={{ background: currentStage.color }}
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider" style={{ background: `${currentStage.color}15`, color: currentStage.color }}>
-                {currentStage.status}
-              </span>
-              <h4 className="text-[12px] font-bold text-[var(--text-primary)] uppercase tracking-wider">
-                Simulation Step {currentStep}/5: {currentStage.label}
-              </h4>
-            </div>
-            <p className="text-[11px] text-[var(--text-secondary)] mt-1">
-              {currentStage.desc}
-            </p>
-          </div>
-          <button
-            onClick={() => setSimulatedAgeOffset(0)}
-            className="text-[10px] font-bold px-2.5 py-1 rounded-lg border flex-shrink-0 hover:bg-[var(--app-surface-hover)] transition-colors"
-            style={{
-              background: 'var(--app-surface)',
-              borderColor: 'var(--app-border)',
-              color: 'var(--text-primary)',
-            }}
-          >
-            End Simulation
-          </button>
-        </motion.div>
-      )}
 
       {/* Cockpit summary band */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
