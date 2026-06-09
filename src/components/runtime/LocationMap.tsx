@@ -162,8 +162,8 @@ export function LocationMap({
   setPromotedDcId,
   onSelectEvidence,
 }: LocationMapProps) {
-  const assetsByDC = groupAssetsByDC(detail);
-  const dataCenters = getDCsFromDetail(detail);
+  const assetsByDC = useMemo(() => groupAssetsByDC(detail), [detail]);
+  const dataCenters = useMemo(() => getDCsFromDetail(detail), [detail]);
   
   const primaryWriteDCId = useMemo(() => {
     const rawId = getPrimaryWriteDC(detail);
@@ -173,6 +173,7 @@ export function LocationMap({
   // Hovered state id or DC id for tooltips
   const [hoveredState, setHoveredState] = useState<string | null>(null);
   const [hoveredDCId, setHoveredDCId] = useState<string | null>(null);
+  const [selectedDcId, setSelectedDcId] = useState<string | null>(null);
 
   // Progressive Failover Simulation States
   const [simulationSpeed, setSimulationSpeed] = useState<number>(1);
@@ -220,7 +221,7 @@ export function LocationMap({
   // Dynamic console log builder
   useEffect(() => {
     if (!simulatingFailover) {
-      setConsoleLogs([]);
+      setConsoleLogs((prev) => (prev.length > 0 ? [] : prev));
       return;
     }
     const failedDc = MOCK_DATA_CENTERS.find((d) => d.id === failedDcId);
@@ -319,29 +320,29 @@ export function LocationMap({
     const status = getStateStatus(stateId);
     const isHovered = hoveredState === stateId;
     
-    let fill = 'rgba(255, 255, 255, 0.012)';
-    let stroke = 'rgba(255, 255, 255, 0.05)';
+    let fill = 'var(--map-state-default-fill)';
+    let stroke = 'var(--map-state-default-stroke)';
     let strokeWidth = '1';
     
     switch (status) {
       case 'primary':
-        fill = isHovered ? 'rgba(48, 209, 88, 0.16)' : 'rgba(48, 209, 88, 0.06)';
-        stroke = 'rgba(48, 209, 88, 0.35)';
+        fill = isHovered ? 'var(--map-state-primary-hover-fill)' : 'var(--map-state-primary-fill)';
+        stroke = 'var(--map-state-primary-stroke)';
         strokeWidth = '1.5';
         break;
       case 'secondary':
-        fill = isHovered ? 'rgba(255, 159, 10, 0.14)' : 'rgba(255, 159, 10, 0.05)';
-        stroke = 'rgba(255, 159, 10, 0.25)';
+        fill = isHovered ? 'var(--map-state-secondary-hover-fill)' : 'var(--map-state-secondary-fill)';
+        stroke = 'var(--map-state-secondary-stroke)';
         strokeWidth = '1.2';
         break;
       case 'failed':
-        fill = isHovered ? 'rgba(255, 69, 58, 0.22)' : 'rgba(255, 69, 58, 0.08)';
-        stroke = 'rgba(255, 69, 58, 0.45)';
+        fill = isHovered ? 'var(--map-state-failed-hover-fill)' : 'var(--map-state-failed-fill)';
+        stroke = 'var(--map-state-failed-stroke)';
         strokeWidth = '1.5';
         break;
       default:
-        fill = isHovered ? 'rgba(255, 255, 255, 0.035)' : 'rgba(255, 255, 255, 0.012)';
-        stroke = isHovered ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)';
+        fill = isHovered ? 'var(--map-state-hover-fill)' : 'var(--map-state-default-fill)';
+        stroke = isHovered ? 'var(--map-state-hover-stroke)' : 'var(--map-state-default-stroke)';
         break;
     }
     
@@ -390,8 +391,8 @@ export function LocationMap({
     .grid-bg {
       background-size: 30px 30px;
       background-image: 
-        linear-gradient(to right, rgba(255,255,255,0.01) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255,255,255,0.01) 1px, transparent 1px);
+        linear-gradient(to right, var(--map-grid-color) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--map-grid-color) 1px, transparent 1px);
     }
   `;
 
@@ -408,19 +409,19 @@ export function LocationMap({
             exit={{ opacity: 0, y: -8 }}
             className="rounded-xl px-4 py-3 flex items-center justify-between gap-3 shadow-lg"
             style={{
-              background: failoverComplete ? 'rgba(48,209,88,0.08)' : 'rgba(255,69,58,0.08)',
-              border: failoverComplete ? '1px solid rgba(48,209,88,0.25)' : '1px solid rgba(255,69,58,0.25)',
+              background: failoverComplete ? 'var(--success-subtle)' : 'var(--danger-subtle)',
+              border: failoverComplete ? '1px solid var(--success)' : '1px solid var(--danger)',
               backdropFilter: 'blur(8px)'
             }}
           >
             <div className="flex items-center gap-2.5">
               {failoverComplete ? (
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-[#30D158] animate-bounce" />
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-[var(--success)] animate-bounce" />
               ) : (
-                <AlertTriangle className="w-4 h-4 flex-shrink-0 text-[#FF453A] animate-pulse" />
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 text-[var(--danger)] animate-pulse" />
               )}
               <div>
-                <p className="text-[12px] font-bold" style={{ color: failoverComplete ? '#30D158' : '#FF453A' }}>
+                <p className="text-[12px] font-bold" style={{ color: failoverComplete ? 'var(--success)' : 'var(--danger)' }}>
                   {failoverComplete
                     ? `FAILOVER SUCCESSFUL — Standby node ${promotedDcId ? MOCK_DATA_CENTERS.find((d) => d.id === promotedDcId)?.short_name ?? promotedDcId : 'standby'} promoted to authoritative WRITE PRIMARY.`
                     : `CRITICAL ALERT — Simulating failure on ${MOCK_DATA_CENTERS.find((d) => d.id === failedDcId)?.short_name ?? failedDcId}. Promoting standby write authority...`}
@@ -432,7 +433,7 @@ export function LocationMap({
             </div>
             <button
               onClick={resetSimulation}
-              className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/5"
+              className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--app-surface-hover)]"
               style={{ color: 'var(--text-muted)' }}
             >
               <X className="w-3.5 h-3.5" />
@@ -445,41 +446,41 @@ export function LocationMap({
       <div 
         className="relative rounded-2xl p-5 overflow-hidden grid-bg border"
         style={{
-          background: 'radial-gradient(circle at 50% 50%, #0D1326 0%, #070913 100%)',
-          borderColor: 'rgba(255, 255, 255, 0.05)',
-          boxShadow: 'inset 0 0 40px rgba(0, 0, 0, 0.6)'
+          background: 'var(--map-container-bg)',
+          borderColor: 'var(--app-border)',
+          boxShadow: 'var(--shadow-sm)'
         }}
       >
         {/* HUD Map Controls & Legend */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4 z-10 relative">
           <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-[#0A84FF]" />
+            <Activity className="w-4 h-4 text-[var(--accent)]" />
             <div>
-              <h3 className="text-[13px] font-semibold text-white tracking-wide uppercase">GEOGRAPHIC TOPOLOGY MAP</h3>
+              <h3 className="text-[13px] font-semibold text-[var(--text-primary)] tracking-wide uppercase">GEOGRAPHIC TOPOLOGY MAP</h3>
               <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Hover nodes and states to inspect live compute and data layers</p>
             </div>
           </div>
           
           {/* Map Legend */}
-          <div className="flex items-center gap-4 px-3 py-1.5 rounded-lg bg-black/40 border border-white/5 text-[10px] text-white/70">
+          <div className="flex items-center gap-4 px-3 py-1.5 rounded-lg bg-[var(--app-surface-raised)] border border-[var(--app-border)] text-[10px] text-[var(--text-secondary)] shadow-sm">
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#30D158] inline-block shadow-[0_0_8px_rgba(48,209,88,0.6)]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[var(--success)] inline-block shadow-[0_0_8px_rgba(0,176,116,0.3)]" />
               <span>Write Primary</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#FF9F0A] inline-block shadow-[0_0_8px_rgba(255,159,10,0.6)]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[var(--warning)] inline-block shadow-[0_0_8px_rgba(255,177,0,0.3)]" />
               <span>Standby Target</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#FF453A] inline-block shadow-[0_0_8px_rgba(255,69,58,0.6)]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[var(--danger)] inline-block shadow-[0_0_8px_rgba(255,0,60,0.3)]" />
               <span>Failed/Offline</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#48484A] inline-block" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[var(--text-disabled)] inline-block" />
               <span>Inactive</span>
             </div>
-            <div className="flex items-center gap-1.5 border-l border-white/10 pl-4">
-              <div className="w-6 h-0.5 border-t border-dashed border-[#0A84FF] inline-block" />
+            <div className="flex items-center gap-1.5 border-l border-[var(--app-border)] pl-4">
+              <div className="w-6 h-0.5 border-t border-dashed border-[var(--accent)] inline-block" />
               <span>Replication Link</span>
             </div>
           </div>
@@ -571,7 +572,7 @@ export function LocationMap({
                 <g
                   key={dc.id}
                   className="cursor-pointer group"
-                  onClick={() => isActive && !isFailed && startFailoverSimulation(dc.id)}
+                  onClick={() => isActive && !isFailed && setSelectedDcId(dc.id)}
                   onMouseEnter={() => setHoveredDCId(dc.id)}
                   onMouseLeave={() => setHoveredDCId(null)}
                 >
@@ -641,10 +642,10 @@ export function LocationMap({
                   <text
                     x={coords.x + radius + 6}
                     y={coords.y + 4}
-                    fill={isActive ? '#ffffff' : 'rgba(255,255,255,0.35)'}
+                    fill={isActive ? 'var(--text-primary)' : 'var(--text-muted)'}
                     fontSize="11"
                     fontWeight={isPrimary ? '700' : '500'}
-                    className="transition-colors pointer-events-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+                    className="transition-colors pointer-events-none font-semibold"
                   >
                     {dc.short_name}
                   </text>
@@ -677,66 +678,66 @@ export function LocationMap({
                   <div 
                     className="rounded-xl border p-3 shadow-2xl flex flex-col gap-1.5 animate-fadeIn"
                     style={{
-                      background: 'rgba(10, 14, 26, 0.95)',
+                      background: 'var(--app-surface-raised)',
                       borderColor: isFailed 
-                        ? 'rgba(255,69,58,0.4)' 
+                        ? 'var(--danger)' 
                         : isPrimary 
-                        ? 'rgba(48,209,88,0.4)' 
-                        : 'rgba(255,255,255,0.1)',
+                        ? 'var(--success)' 
+                        : 'var(--app-border)',
                       backdropFilter: 'blur(10px)',
-                      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.8)'
+                      boxShadow: 'var(--shadow-lg)'
                     }}
                   >
-                    <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-1.5">
+                    <div className="flex items-center justify-between gap-2 border-b border-[var(--app-border)] pb-1.5">
                       <div className="flex items-center gap-1.5">
-                        <Server className="w-3.5 h-3.5 text-white/70" />
-                        <span className="text-[11px] font-bold text-white tracking-wide">{dc.name}</span>
+                        <Server className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                        <span className="text-[11px] font-bold text-[var(--text-primary)] tracking-wide">{dc.name}</span>
                       </div>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-white font-medium">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--app-bg-muted)] text-[var(--text-secondary)] font-medium">
                         {dc.short_name}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[10px] text-white/80">
+                    <div className="flex items-center justify-between text-[10px] text-[var(--text-secondary)]">
                       <span>Environment:</span>
-                      <span className="font-semibold text-white/90">{isActive ? 'Production' : 'Inactive'}</span>
+                      <span className="font-semibold text-[var(--text-primary)]">{isActive ? 'Production' : 'Inactive'}</span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[10px] text-white/80">
+                    <div className="flex items-center justify-between text-[10px] text-[var(--text-secondary)]">
                       <span>Replication Role:</span>
                       <span 
                         className="font-bold text-[9px] px-1.5 py-0.5 rounded uppercase"
                         style={{
                           background: isFailed 
-                            ? 'rgba(255,69,58,0.15)' 
+                            ? 'var(--danger-subtle)' 
                             : isPrimary 
-                            ? 'rgba(48,209,88,0.15)' 
+                            ? 'var(--success-subtle)' 
                             : isStandby 
-                            ? 'rgba(255,159,10,0.15)' 
-                            : 'rgba(255,255,255,0.05)',
-                          color: isFailed ? '#FF453A' : isPrimary ? '#30D158' : isStandby ? '#FF9F0A' : '#8E8E93'
+                            ? 'var(--warning-subtle)' 
+                            : 'var(--app-bg-muted)',
+                          color: isFailed ? 'var(--danger)' : isPrimary ? 'var(--success)' : isStandby ? 'var(--warning)' : 'var(--text-muted)'
                         }}
                       >
                         {isFailed ? 'OFFLINE' : isPrimary ? 'WRITE PRIMARY' : isStandby ? 'STANDBY REPLICA' : 'INACTIVE'}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[10px] text-white/80">
+                    <div className="flex items-center justify-between text-[10px] text-[var(--text-secondary)]">
                       <span>Component Assets:</span>
-                      <span className="font-semibold text-white/90">{assets.length} active assets</span>
+                      <span className="font-semibold text-[var(--text-primary)]">{assets.length} active assets</span>
                     </div>
 
                     {/* Tech stack badges */}
                     {techStacks.length > 0 && (
-                      <div className="flex items-center gap-1 mt-1 flex-wrap border-t border-white/5 pt-1.5">
-                        <span className="text-[9px] text-white/50 mr-1">Stacks:</span>
+                      <div className="flex items-center gap-1 mt-1 flex-wrap border-t border-[var(--app-border)] pt-1.5">
+                        <span className="text-[9px] text-[var(--text-muted)] mr-1">Stacks:</span>
                         {techStacks.map((stack) => (
                           <div 
                             key={stack} 
-                            className="p-1 rounded bg-white/5 flex items-center justify-center border border-white/5" 
+                            className="p-1 rounded bg-[var(--app-surface)] flex items-center justify-center border border-[var(--app-border)]" 
                             title={stack}
                           >
-                            <TechStackIcon techStack={stack as TechStack} size={12} className="text-white" />
+                            <TechStackIcon techStack={stack as TechStack} size={12} className="text-[var(--text-primary)]" />
                           </div>
                         ))}
                       </div>
@@ -744,7 +745,7 @@ export function LocationMap({
 
                     {/* Simulation Hint */}
                     {isActive && !simulatingFailover && (
-                      <div className="mt-1.5 text-[8px] text-center text-[#FF453A]/80 font-bold bg-[#FF453A]/10 py-1 rounded">
+                      <div className="mt-1.5 text-[8px] text-center text-[var(--danger)] font-bold bg-[var(--danger-subtle)] py-1 rounded">
                         Click node to simulate failover
                       </div>
                     )}
@@ -759,84 +760,251 @@ export function LocationMap({
       {/* Grid of Data Center Cards + Failover Console */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-2 items-start">
         {/* Column: Data Center Cards */}
-        <div className={cn("flex flex-col gap-2.5", simulatingFailover ? "lg:col-span-5" : "lg:col-span-12")}>
-          <div className="flex items-center justify-between px-1">
-            <h4 className="text-[11px] font-bold tracking-wider text-white/50 uppercase">Data Center Instance Details</h4>
-            <span className="text-[10px] text-white/40">{dataCenters.length} locations configured</span>
-          </div>
-          
-          <div className={cn("flex gap-4 pb-2", simulatingFailover ? "flex-col overflow-y-auto max-h-[420px] pr-1" : "overflow-x-auto")} style={{ scrollbarWidth: 'none' }}>
-            {dataCenters.map((dc, index) => {
-              const mapDcId = mapToMapDcId(dc.id) || dc.id;
-              const isFailed = simulatingFailover && failedDcId === mapDcId;
-              const isPromoted = simulatingFailover && failoverComplete && promotedDcId === mapDcId;
-              const isEffectivePrimary = isPromoted || (mapDcId === primaryWriteDCId && !isFailed);
+        {(() => {
+          const isDetailPanelOpen = selectedDcId !== null && !simulatingFailover;
+          const colSpanClass = (simulatingFailover || isDetailPanelOpen) ? "lg:col-span-5" : "lg:col-span-12";
+          const listFlexClass = (simulatingFailover || isDetailPanelOpen) ? "flex-col overflow-y-auto max-h-[420px] pr-1" : "overflow-x-auto";
+          const cardWidthClass = (simulatingFailover || isDetailPanelOpen) ? "w-full" : "w-[250px]";
 
-              return (
-                <React.Fragment key={dc.id}>
-                  <div className={cn("flex-shrink-0 flex flex-col gap-1.5", simulatingFailover ? "w-full" : "w-[250px]")}>
-                    <motion.div
-                      animate={
-                        isFailed
-                          ? { opacity: [1, 0.45, 0.25], scale: [1, 0.98, 0.96] }
-                          : isPromoted
-                          ? { scale: [1, 1.02, 1], opacity: 1 }
-                          : { opacity: 1, scale: 1 }
-                      }
-                      transition={{ duration: 0.8, ease: 'easeInOut' }}
-                      style={{
-                        filter: isFailed ? 'grayscale(0.6)' : 'none',
-                        boxShadow: isPromoted ? '0 0 25px rgba(48,209,88,0.25)' : 'none',
-                        borderRadius: 16,
-                      }}
-                    >
-                      <DataCenterCard
-                        dataCenter={dc}
-                        assets={assetsByDC.get(mapDcId) ?? []}
-                        isPrimaryWrite={isEffectivePrimary}
-                        isFailed={isFailed}
-                        onSelectEvidence={onSelectEvidence}
-                      />
-                    </motion.div>
+          return (
+            <div className={cn("flex flex-col gap-2.5", colSpanClass)}>
+              <div className="flex items-center justify-between px-1">
+                <h4 className="text-[11px] font-bold tracking-wider uppercase" style={{ color: 'var(--text-secondary)' }}>Data Center Instance Details</h4>
+                <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{dataCenters.length} locations configured</span>
+              </div>
+              
+              <div className={cn("flex gap-4 pb-2", listFlexClass)} style={{ scrollbarWidth: 'none' }}>
+                {dataCenters.map((dc, index) => {
+                  const mapDcId = mapToMapDcId(dc.id) || dc.id;
+                  const isFailed = simulatingFailover && failedDcId === mapDcId;
+                  const isPromoted = simulatingFailover && failoverComplete && promotedDcId === mapDcId;
+                  const isEffectivePrimary = isPromoted || (mapDcId === primaryWriteDCId && !isFailed);
+                  const isSelected = selectedDcId === mapDcId;
 
-                    {/* Failover simulation trigger */}
-                    {!simulatingFailover && (
-                      <button
-                        onClick={() => startFailoverSimulation(mapDcId)}
-                        className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all"
-                        style={{
-                          background: 'rgba(255,69,58,0.06)',
-                          border: '1px solid rgba(255,69,58,0.15)',
-                          color: '#FF453A',
-                          opacity: 0.6,
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.6')}
-                      >
-                        <Play className="w-2.5 h-2.5" />
-                        Simulate Node Outage
-                      </button>
-                    )}
-                  </div>
-                  {index < dataCenters.length - 1 && !simulatingFailover && (
-                    <div className="flex items-center justify-center flex-shrink-0 px-2">
-                      <div className="relative w-8 h-8 flex items-center justify-center rounded-full bg-white/5 border border-white/5 shadow-md">
+                  return (
+                    <React.Fragment key={dc.id}>
+                      <div className={cn("flex-shrink-0 flex flex-col gap-1.5", cardWidthClass)}>
                         <motion.div
-                          animate={{ x: [-6, 6], opacity: [0, 1, 0] }}
-                          transition={{ repeat: Infinity, duration: 1.8, ease: 'linear' }}
-                          className="absolute text-[10px] font-extrabold text-[#00E599]"
+                          animate={
+                            isFailed
+                              ? { opacity: [1, 0.45, 0.25], scale: [1, 0.98, 0.96] }
+                              : isPromoted
+                              ? { scale: [1, 1.02, 1], opacity: 1 }
+                              : { opacity: 1, scale: 1 }
+                          }
+                          transition={{ duration: 0.8, ease: 'easeInOut' }}
+                          style={{
+                            filter: isFailed ? 'grayscale(0.6)' : 'none',
+                            boxShadow: isPromoted 
+                              ? '0 0 25px var(--success-subtle)' 
+                              : isSelected 
+                              ? '0 0 18px var(--accent-subtle)' 
+                              : 'none',
+                            border: isSelected ? '2px solid var(--accent)' : 'none',
+                            borderRadius: 16,
+                          }}
                         >
-                          ➔
+                          <div 
+                            className="cursor-pointer" 
+                            onClick={() => !isFailed && !simulatingFailover && setSelectedDcId(mapDcId)}
+                          >
+                            <DataCenterCard
+                              dataCenter={dc}
+                              assets={assetsByDC.get(mapDcId) ?? []}
+                              isPrimaryWrite={isEffectivePrimary}
+                              isFailed={isFailed}
+                              onSelectEvidence={onSelectEvidence}
+                            />
+                          </div>
                         </motion.div>
-                        <span className="text-white/20 text-[10px]">➔</span>
+
+                        {/* Failover simulation trigger */}
+                        {!simulatingFailover && (
+                          <button
+                            onClick={() => startFailoverSimulation(mapDcId)}
+                            className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all"
+                            style={{
+                              background: 'var(--danger-subtle)',
+                              border: '1px solid rgba(255,69,58,0.15)',
+                              color: 'var(--danger)',
+                              opacity: 0.6,
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                            onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.6')}
+                          >
+                            <Play className="w-2.5 h-2.5" />
+                            Simulate Node Outage
+                          </button>
+                        )}
                       </div>
+                      {index < dataCenters.length - 1 && !simulatingFailover && !isDetailPanelOpen && (
+                        <div className="flex items-center justify-center flex-shrink-0 px-2">
+                          <div className="relative w-8 h-8 flex items-center justify-center rounded-full border shadow-md" style={{ background: 'var(--app-bg-subtle)', borderColor: 'var(--app-border)' }}>
+                            <motion.div
+                              animate={{ x: [-6, 6], opacity: [0, 1, 0] }}
+                              transition={{ repeat: Infinity, duration: 1.8, ease: 'linear' }}
+                              className="absolute text-[10px] font-extrabold text-[var(--success)]"
+                            >
+                              ➔
+                            </motion.div>
+                            <span className="text-[10px]" style={{ color: 'var(--text-muted)', opacity: 0.3 }}>➔</span>
+                          </div>
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Column: Data Center Cockpit Detail Panel */}
+        {selectedDcId && !simulatingFailover && (() => {
+          const realDc = dataCenters.find(d => (mapToMapDcId(d.id) || mapToMapDcId(d.short_name)) === selectedDcId);
+          const dcInfo = MOCK_DATA_CENTERS.find(d => d.id === selectedDcId);
+          const dcName = realDc?.name || dcInfo?.name || selectedDcId;
+          const dcShortName = realDc?.short_name || dcInfo?.short_name || 'UNK';
+          const dcRegion = realDc?.region || dcInfo?.region || 'Production Region';
+          const dcZone = realDc?.zone || dcInfo?.zone || 'Primary Zone';
+          const selectedDcAssets = assetsByDC.get(selectedDcId) || [];
+          const selectedDcIsPrimary = selectedDcId === effectivePrimaryId;
+
+          // Group selected DC's assets by Neighborhood
+          const groupedByNeighborhood: Record<string, RuntimeAsset[]> = {};
+          selectedDcAssets.forEach(asset => {
+            const nh = asset.metadata?.neighborhood || 'DEFAULT_ZONE';
+            if (!groupedByNeighborhood[nh]) {
+              groupedByNeighborhood[nh] = [];
+            }
+            groupedByNeighborhood[nh].push(asset);
+          });
+
+          return (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="lg:col-span-7 flex flex-col gap-4 rounded-2xl p-5 border backdrop-blur-md"
+              style={{
+                background: 'var(--app-surface)',
+                borderColor: 'var(--app-border)',
+              }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--app-border)' }}>
+                <div className="flex items-center gap-2">
+                  <Server className={cn("w-4.5 h-4.5", selectedDcIsPrimary ? "text-[var(--success)]" : "text-[var(--warning)]")} />
+                  <div>
+                    <h4 className="text-[13px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>
+                      {dcName} Cockpit
+                    </h4>
+                    <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{dcRegion} • {dcZone} • {dcShortName}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedDcId(null)}
+                  className="p-1 rounded-lg transition-colors hover:bg-[var(--app-surface-hover)]"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Quick stats grid */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-2.5 rounded-xl text-center border" style={{ background: 'var(--app-bg-subtle)', borderColor: 'var(--app-border)' }}>
+                  <p className="text-[9px] uppercase font-extrabold tracking-wider" style={{ color: 'var(--text-muted)' }}>Status</p>
+                  <p className="text-[11px] font-bold mt-1 text-[var(--success)]">ONLINE</p>
+                </div>
+                <div className="p-2.5 rounded-xl text-center border" style={{ background: 'var(--app-bg-subtle)', borderColor: 'var(--app-border)' }}>
+                  <p className="text-[9px] uppercase font-extrabold tracking-wider" style={{ color: 'var(--text-muted)' }}>Total Assets</p>
+                  <p className="text-[11px] font-bold mt-1" style={{ color: 'var(--text-primary)' }}>{selectedDcAssets.length}</p>
+                </div>
+                <div className="p-2.5 rounded-xl text-center border" style={{ background: 'var(--app-bg-subtle)', borderColor: 'var(--app-border)' }}>
+                  <p className="text-[9px] uppercase font-extrabold tracking-wider" style={{ color: 'var(--text-muted)' }}>Replication Role</p>
+                  <p className="text-[11px] font-bold mt-1 uppercase" style={{ color: selectedDcIsPrimary ? 'var(--success)' : 'var(--warning)' }}>{selectedDcIsPrimary ? 'PRIMARY' : 'STANDBY'}</p>
+                </div>
+              </div>
+
+              {/* Neighborhoods Drill Down */}
+              <div className="flex-1 overflow-y-auto max-h-[280px] space-y-4 pr-1 scrollbar-thin">
+                {Object.entries(groupedByNeighborhood).map(([nhName, nhAssets]) => (
+                  <div key={nhName} className="space-y-2">
+                    <div className="flex items-center justify-between border-b pb-1" style={{ borderColor: 'var(--app-border)' }}>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[var(--warning)]" />
+                        <h5 className="text-[11px] font-extrabold uppercase tracking-widest" style={{ color: 'var(--warning)' }}>
+                          Neighborhood: {nhName}
+                        </h5>
+                      </div>
+                      <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>{nhAssets.length} resource(s)</span>
                     </div>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
-        </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {nhAssets.map((asset) => {
+                        const role = asset.latest_replication_role ?? asset.latest_operational_state ?? 'UNKNOWN';
+                        const displayRole = role === 'NONE' ? (asset.latest_operational_state ?? 'ACTIVE') : role;
+                        return (
+                          <div 
+                            key={asset.id} 
+                            className="p-3 rounded-xl flex flex-col gap-1.5 hover:bg-[var(--app-surface-hover)] transition-colors border"
+                            style={{ background: 'var(--app-bg-muted)', borderColor: 'var(--app-border)' }}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <TechStackIcon techStack={asset.tech_stack} size={11} />
+                                <span className="text-[10px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>{asset.name}</span>
+                              </div>
+                              {asset.write_authority && (
+                                <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase border" style={{ background: 'var(--success-subtle)', color: 'var(--success)', borderColor: 'var(--app-border)' }}>
+                                  Write
+                                </span>
+                              )}
+                            </div>
+                            {asset.host && (
+                              <p className="text-[9px] font-mono truncate" style={{ color: 'var(--text-muted)' }}>{asset.host}</p>
+                            )}
+                            <div className="flex items-center justify-between mt-1 text-[9px]">
+                              <span style={{ color: 'var(--text-secondary)' }}>State:</span>
+                              <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{displayRole}</span>
+                            </div>
+                            {asset.latest_confidence_level && (
+                              <div className="flex items-center justify-between text-[9px]">
+                                <span style={{ color: 'var(--text-secondary)' }}>Confidence:</span>
+                                <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{asset.latest_confidence_level}/4</span>
+                              </div>
+                            )}
+                            {asset.data_source && (
+                              <div className="flex items-center justify-between text-[9px]">
+                                <span style={{ color: 'var(--text-secondary)' }}>Source:</span>
+                                <span className="font-mono" style={{ color: 'var(--text-primary)' }}>{asset.data_source}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Actions */}
+              <div className="border-t pt-3 flex items-center justify-between" style={{ borderColor: 'var(--app-border)' }}>
+                <p className="text-[9px] italic" style={{ color: 'var(--text-muted)' }}>Click "Simulate Outage" to test active failover routing.</p>
+                <button
+                  onClick={() => {
+                    startFailoverSimulation(selectedDcId);
+                    setSelectedDcId(null);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold text-[var(--danger)] bg-[var(--danger-subtle)] border border-[var(--danger)]/20 hover:brightness-110 transition-all"
+                >
+                  <Play className="w-3 h-3" />
+                  Simulate Outage
+                </button>
+              </div>
+            </motion.div>
+          );
+        })()}
 
         {/* Column: Failover Console */}
         {simulatingFailover && (
@@ -845,19 +1013,19 @@ export function LocationMap({
             animate={{ opacity: 1, x: 0 }}
             className="lg:col-span-7 flex flex-col gap-4 rounded-2xl p-5 border backdrop-blur-md"
             style={{
-              background: 'rgba(15, 20, 28, 0.4)',
-              borderColor: 'rgba(255, 255, 255, 0.06)',
+              background: 'var(--app-surface)',
+              borderColor: 'var(--app-border)',
             }}
           >
             {/* Console Header */}
-            <div className="flex items-center justify-between border-b border-white/5 pb-3">
+            <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--app-border)' }}>
               <div className="flex items-center gap-2">
-                <ShieldAlert className="w-4.5 h-4.5 text-[#FF453A]" />
+                <ShieldAlert className="w-4.5 h-4.5 text-[var(--danger)]" />
                 <div>
-                  <h4 className="text-[13px] font-bold text-white uppercase tracking-wider">
+                  <h4 className="text-[13px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>
                     Failover Control Console
                   </h4>
-                  <p className="text-[10px] text-white/40">Active Incident Response Systems</p>
+                  <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Active Incident Response Systems</p>
                 </div>
               </div>
 
@@ -865,14 +1033,16 @@ export function LocationMap({
                 {failoverComplete && (
                   <button
                     onClick={exportFailoverReport}
-                    className="px-2.5 py-1 rounded-lg text-[9px] font-extrabold border bg-[#30D158]/10 border-[#30D158]/20 text-[#30D158] hover:bg-[#30D158]/20 transition-colors"
+                    className="px-2.5 py-1 rounded-lg text-[9px] font-extrabold border"
+                    style={{ background: 'var(--success-subtle)', borderColor: 'var(--success)', color: 'var(--success)' }}
                   >
                     Export Report
                   </button>
                 )}
                 <button
                   onClick={resetSimulation}
-                  className="px-2.5 py-1 rounded-lg text-[9px] font-extrabold border bg-white/5 border-white/10 text-white/60 hover:bg-white/10 transition-colors"
+                  className="px-2.5 py-1 rounded-lg text-[9px] font-extrabold border transition-colors hover:bg-[var(--app-surface-hover)]"
+                  style={{ background: 'var(--app-surface)', borderColor: 'var(--app-border)', color: 'var(--text-muted)' }}
                 >
                   Close Console
                 </button>
@@ -880,18 +1050,18 @@ export function LocationMap({
             </div>
 
             {/* Circular Progress & Info Grid */}
-            <div className="flex flex-col sm:flex-row items-center gap-4 bg-white/[0.02] border border-white/5 p-4 rounded-xl">
+            <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-xl border" style={{ background: 'var(--app-bg-subtle)', borderColor: 'var(--app-border)' }}>
               {/* Circular progress loader */}
               <div className="relative w-14 h-14 flex-shrink-0 flex items-center justify-center">
                 <svg className="w-full h-full transform -rotate-90">
-                  <circle cx="28" cy="28" r="24" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="3.5" fill="transparent" />
-                  <circle cx="28" cy="28" r="24" stroke={failoverComplete ? "#30D158" : "var(--primary-500)"} strokeWidth="3.5" fill="transparent"
+                  <circle cx="28" cy="28" r="24" stroke="var(--app-border)" strokeWidth="3.5" fill="transparent" />
+                  <circle cx="28" cy="28" r="24" stroke={failoverComplete ? "var(--success)" : "var(--accent)"} strokeWidth="3.5" fill="transparent"
                     strokeDasharray={2 * Math.PI * 24}
                     strokeDashoffset={2 * Math.PI * 24 * (1 - failoverProgress / 100)}
                     className="transition-all duration-300"
                   />
                 </svg>
-                <span className="absolute text-[10px] font-bold text-white font-mono">
+                <span className="absolute text-[10px] font-bold font-mono" style={{ color: 'var(--text-primary)' }}>
                   {failoverProgress}%
                 </span>
               </div>
@@ -899,17 +1069,17 @@ export function LocationMap({
               {/* Progress Detail */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between text-[11px] font-bold">
-                  <span className="text-white/40 uppercase tracking-wider">Mitigation Step</span>
-                  <span style={{ color: failoverComplete ? '#30D158' : 'var(--primary-500)' }}>
+                  <span className="uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Mitigation Step</span>
+                  <span style={{ color: failoverComplete ? 'var(--success)' : 'var(--accent)' }}>
                     {currentLogMsg}
                   </span>
                 </div>
-                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mt-2">
+                <div className="w-full h-1.5 rounded-full overflow-hidden mt-2" style={{ background: 'var(--app-bg-muted)' }}>
                   <div 
                     className="h-full transition-all duration-300" 
                     style={{ 
                       width: `${failoverProgress}%`, 
-                      background: failoverComplete ? '#30D158' : 'linear-gradient(to right, var(--primary-500), #00E599)' 
+                      background: failoverComplete ? 'var(--success)' : 'linear-gradient(to right, var(--accent), #00E599)' 
                     }} 
                   />
                 </div>
@@ -917,15 +1087,15 @@ export function LocationMap({
             </div>
 
             {/* Terminal Prompts (Console Logs) */}
-            <div className="flex-1 min-h-[180px] max-h-[180px] bg-black/40 border border-white/5 rounded-xl p-3 font-mono text-[9px] overflow-y-auto flex flex-col gap-1.5 scrollbar-thin">
+            <div className="flex-1 min-h-[180px] max-h-[180px] border rounded-xl p-3 font-mono text-[9px] overflow-y-auto flex flex-col gap-1.5 scrollbar-thin" style={{ background: 'var(--app-bg-muted)', borderColor: 'var(--app-border)' }}>
               {consoleLogs.map((log, i) => {
-                let color = '#30D158'; // Green
+                let color = 'var(--success)';
                 if (log.includes('ALERT') || log.includes('CRITICAL')) {
-                  color = '#FF453A';
+                  color = 'var(--danger)';
                 } else if (log.includes('INITIATING') || log.includes('ROUTING') || log.includes('SYNCING') || log.includes('TRAFFIC') || log.includes('CHECKING')) {
-                  color = '#0A84FF';
+                  color = 'var(--accent)';
                 } else if (log.includes('SUCCESS') || log.includes('INTEGRITY')) {
-                  color = '#30D158';
+                  color = 'var(--success)';
                 }
                 return (
                   <div key={i} style={{ color }} className="leading-normal">
@@ -934,20 +1104,20 @@ export function LocationMap({
                 );
               })}
               {!failoverComplete && !isPaused && (
-                <div className="text-white/20 animate-pulse">_ [Executing replication task hooks...]</div>
+                <div className="animate-pulse" style={{ color: 'var(--text-muted)' }}>_ [Executing replication task hooks...]</div>
               )}
             </div>
 
             {/* Console Control Row */}
-            <div className="flex items-center justify-between gap-4 border-t border-white/5 pt-3 flex-wrap">
+            <div className="flex items-center justify-between gap-4 border-t border-[var(--app-border)] pt-3 flex-wrap">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIsPaused(!isPaused)}
-                  className="px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-colors hover:bg-white/5"
+                  className="px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-colors hover:bg-[var(--app-surface-hover)]"
                   style={{
-                    background: 'rgba(255,255,255,0.02)',
-                    borderColor: 'rgba(255,255,255,0.08)',
-                    color: '#fff',
+                    background: 'var(--app-surface)',
+                    borderColor: 'var(--app-border)',
+                    color: 'var(--text-primary)',
                   }}
                 >
                   {isPaused ? 'Resume Failover' : 'Pause Failover'}
@@ -959,11 +1129,11 @@ export function LocationMap({
                     setPromotedDcId(null);
                     setIsPaused(false);
                   }}
-                  className="px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-colors hover:bg-white/5"
+                  className="px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-colors hover:bg-[var(--app-surface-hover)]"
                   style={{
-                    background: 'rgba(255,255,255,0.02)',
-                    borderColor: 'rgba(255,255,255,0.08)',
-                    color: 'rgba(255,255,255,0.4)',
+                    background: 'var(--app-surface)',
+                    borderColor: 'var(--app-border)',
+                    color: 'var(--text-muted)',
                   }}
                 >
                   Restart Simulation
@@ -971,19 +1141,21 @@ export function LocationMap({
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-[9px] font-bold text-white/40 uppercase">Simulation Speed:</span>
+                <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase">Simulation Speed:</span>
                 <div className="flex gap-1">
                   {[1, 2, 4].map((speed) => (
                     <button
                       key={speed}
                       onClick={() => setSimulationSpeed(speed)}
-                      className="px-2.5 py-0.5 rounded text-[10px] font-extrabold transition-all"
+                      className="px-2.5 py-0.5 rounded text-[10px] font-extrabold transition-all border"
                       style={simulationSpeed === speed ? {
-                        background: 'var(--primary-500)',
-                        color: '#fff',
+                        background: 'var(--accent)',
+                        color: 'var(--text-inverse)',
+                        borderColor: 'var(--accent)',
                       } : {
-                        background: 'rgba(255,255,255,0.04)',
-                        color: 'rgba(255,255,255,0.4)',
+                        background: 'var(--app-surface)',
+                        color: 'var(--text-muted)',
+                        borderColor: 'var(--app-border)',
                       }}
                     >
                       {speed}x

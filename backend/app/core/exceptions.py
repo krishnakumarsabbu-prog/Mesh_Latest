@@ -71,6 +71,13 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(SQLAlchemyError)
     async def sqlalchemy_error_handler(request: Request, exc: SQLAlchemyError):
+        import traceback
+        try:
+            with open("db_error.log", "w") as f:
+                f.write(f"SQLAlchemyError: {exc}\n")
+                traceback.print_exception(type(exc), exc, exc.__traceback__, file=f)
+        except Exception:
+            pass
         logger.error(f"Database error: {exc}")
         return JSONResponse(
             status_code=500,

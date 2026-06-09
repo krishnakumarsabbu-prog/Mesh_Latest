@@ -38,6 +38,29 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("Database initialized")
 
+    # Always auto-import telemetry docs on startup if empty
+    from app.api.v1.endpoints.runtime import import_all_docs
+    from app.db.base import AsyncSessionLocal
+    from app.models.runtime import RuntimeAsset
+    from sqlalchemy import select, func
+    async with AsyncSessionLocal() as session:
+        try:
+            count_res = await session.execute(select(func.count(RuntimeAsset.id)))
+            count = count_res.scalar() or 0
+            if count == 0:
+                logger.info("Database is empty. Auto-importing telemetry docs from docs directory...")
+                result = await import_all_docs(db=session)
+                logger.info(f"Auto-import completed: {result.get('message', '')} "
+                            f"Loaded {result.get('total_assets', 0)} assets.")
+            else:
+                logger.info(f"Database already contains {count} assets. Skipping auto-import to preserve data.")
+        except Exception as e:
+            try:
+                await session.rollback()
+            except Exception:
+                pass
+            logger.error(f"Failed to auto-import telemetry docs on startup: {e}", exc_info=True)
+
     from app.services.aggregation_scheduler import aggregation_scheduler
     _scheduler_task = asyncio.ensure_future(aggregation_scheduler.run_scheduled_refresh())
     logger.info("Aggregation scheduler started")

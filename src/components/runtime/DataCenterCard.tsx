@@ -30,25 +30,25 @@ function AssetRow({ asset, onSelectEvidence }: { asset: RuntimeAsset; onSelectEv
     if (asset.data_source === 'mongodb') chipLabel = 'Mongo';
     if (asset.data_source === 'cmdb') chipLabel = 'CMDB';
     
-    let chipColor = 'rgba(255,255,255,0.1)';
-    let chipTextColor = 'rgba(255,255,255,0.6)';
-    let chipBorder = '1px solid rgba(255,255,255,0.15)';
+    let chipColor = 'var(--app-bg-muted)';
+    let chipTextColor = 'var(--text-secondary)';
+    let chipBorder = '1px solid var(--app-border)';
     let type: 'deterministic' | 'inferred' | 'cmdb' = 'inferred';
     
     if (asset.data_source === 'cmdb') {
-      chipColor = 'rgba(142,142,147,0.08)';
-      chipTextColor = '#8E8E93';
-      chipBorder = '1px solid rgba(142,142,147,0.2)';
+      chipColor = 'var(--app-bg-muted)';
+      chipTextColor = 'var(--text-muted)';
+      chipBorder = '1px solid var(--app-border)';
       type = 'cmdb';
     } else if (asset.is_deterministic) {
-      chipColor = 'rgba(48,209,88,0.08)';
-      chipTextColor = '#30D158';
-      chipBorder = '1px solid rgba(48,209,88,0.2)';
+      chipColor = 'var(--success-subtle)';
+      chipTextColor = 'var(--success)';
+      chipBorder = '1px solid var(--success)';
       type = 'deterministic';
     } else {
-      chipColor = 'rgba(255,159,10,0.08)';
-      chipTextColor = '#FF9F0A';
-      chipBorder = '1px solid rgba(255,159,10,0.2)';
+      chipColor = 'var(--warning-subtle)';
+      chipTextColor = 'var(--warning)';
+      chipBorder = '1px solid var(--warning)';
       type = 'inferred';
     }
     
@@ -92,9 +92,9 @@ function AssetRow({ asset, onSelectEvidence }: { asset: RuntimeAsset; onSelectEv
   if (asset.tech_stack === 'mongodb') {
     chips.push({
       label: 'OpsMgr',
-      bg: 'rgba(48,209,88,0.08)',
-      text: '#30D158',
-      border: '1px solid rgba(48,209,88,0.2)',
+      bg: 'var(--success-subtle)',
+      text: 'var(--success)',
+      border: '1px solid var(--success)',
       type: 'deterministic' as const,
       details: [
         `Record source: MongoDB Ops Manager API`,
@@ -106,9 +106,9 @@ function AssetRow({ asset, onSelectEvidence }: { asset: RuntimeAsset; onSelectEv
   } else if (asset.tech_stack === 'oracle') {
     chips.push({
       label: 'AppDyn',
-      bg: 'rgba(255,159,10,0.08)',
-      text: '#FF9F0A',
-      border: '1px solid rgba(255,159,10,0.2)',
+      bg: 'var(--warning-subtle)',
+      text: 'var(--warning)',
+      border: '1px solid var(--warning)',
       type: 'inferred' as const,
       details: [
         `Record source: AppDynamics Infrastructure Agent`,
@@ -120,9 +120,9 @@ function AssetRow({ asset, onSelectEvidence }: { asset: RuntimeAsset; onSelectEv
   } else if (asset.tech_stack === 'ibm_mq') {
     chips.push({
       label: 'SCOM',
-      bg: 'rgba(142,142,147,0.1)',
-      text: '#8E8E93',
-      border: '1px solid rgba(142,142,147,0.2)',
+      bg: 'var(--app-bg-muted)',
+      text: 'var(--text-muted)',
+      border: '1px solid var(--app-border)',
       type: 'cmdb' as const,
       details: [
         `Record source: SCOM Windows Event Monitor`,
@@ -135,26 +135,26 @@ function AssetRow({ asset, onSelectEvidence }: { asset: RuntimeAsset; onSelectEv
 
   return (
     <div
-      className="rounded-lg px-3 py-2.5 flex flex-col gap-1.5 transition-all hover:bg-white/5"
-      style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
+      className="rounded-lg px-3 py-2.5 flex flex-col gap-1.5 transition-all hover:bg-[var(--app-surface-hover)]"
+      style={{ background: 'var(--app-bg-subtle)', border: '1px solid var(--app-border)' }}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <TechStackIcon techStack={asset.tech_stack} size={11} />
-          <span className="text-[11px] font-bold truncate text-white/90">
+          <span className="text-[11px] font-bold truncate text-[var(--text-primary)]">
             {asset.name}
           </span>
         </div>
         {asset.write_authority && (
           <span
-            className="flex-shrink-0 text-[8px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wide bg-[#30D158]/10 text-[#30D158] border border-[#30D158]/20"
+            className="flex-shrink-0 text-[8px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wide bg-[var(--success-subtle)] text-[var(--success)] border border-[var(--success)]/20"
           >
             Write
           </span>
         )}
       </div>
       {asset.host && (
-        <p className="text-[10px] truncate text-white/50">
+        <p className="text-[10px] truncate text-[var(--text-muted)]">
           {asset.host}
         </p>
       )}
@@ -166,13 +166,13 @@ function AssetRow({ asset, onSelectEvidence }: { asset: RuntimeAsset; onSelectEv
         <FreshnessIndicator lastUpdated={asset.last_seen_at} compact showRelativeTime />
       </div>
       {asset.is_deterministic === false && (
-        <p className="text-[9px] italic text-[#FF9F0A]">
+        <p className="text-[9px] italic text-[var(--warning)]">
           Inferred (not verified)
         </p>
       )}
       {chips.length > 0 && (
         <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-          <span className="text-[9px] text-white/30 mr-0.5">Evidence:</span>
+          <span className="text-[9px] text-[var(--text-muted)] mr-0.5">Evidence:</span>
           {chips.map((c, idx) => (
             <button
               key={idx}
@@ -218,49 +218,49 @@ export function DataCenterCard({ dataCenter, assets, isPrimaryWrite = false, isF
       )}
       style={{
         background: isFailed 
-          ? 'rgba(255, 69, 58, 0.05)' 
+          ? 'var(--danger-subtle)' 
           : isPrimaryWrite
-          ? 'rgba(10, 18, 30, 0.75)'
-          : 'rgba(20, 20, 25, 0.65)',
+          ? 'var(--accent-subtle)'
+          : 'var(--app-surface)',
         border: isFailed
-          ? '1px solid rgba(255,69,58,0.35)'
+          ? '1px solid var(--danger)'
           : isPrimaryWrite
-          ? '1px solid rgba(0, 229, 153, 0.3)'
-          : '1px solid rgba(255,255,255,0.06)',
+          ? '1px solid var(--success)'
+          : '1px solid var(--app-border)',
         borderLeft: isPrimaryWrite 
-          ? '4px solid #00E599' 
+          ? '4px solid var(--success)' 
           : isFailed 
-          ? '4px solid #FF453A' 
-          : '1px solid rgba(255,255,255,0.06)',
+          ? '4px solid var(--danger)' 
+          : '1px solid var(--app-border)',
         boxShadow: isPrimaryWrite 
-          ? '0 0 20px rgba(0, 229, 153, 0.15)' 
+          ? 'var(--accent-glow)' 
           : isFailed 
           ? '0 0 20px rgba(255, 69, 58, 0.1)' 
-          : '0 4px 15px rgba(0, 0, 0, 0.2)',
+          : 'var(--shadow-sm)',
         minWidth: 220,
       }}
     >
       {/* DC Header */}
       <div
-        className="px-4 py-3 flex items-start justify-between gap-2 border-b border-white/5"
+        className="px-4 py-3 flex items-start justify-between gap-2 border-b border-[var(--app-border)]"
       >
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <Server className={cn("w-3.5 h-3.5 flex-shrink-0", isFailed ? "text-[#FF453A]" : "text-white/50")} />
-            <p className="text-[13px] font-extrabold truncate text-white tracking-wide">
+            <Server className={cn("w-3.5 h-3.5 flex-shrink-0", isFailed ? "text-[var(--danger)]" : "text-[var(--text-muted)]")} />
+            <p className="text-[13px] font-extrabold truncate text-[var(--text-primary)] tracking-wide">
               {dataCenter.short_name ?? dataCenter.name}
             </p>
             
             {/* Live Traffic Pulsing Dot */}
             {!isFailed && (
               <span className="relative flex h-2 w-2 ml-1">
-                <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", isPrimaryWrite ? "bg-[#00E599]" : "bg-[#FF9F0A]")}></span>
-                <span className={cn("relative inline-flex rounded-full h-2 w-2", isPrimaryWrite ? "bg-[#00E599]" : "bg-[#FF9F0A]")}></span>
+                <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", isPrimaryWrite ? "bg-[var(--success)]" : "bg-[var(--warning)]")}></span>
+                <span className={cn("relative inline-flex rounded-full h-2 w-2", isPrimaryWrite ? "bg-[var(--success)]" : "bg-[var(--warning)]")}></span>
               </span>
             )}
           </div>
           {dataCenter.region && (
-            <p className="text-[10px] mt-0.5 truncate text-white/40 font-medium">
+            <p className="text-[10px] mt-0.5 truncate text-[var(--text-muted)] font-medium">
               {dataCenter.region}
             </p>
           )}
@@ -268,20 +268,20 @@ export function DataCenterCard({ dataCenter, assets, isPrimaryWrite = false, isF
         
         {isFailed ? (
           <span
-            className="flex-shrink-0 flex items-center gap-1 text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider bg-[#FF453A]/10 text-[#FF453A] border border-[#FF453A]/20"
+            className="flex-shrink-0 flex items-center gap-1 text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider bg-[var(--danger-subtle)] text-[var(--danger)] border border-[var(--danger)]/20"
           >
             OFFLINE
           </span>
         ) : isPrimaryWrite ? (
           <span
-            className="flex-shrink-0 flex items-center gap-1 text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider bg-[#00E599]/10 text-[#00E599] border border-[#00E599]/20"
+            className="flex-shrink-0 flex items-center gap-1 text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider bg-[var(--success-subtle)] text-[var(--success)] border border-[var(--success)]/20"
           >
             <Crown className="w-2.5 h-2.5" />
             Primary
           </span>
         ) : (
           <span
-            className="flex-shrink-0 flex items-center gap-1 text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider bg-white/5 text-white/50 border border-white/5"
+            className="flex-shrink-0 flex items-center gap-1 text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider bg-[var(--app-bg-muted)] text-[var(--text-secondary)] border border-[var(--app-border)]"
           >
             Standby
           </span>
@@ -289,7 +289,7 @@ export function DataCenterCard({ dataCenter, assets, isPrimaryWrite = false, isF
 
         <button
           onClick={() => setExpanded(e => !e)}
-          className="ml-1 flex-shrink-0 p-1 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+          className="ml-1 flex-shrink-0 p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--app-surface-hover)] transition-colors"
           title={expanded ? 'Collapse' : 'Expand'}
         >
           <motion.span
@@ -305,11 +305,11 @@ export function DataCenterCard({ dataCenter, assets, isPrimaryWrite = false, isF
       {/* Mini Tech Stack Distribution Bar Chart */}
       {totalAssets > 0 && !isFailed && (
         <div className="px-4 pt-2.5 pb-1 flex flex-col gap-1">
-          <div className="flex items-center justify-between text-[9px] font-extrabold text-white/40 uppercase tracking-widest">
+          <div className="flex items-center justify-between text-[9px] font-extrabold text-[var(--text-muted)] uppercase tracking-widest">
             <span>Tech Distribution</span>
-            <span className="text-[8px] font-mono text-white/30">{totalAssets} items</span>
+            <span className="text-[8px] font-mono text-[var(--text-disabled)]">{totalAssets} items</span>
           </div>
-          <div className="flex h-1 rounded-full overflow-hidden bg-white/5 w-full">
+          <div className="flex h-1 rounded-full overflow-hidden bg-[var(--app-bg-muted)] w-full">
             {Object.entries(techCounts).map(([tech, count]) => {
               const pct = (count / totalAssets) * 100;
               const color = TECH_COLORS[tech] || '#8E8E93';
@@ -336,15 +336,38 @@ export function DataCenterCard({ dataCenter, assets, isPrimaryWrite = false, isF
             transition={{ type: 'spring', stiffness: 280, damping: 28 }}
             style={{ overflow: 'hidden' }}
           >
-            <div className="p-3 flex flex-col gap-2">
-              {assets.length === 0 && (
-                <p className="text-[11px] text-center py-4 text-white/30">
+            <div className="p-3 flex flex-col gap-3">
+              {assets.length === 0 ? (
+                <p className="text-[11px] text-center py-4 text-[var(--text-muted)]">
                   No assets found
                 </p>
-              )}
-              {assets.map((asset) => (
-                <AssetRow key={asset.id} asset={asset} onSelectEvidence={onSelectEvidence} />
-              ))}
+              ) : (() => {
+                // Group assets by neighborhood on the fly
+                const nhMap = new Map<string, RuntimeAsset[]>();
+                assets.forEach((asset) => {
+                  const nh = asset.metadata?.neighborhood || 'DEFAULT_ZONE';
+                  if (!nhMap.has(nh)) {
+                    nhMap.set(nh, []);
+                  }
+                  nhMap.get(nh)!.push(asset);
+                });
+
+                return Array.from(nhMap.entries()).map(([nhName, nhAssets]) => (
+                  <div key={nhName} className="flex flex-col gap-2 p-2 rounded-xl bg-[var(--app-bg-subtle)] border border-[var(--app-border)]">
+                    <div className="flex items-center gap-1.5 px-1 pb-1 border-b border-[var(--app-border)]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)]" />
+                      <span className="text-[9px] font-bold text-[var(--warning)] uppercase tracking-widest">
+                        NH: {nhName}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      {nhAssets.map((asset) => (
+                        <AssetRow key={asset.id} asset={asset} onSelectEvidence={onSelectEvidence} />
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           </motion.div>
         )}
@@ -352,9 +375,9 @@ export function DataCenterCard({ dataCenter, assets, isPrimaryWrite = false, isF
 
       {/* Footer count */}
       <div
-        className="px-4 py-2 text-center border-t border-white/5 bg-white/[0.01]"
+        className="px-4 py-2 text-center border-t border-[var(--app-border)] bg-[var(--app-bg-subtle)]"
       >
-        <p className="text-[10px] font-medium text-white/40">
+        <p className="text-[10px] font-medium text-[var(--text-muted)]">
           {assets.length} active resource{assets.length !== 1 ? 's' : ''}
         </p>
       </div>

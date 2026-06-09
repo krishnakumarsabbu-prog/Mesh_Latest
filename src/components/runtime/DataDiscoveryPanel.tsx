@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle,
   CircleHelp as HelpCircle, Database, Plus, Send,
-  ChevronDown, Share2, Clock, Zap, Trophy, Info,
+  ChevronDown, Share2, Info, Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TECH_STACK_COVERAGE, CONFIDENCE_LABELS, type TechStackCoverage } from '@/lib/runtimeLocationMock';
@@ -11,7 +11,7 @@ import { TechStackIcon } from './TechStackIcon';
 import { useRuntimeLocationStore } from '@/store/runtimeLocationStore';
 import type { TechStack, SourceProposal, ProposalStatus } from '@/types';
 
-// ─── Pre-populated Team Discoveries ──────────────────────────────────────────
+// ─── Integrated Source Signals Reference ─────────────────────────────────────
 
 interface TeamDiscovery {
   id: string;
@@ -133,139 +133,7 @@ function SampleBadge({ value }: { value: 'Yes' | 'No' | 'Partial' }) {
 
 // ─── Submit Discovery Banner ──────────────────────────────────────────────────
 
-const QUICK_DISCOVERIES = TEAM_DISCOVERIES.map((d) => ({
-  value: d.id,
-  label: d.title,
-}));
-
-function SubmitDiscoveryBanner({ onSubmitted }: { onSubmitted: (id: string) => void }) {
-  const [selectedId, setSelectedId] = useState<string>(TEAM_DISCOVERIES[0].id);
-  const [customNote, setCustomNote] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [sharing, setSharing] = useState(false);
-
-  const selected = TEAM_DISCOVERIES.find((d) => d.id === selectedId)!;
-
-  function handleShare() {
-    setSharing(true);
-    setTimeout(() => {
-      setSharing(false);
-      setSubmitted(true);
-      onSubmitted(selectedId);
-    }, 1200);
-  }
-
-  if (submitted) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mx-5 mt-4 rounded-2xl p-4 flex items-center gap-3 border"
-        style={{ background: 'rgba(48,209,88,0.07)', borderColor: 'rgba(48,209,88,0.25)' }}
-      >
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(48,209,88,0.15)' }}>
-          <CheckCircle className="w-4 h-4" style={{ color: '#30D158' }} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-bold" style={{ color: '#30D158' }}>Shared to Hackathon Channel ✓</p>
-          <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>{selected.title}</span> has been published to the shared discovery channel.
-          </p>
-        </div>
-        <button
-          onClick={() => { setSubmitted(false); setSelectedId(TEAM_DISCOVERIES[0].id); setCustomNote(''); }}
-          className="text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-colors"
-          style={{ color: 'var(--text-muted)', borderColor: 'var(--app-border)', background: 'var(--app-surface)' }}
-        >
-          Share Another
-        </button>
-      </motion.div>
-    );
-  }
-
-  return (
-    <div
-      className="mx-5 mt-4 rounded-2xl p-4 flex flex-col gap-3 border"
-      style={{ background: 'rgba(10,132,255,0.06)', borderColor: 'rgba(10,132,255,0.2)' }}
-    >
-      <div className="flex items-center gap-2">
-        <Zap className="w-4 h-4" style={{ color: '#0A84FF' }} />
-        <p className="text-[12px] font-bold" style={{ color: '#0A84FF' }}>Submit Discovery to Hackathon Channel</p>
-        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full ml-auto" style={{ background: 'rgba(10,132,255,0.15)', color: '#0A84FF' }}>
-          BONUS CREDIT
-        </span>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-          Select Discovery to Share
-        </label>
-        <div className="relative">
-          <select
-            value={selectedId}
-            onChange={(e) => setSelectedId(e.target.value)}
-            className="w-full appearance-none rounded-xl pl-3 pr-7 py-2 text-[12px] font-medium outline-none"
-            style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--text-primary)' }}
-          >
-            {QUICK_DISCOVERIES.map((d) => (
-              <option key={d.value} value={d.value}>{d.label}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
-        </div>
-
-        <div
-          className="rounded-xl p-3 flex flex-col gap-1.5"
-          style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
-        >
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)' }}>
-              {selected.sourceType}
-            </span>
-            {selected.isDeterministic && (
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(48,209,88,0.12)', color: '#30D158', border: '1px solid rgba(48,209,88,0.25)' }}>
-                DETERMINISTIC
-              </span>
-            )}
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(255,159,10,0.1)', color: '#FF9F0A', border: '1px solid rgba(255,159,10,0.25)' }}>
-              {selected.isDeterministic ? 'inferred=false' : 'inferred=true'}
-            </span>
-          </div>
-          <p className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>Signal: {selected.signal}</p>
-          <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{selected.valueProposition}</p>
-        </div>
-
-        <textarea
-          value={customNote}
-          onChange={(e) => setCustomNote(e.target.value)}
-          placeholder="Optional: add context or sample data reference…"
-          rows={2}
-          className="rounded-xl px-3 py-2 text-[11px] outline-none resize-none"
-          style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--text-primary)' }}
-        />
-      </div>
-
-      <button
-        onClick={handleShare}
-        disabled={sharing}
-        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-bold text-white transition-all disabled:opacity-70"
-        style={{ background: 'linear-gradient(135deg, #0A84FF 0%, #0060CC 100%)', boxShadow: '0 4px 12px rgba(10,132,255,0.3)' }}
-      >
-        {sharing ? (
-          <>
-            <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white" />
-            Sharing to Channel…
-          </>
-        ) : (
-          <>
-            <Share2 className="w-3.5 h-3.5" />
-            Share to Hackathon Channel
-          </>
-        )}
-      </button>
-    </div>
-  );
-}
+// (SubmitDiscoveryBanner removed — replaced by ProposeModal inline button in main panel)
 
 // ─── Team Discovery Card ──────────────────────────────────────────────────────
 
@@ -286,7 +154,7 @@ function TeamDiscoveryCard({ discovery }: { discovery: TeamDiscovery }) {
         >
           {discovery.isDeterministic
             ? <CheckCircle className="w-3.5 h-3.5" style={{ color: '#30D158' }} />
-            : <Zap className="w-3.5 h-3.5" style={{ color: '#FF9F0A' }} />}
+            : <Activity className="w-3.5 h-3.5" style={{ color: '#FF9F0A' }} />}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -666,9 +534,6 @@ function ProposalCard({ proposal, onAccept, onReject }: {
 
 export function DataDiscoveryPanel({ onClose }: Props) {
   const [showPropose, setShowPropose] = useState(false);
-  const [sharedDiscoveryIds, setSharedDiscoveryIds] = useState<Set<string>>(
-    new Set(TEAM_DISCOVERIES.filter((d) => d.sharedToChannel).map((d) => d.id))
-  );
   const { proposals, updateProposalStatus } = useRuntimeLocationStore();
 
   const gaps = TECH_STACK_COVERAGE.filter(
@@ -706,10 +571,10 @@ export function DataDiscoveryPanel({ onClose }: Props) {
             </div>
             <div>
               <h2 className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>
-                Data Discovery Hub
+                Signal Coverage & Data Sources
               </h2>
               <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                A crowdsourced enterprise wiki for mapping dark infrastructure and resolving blindspots
+                Track telemetry source coverage, identify gaps, and propose new data sources for the platform team
               </p>
             </div>
           </div>
@@ -752,46 +617,36 @@ export function DataDiscoveryPanel({ onClose }: Props) {
           </div>
         </div>
 
-        {/* Collaborative Discovery Wiki Model Callout Banner */}
+        {/* Signal Coverage Summary Banner */}
         <div className="mx-5 mt-4 rounded-2xl p-4 border flex gap-3 items-start"
-             style={{ background: 'rgba(191,90,242,0.06)', borderColor: 'rgba(191,90,242,0.2)' }}>
-          <Trophy className="w-5 h-5 mt-0.5 flex-shrink-0 animate-bounce" style={{ color: '#BF5AF2' }} />
+             style={{ background: 'rgba(10,132,255,0.05)', borderColor: 'rgba(10,132,255,0.2)' }}>
+          <Database className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#0A84FF' }} />
           <div className="flex-1">
-            <h4 className="text-[12px] font-bold text-white flex items-center gap-1.5">
-              Collaborative Discovery Model (Crowdsourced Wiki)
-              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-[#BF5AF2]/15 text-[#BF5AF2] uppercase tracking-wider">
-                Innovation Point
-              </span>
-            </h4>
-            <p className="text-[11px] text-white/75 mt-1 leading-relaxed">
-              Rather than treating dark infrastructure as a permanent blindspot, HealthMesh frames this hub as a crowdsourced enterprise wiki. Application teams actively help security and observability teams map dark systems (like batch AutoSys workflows and legacy IBM MQ networks) to secure decentralized visibility.
+            <h4 className="text-[12px] font-bold" style={{ color: '#0A84FF' }}>About Signal Coverage</h4>
+            <p className="text-[11px] mt-1 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+              This matrix maps every monitored tech stack to its active data sources and confidence levels. Stacks rated 1–2 represent integration gaps. Use the "Propose New Data Source" button to notify the platform team of newly discovered telemetry endpoints that can improve coverage.
             </p>
           </div>
         </div>
 
-        {/* Submit Discovery Banner — Phase 10 */}
-        <SubmitDiscoveryBanner
-          onSubmitted={(id) => setSharedDiscoveryIds((prev) => new Set([...prev, id]))}
-        />
-
         {/* Coverage matrix */}
         <div className="flex-1 overflow-y-auto">
-          {/* Discoveries by This Team */}
+          {/* Integrated Source Signals */}
           <div className="px-5 pt-4 pb-2">
             <div className="flex items-center gap-2 mb-3">
-              <Trophy className="w-4 h-4" style={{ color: '#FF9F0A' }} />
+              <CheckCircle className="w-4 h-4" style={{ color: '#30D158' }} />
               <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                Discoveries by This Team
+                Integrated Source Signals
               </p>
               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full ml-auto" style={{ background: 'rgba(48,209,88,0.1)', color: '#30D158' }}>
-                {sharedDiscoveryIds.size} shared
+                {TEAM_DISCOVERIES.filter(d => d.sharedToChannel).length} active
               </span>
             </div>
             <div className="flex flex-col gap-2">
               {TEAM_DISCOVERIES.map((disc) => (
                 <TeamDiscoveryCard
                   key={disc.id}
-                  discovery={{ ...disc, sharedToChannel: sharedDiscoveryIds.has(disc.id) }}
+                  discovery={disc}
                 />
               ))}
             </div>
@@ -874,7 +729,7 @@ export function DataDiscoveryPanel({ onClose }: Props) {
             <div className="flex items-center gap-2 mb-3">
               <Info className="w-4 h-4" style={{ color: '#0A84FF' }} />
               <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                Problem Statement Signal Gap Analysis
+                Full Stack Signal Coverage Analysis
               </p>
             </div>
             <div
@@ -882,7 +737,7 @@ export function DataDiscoveryPanel({ onClose }: Props) {
               style={{ background: 'rgba(10,132,255,0.05)', border: '1px solid rgba(10,132,255,0.2)' }}
             >
               <p className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
-                The table below maps every tech stack from the <strong>Problem Statement §7</strong> to our current signal availability. Stacks rated 1–2 represent active gaps where deterministic data is missing or proprietary.
+                The table below maps every monitored tech stack to its current signal availability. Stacks rated 1–2 represent active gaps where deterministic data is missing or integration is in progress.
               </p>
             </div>
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--app-border)' }}>
@@ -985,13 +840,13 @@ export function DataDiscoveryPanel({ onClose }: Props) {
           )}
         </div>
 
-          {/* Shared Discoveries */}
+          {/* Source Proposals */}
           <div className="px-5 py-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Share2 className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
                 <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                  Shared Discoveries
+                  Source Proposals
                 </p>
                 {pendingCount > 0 && (
                   <span

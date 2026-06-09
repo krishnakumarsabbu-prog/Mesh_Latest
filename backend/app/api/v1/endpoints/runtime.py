@@ -1423,16 +1423,7 @@ async def import_all_docs(db: AsyncSession = Depends(get_db)):
     import os
     from fastapi import HTTPException
     
-    # 1. Clean all data
-    await db.execute(delete(RuntimeAsset))
-    await db.execute(delete(RuntimeDataCenter))
-    await db.execute(delete(DataSourceImport))
-    await db.execute(delete(RuntimeAuditLog))
-    await db.execute(delete(SourceProposal))
-    await db.execute(delete(ApplicationIntent))
-    await db.commit()
-    
-    # Locate docs directory
+    # Locate docs directory first
     docs_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../docs"))
     if not os.path.exists(docs_dir):
         docs_dir = os.path.abspath(os.path.join(os.getcwd(), "backend", "docs"))
@@ -1441,6 +1432,14 @@ async def import_all_docs(db: AsyncSession = Depends(get_db)):
             
     if not os.path.exists(docs_dir):
         raise HTTPException(status_code=404, detail=f"Documentation directory not found. Checked: {docs_dir}")
+        
+    # Clean all data inside the transaction (do not commit early, rollback on failure)
+    await db.execute(delete(RuntimeAsset))
+    await db.execute(delete(RuntimeDataCenter))
+    await db.execute(delete(DataSourceImport))
+    await db.execute(delete(RuntimeAuditLog))
+    await db.execute(delete(SourceProposal))
+    await db.execute(delete(ApplicationIntent))
         
     imported_files = []
     total_assets = 0

@@ -4,26 +4,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Search, Upload, RefreshCw, Building2, Server,
   TriangleAlert as AlertTriangle, ChevronDown, CircleCheck as CheckCircle,
-  Database, Zap, Siren, LayoutList, Play, History, CircleAlert as AlertCircle,
-  FileText, X, Clock, Activity,
+  Database, Siren, LayoutList, History, CircleAlert as AlertCircle,
+  FileText, X, Activity, BookOpen, Filter,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   useRuntimeLocationStore,
   EnvironmentFilter,
   TechStackFilter,
-  selectFilteredApplications,
 } from '@/store/runtimeLocationStore';
 import { useNotificationStore, notify } from '@/store/notificationStore';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useWsStore } from '@/store/wsStore';
-import { ConfidenceBadge } from '@/components/runtime/ConfidenceBadge';
 import { FreshnessIndicator } from '@/components/runtime/FreshnessIndicator';
 import { TechStackIcon, techStackLabel } from '@/components/runtime/TechStackIcon';
 import { getAppTechStacks } from '@/lib/runtimeLocationMock';
 import { IncidentModePanel } from '@/components/runtime/IncidentModePanel';
 import { DataDiscoveryPanel } from '@/components/runtime/DataDiscoveryPanel';
-import { DemoWalkthroughOverlay } from '@/components/runtime/DemoWalkthroughOverlay';
+import { PortalGuidePanel } from '@/components/runtime/PortalGuidePanel';
 import { detectSourceType } from '@/lib/csvParser';
 import type { ApplicationLocationSummary, DataSourceName, TechStack } from '@/types';
 
@@ -70,13 +68,13 @@ function StatCard({ label, value, icon: Icon, color }: {
   const isString = typeof value === 'string' && isNaN(Number(value));
 
   // Determine glow card gradient background based on color
-  let cardGradient = 'linear-gradient(135deg, rgba(10, 132, 255, 0.02) 0%, rgba(20, 20, 25, 0.75) 100%)';
+  let cardGradient = 'linear-gradient(135deg, rgba(10, 132, 255, 0.02) 0%, var(--app-surface-raised) 100%)';
   if (c === '#00E599') {
-    cardGradient = 'linear-gradient(135deg, rgba(0, 229, 153, 0.02) 0%, rgba(20, 20, 25, 0.75) 100%)';
+    cardGradient = 'linear-gradient(135deg, rgba(0, 229, 153, 0.02) 0%, var(--app-surface-raised) 100%)';
   } else if (c === '#FF9F0A') {
-    cardGradient = 'linear-gradient(135deg, rgba(255, 159, 10, 0.02) 0%, rgba(20, 20, 25, 0.75) 100%)';
+    cardGradient = 'linear-gradient(135deg, rgba(255, 159, 10, 0.02) 0%, var(--app-surface-raised) 100%)';
   } else if (c === '#FF453A') {
-    cardGradient = 'linear-gradient(135deg, rgba(255, 69, 58, 0.02) 0%, rgba(20, 20, 25, 0.75) 100%)';
+    cardGradient = 'linear-gradient(135deg, rgba(255, 69, 58, 0.02) 0%, var(--app-surface-raised) 100%)';
   }
 
   return (
@@ -84,8 +82,8 @@ function StatCard({ label, value, icon: Icon, color }: {
       className="rounded-2xl px-5 py-4 flex items-center gap-4 relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border backdrop-blur-md"
       style={{
         background: cardGradient,
-        borderColor: 'rgba(255, 255, 255, 0.06)',
-        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.15)',
+        borderColor: 'var(--app-border)',
+        boxShadow: 'var(--shadow-md)',
       }}
     >
       <div
@@ -99,10 +97,10 @@ function StatCard({ label, value, icon: Icon, color }: {
         <Icon className="w-5 h-5" style={{ color: c }} strokeWidth={2} />
       </div>
       <div>
-        <p className="text-[24px] font-extrabold leading-none text-white tracking-tight">
+        <p className="text-[24px] font-extrabold leading-none tracking-tight" style={{ color: 'var(--text-primary)' }}>
           {isString ? value : <AnimatedCounter value={numericValue} />}
         </p>
-        <p className="text-[11px] mt-1.5 font-bold uppercase tracking-widest text-white/40">
+        <p className="text-[11px] mt-1.5 font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
           {label}
         </p>
       </div>
@@ -177,10 +175,10 @@ function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: 
       onMouseLeave={() => setHovered(false)}
       className="rounded-2xl p-5 cursor-pointer flex flex-col gap-4 relative overflow-hidden transition-all duration-300 pl-7"
       style={{
-        background: 'rgba(20, 20, 25, 0.65)',
-        border: '1px solid rgba(255, 255, 255, 0.06)',
-        boxShadow: hovered ? `0 0 25px ${confidenceColor}22` : '0 4px 15px rgba(0, 0, 0, 0.15)',
-        borderColor: hovered ? confidenceColor : 'rgba(255, 255, 255, 0.06)',
+        background: 'var(--app-surface)',
+        border: '1px solid var(--app-border)',
+        boxShadow: hovered ? `0 0 25px ${confidenceColor}22` : 'var(--shadow-sm)',
+        borderColor: hovered ? confidenceColor : 'var(--app-border)',
         backdropFilter: 'blur(8px)',
       }}
     >
@@ -196,7 +194,7 @@ function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: 
         {/* Left: App Info */}
         <div className="flex flex-col gap-1 min-w-[200px] max-w-[250px]">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[15px] font-extrabold text-white truncate">
+            <span className="text-[15px] font-extrabold truncate" style={{ color: 'var(--text-primary)' }}>
               {app.application_name}
             </span>
             <span
@@ -206,24 +204,24 @@ function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: 
               {app.environment}
             </span>
           </div>
-          <span className="text-[10px] font-bold tracking-wider text-white/40 uppercase">
+          <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--text-muted)' }}>
             {app.application_id}
           </span>
         </div>
 
         {/* Center: Mini Distribution Bar */}
         <div className="flex-1 flex flex-col gap-1 max-w-xs md:mx-auto min-w-[180px]">
-          <div className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest">
+          <div className="text-[9px] font-extrabold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
             Asset Distribution
           </div>
-          <div className="flex h-1.5 rounded-full overflow-hidden bg-white/5 w-full mt-1">
+          <div className="flex h-1.5 rounded-full overflow-hidden w-full mt-1" style={{ background: 'var(--app-bg-muted)' }}>
             {app.data_centers.map((dc) => {
               const isPrimary = dc === app.primary_write_dc;
               const pct = isPrimary ? 60 : 40 / Math.max(1, app.data_centers.length - 1);
               return (
                 <div
                   key={dc}
-                  style={{ width: `${pct}%`, background: isPrimary ? '#30D158' : '#FF9F0A' }}
+                  style={{ width: `${pct}%`, background: isPrimary ? 'var(--success)' : 'var(--warning)' }}
                   title={`${dc}: ${isPrimary ? 'Primary' : 'Standby'}`}
                 />
               );
@@ -231,10 +229,10 @@ function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: 
           </div>
           <div className="flex items-center gap-2.5 mt-1 flex-wrap">
             {app.data_centers.map((dc) => (
-              <span key={dc} className="text-[9px] font-extrabold flex items-center gap-1 text-white/70">
+              <span key={dc} className="text-[9px] font-extrabold flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
                 <span
                   className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: dc === app.primary_write_dc ? '#30D158' : '#FF9F0A' }}
+                  style={{ background: dc === app.primary_write_dc ? 'var(--success)' : 'var(--warning)' }}
                 />
                 {dc}
               </span>
@@ -245,16 +243,16 @@ function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: 
         {/* Right: Confidence, Primary DC, Freshness */}
         <div className="flex items-center gap-6 text-right flex-shrink-0 flex-wrap md:flex-nowrap">
           <div className="flex flex-col text-left md:text-right">
-            <span className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest">
+            <span className="text-[9px] font-extrabold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
               Primary Authority
             </span>
-            <span className="text-[12px] font-bold text-white mt-0.5 flex items-center gap-1 justify-start md:justify-end">
-              <span className="w-2 h-2 rounded-full bg-[#30D158] animate-pulse-soft" />
+            <span className="text-[12px] font-bold mt-0.5 flex items-center gap-1 justify-start md:justify-end" style={{ color: 'var(--text-primary)' }}>
+              <span className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse-soft" />
               {app.primary_write_dc || 'N/A'}
             </span>
           </div>
           <div className="flex flex-col items-start md:items-end">
-            <span className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest">
+            <span className="text-[9px] font-extrabold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
               Confidence
             </span>
             <span
@@ -265,7 +263,7 @@ function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: 
             </span>
           </div>
           <div className="flex flex-col items-start md:items-end">
-            <span className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest">
+            <span className="text-[9px] font-extrabold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
               Freshness
             </span>
             <div className="mt-1">
@@ -277,19 +275,20 @@ function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: 
       </div>
 
       {/* Divider */}
-      <div className="h-px bg-white/5 -mx-5" />
+      <div className="h-px -mx-5" style={{ background: 'var(--app-border)' }} />
 
       {/* Bottom Row */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         {/* Tech Stack Icons */}
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest mr-1">
+          <span className="text-[9px] font-extrabold uppercase tracking-widest mr-1" style={{ color: 'var(--text-muted)' }}>
             Engine Stack:
           </span>
           {stacks.map((stack) => (
             <div
               key={stack}
-              className="p-1 rounded bg-white/5 flex items-center justify-center border border-white/5"
+              className="p-1 rounded flex items-center justify-center border"
+              style={{ background: 'var(--app-bg-muted)', borderColor: 'var(--app-border)' }}
               title={techStackLabel(stack as TechStack)}
             >
               <TechStackIcon techStack={stack as TechStack} size={11} />
@@ -298,7 +297,7 @@ function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: 
         </div>
 
         {/* Counts & Alerts */}
-        <div className="flex items-center gap-3 text-[11px] font-medium text-white/60">
+        <div className="flex items-center gap-3 text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>
           <span>
             {app.component_count} component{app.component_count !== 1 ? 's' : ''}
           </span>
@@ -307,7 +306,12 @@ function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: 
           </span>
           {app.stale_source_count > 0 && (
             <span
-              className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FF9F0A]/10 text-[#FF9F0A] border border-[#FF9F0A]/20"
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{
+                background: 'var(--warning-subtle)',
+                color: 'var(--warning)',
+                border: '1px solid var(--warning)'
+              }}
             >
               <AlertTriangle className="w-3 h-3" />
               {app.stale_source_count} stale
@@ -315,7 +319,8 @@ function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: 
           )}
           {app.missing_source_count != null && app.missing_source_count > 0 && (
             <span
-              className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 text-white/40"
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full border"
+              style={{ background: 'var(--app-bg-muted)', borderColor: 'var(--app-border)', color: 'var(--text-muted)' }}
               title="Expected data sources that have not yet provided data"
             >
               {app.missing_source_count} missing signal{app.missing_source_count !== 1 ? 's' : ''}
@@ -731,174 +736,12 @@ function ImportModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ─── Seed Confirm Modal ───────────────────────────────────────────────────────
-
-function SeedModal({ onClose }: { onClose: () => void }) {
-  const { seedSampleData, isSeeding } = useRuntimeLocationStore();
-  const { add } = useNotificationStore();
-
-  async function handleSeed() {
-    await seedSampleData();
-    add({
-      type: 'success',
-      title: 'Sample Data Loaded',
-      message: '4 topology files seeded: IBM MQ (44), MongoDB (22), Oracle OEM (41), CMDB (2)',
-    });
-    onClose();
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="relative rounded-2xl p-6 w-full max-w-sm flex flex-col gap-5"
-        style={{
-          background: 'var(--app-surface-raised)',
-          border: '1px solid var(--app-border)',
-          boxShadow: 'var(--shadow-xl)',
-        }}
-      >
-        <div>
-          <h3 className="text-[16px] font-bold" style={{ color: 'var(--text-primary)' }}>
-            Load Sample Data
-          </h3>
-          <p className="text-[12px] mt-2" style={{ color: 'var(--text-secondary)' }}>
-            This will populate the platform with data derived from all 4 sample CSV files:
-          </p>
-          <ul className="mt-3 flex flex-col gap-1.5">
-            {[
-              { label: 'ibmma_qmgr_sever_status.csv', count: '44 MQ queue managers' },
-              { label: 'mongodb_info.csv',             count: '22 MongoDB nodes' },
-              { label: 'oem_db_role.csv',              count: '41 Oracle DB instances' },
-              { label: 'business_application_topology.csv', count: '2 applications (PCA, DUMPS)' },
-            ].map((f) => (
-              <li key={f.label} className="flex items-start gap-2">
-                <Database className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: '#0A84FF' }} />
-                <div>
-                  <p className="text-[11px] font-semibold" style={{ color: 'var(--text-primary)' }}>{f.label}</p>
-                  <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{f.count}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="flex gap-3 justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl text-[13px] font-medium"
-            style={{
-              background: 'var(--app-surface)',
-              border: '1px solid var(--app-border)',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSeed}
-            disabled={isSeeding}
-            className="px-4 py-2 rounded-xl text-[13px] font-semibold text-white flex items-center gap-2 disabled:opacity-50"
-            style={{ background: '#30D158' }}
-          >
-            {isSeeding && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-            {isSeeding ? 'Loading…' : 'Load Sample Data'}
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
 
 // ─── Time Simulation Slider ───────────────────────────────────────────────────
 
-export const STAGES = [
-  { step: 1, label: 'Baseline', offset: 0, desc: 'All telemetry sources aligned. Data centers reporting normal operations.', status: 'NORMAL', color: '#30D158' },
-  { step: 2, label: 'MongoDB UAT Failure', offset: 60, desc: 'Ingestion failure in MongoDB UAT. 1 source reporting stale data.', status: 'WARNING', color: '#FF9F0A' },
-  { step: 3, label: 'Secondary CMDB Failure', offset: 120, desc: 'Secondary CMDB failure in PRODUCTION. 2 sources reporting stale telemetry.', status: 'WARNING', color: '#FF9F0A' },
-  { step: 4, label: 'Split-Brain Drift Detected', offset: 180, desc: 'Primary DC mismatch: CMDB vs OpenShift active roles disagree.', status: 'ALERT', color: '#FF453A' },
-  { step: 5, label: 'Mitigation Failure (Critical)', offset: 240, desc: 'Incident state: Drift score critical, automated failover fails.', status: 'CRITICAL', color: '#FF453A' },
-];
 
-function TimeSimulatorSlider() {
-  const { simulatedAgeOffset, setSimulatedAgeOffset } = useRuntimeLocationStore();
 
-  const currentStep = simulatedAgeOffset === 0 ? 1
-    : simulatedAgeOffset === 60 ? 2
-    : simulatedAgeOffset === 120 ? 3
-    : simulatedAgeOffset === 180 ? 4
-    : 5;
 
-  const currentStage = STAGES[currentStep - 1];
-
-  return (
-    <div
-      className="flex items-center gap-4 px-4 py-2 rounded-2xl flex-shrink-0 relative group"
-      style={{
-        background: 'rgba(20, 20, 25, 0.6)',
-        border: `1px solid ${currentStage.color}35`,
-        boxShadow: `0 0 15px ${currentStage.color}08`,
-      }}
-    >
-      <div
-        className="w-2.5 h-2.5 rounded-full flex-shrink-0 animate-ping"
-        style={{ background: currentStage.color }}
-      />
-      
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[9px] font-extrabold uppercase tracking-widest text-white/50">
-            Simulate Timeline
-          </span>
-          <span className="text-[10px] font-extrabold font-mono" style={{ color: currentStage.color }}>
-            Step {currentStep}/5: {currentStage.label}
-          </span>
-        </div>
-        <input
-          type="range"
-          min={1}
-          max={5}
-          step={1}
-          value={currentStep}
-          onChange={(e) => {
-            const step = Number(e.target.value);
-            const offset = STAGES[step - 1].offset;
-            setSimulatedAgeOffset(offset);
-          }}
-          className="w-36 accent-current cursor-pointer"
-          style={{ accentColor: currentStage.color }}
-        />
-      </div>
-
-      {/* Popover/Tooltip on hover of timeline slider */}
-      <div
-        className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col gap-2 p-3 rounded-2xl z-50 pointer-events-none w-72 text-left shadow-2xl backdrop-blur-md transition-all border"
-        style={{
-          background: 'rgba(15, 20, 28, 0.96)',
-          borderColor: 'rgba(255, 255, 255, 0.1)',
-        }}
-      >
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold text-white/40 uppercase">Timeline Status</span>
-          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded" style={{ background: `${currentStage.color}15`, color: currentStage.color }}>
-            {currentStage.status}
-          </span>
-        </div>
-        <p className="text-[12px] font-extrabold text-white mt-1">
-          {currentStage.label}
-        </p>
-        <p className="text-[10px] text-white/60 leading-relaxed">
-          {currentStage.desc}
-        </p>
-        <div className="text-[9px] font-mono text-white/35 pt-1.5 border-t border-white/5">
-          Offset: +{currentStage.offset} mins
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── Filter options ───────────────────────────────────────────────────────────
 
@@ -932,100 +775,16 @@ interface LiveFeedEvent {
   badgeColor?: string;
 }
 
-const getLiveEventsForStep = (step: number): LiveFeedEvent[] => {
-  const now = new Date();
-  const formatTime = (minutesAgo: number) => {
-    return new Date(now.getTime() - minutesAgo * 60 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  };
+// getLiveEventsForStep removed — live feed now driven exclusively by real WebSocket events
 
-  const events: LiveFeedEvent[] = [];
 
-  // Step 1 events
-  events.push({
-    id: 'e1',
-    timestamp: formatTime(25),
-    type: 'import',
-    message: "Data source 'IBM MQ' imported 14 records (Freshness: 100%)",
-    application_id: 'PCA',
-    environment: 'PRODUCTION',
-    badgeColor: '#30D158'
-  });
-  events.push({
-    id: 'e2',
-    timestamp: formatTime(22),
-    type: 'import',
-    message: "Data source 'CMDB' imported 150 records (Freshness: 100%)",
-    application_id: 'PCA',
-    environment: 'PRODUCTION',
-    badgeColor: '#30D158'
-  });
-
-  if (step >= 2) {
-    events.push({
-      id: 'e3',
-      timestamp: formatTime(15),
-      type: 'info',
-      message: "UAT Data source 'CMDB' decay: 1 source reported stale (Freshness: 80%)",
-      application_id: 'PCA',
-      environment: 'UAT',
-      badgeColor: '#FF9F0A'
-    });
-  }
-
-  if (step >= 3) {
-    events.push({
-      id: 'e4',
-      timestamp: formatTime(10),
-      type: 'conflict',
-      message: "Conflict detected between CMDB and SCOM on PCA DB Primary roles",
-      application_id: 'PCA',
-      environment: 'PRODUCTION',
-      badgeColor: '#FF453A'
-    });
-  }
-
-  if (step >= 4) {
-    events.push({
-      id: 'e5',
-      timestamp: formatTime(5),
-      type: 'drift',
-      message: "Drift detected on PCA: Active primary in IBB1, intended primary in SHV",
-      application_id: 'PCA',
-      environment: 'PRODUCTION',
-      badgeColor: '#FF453A'
-    });
-  }
-
-  if (step >= 5) {
-    events.push({
-      id: 'e6',
-      timestamp: formatTime(1),
-      type: 'failover',
-      message: "Failover initiated for PCA: IBB1 -> SHV",
-      application_id: 'PCA',
-      environment: 'PRODUCTION',
-      badgeColor: '#0A84FF'
-    });
-    events.push({
-      id: 'e7',
-      timestamp: formatTime(0.5),
-      type: 'drift',
-      message: "Primary write on SHV — expected IBB1 (Failover Active)",
-      application_id: 'PCA',
-      environment: 'PRODUCTION',
-      badgeColor: '#FF453A'
-    });
-  }
-
-  return events.reverse();
-};
 
 export function RuntimeLocationPage() {
   const navigate = useNavigate();
   const store = useRuntimeLocationStore();
   const {
     applications, dataCenters, isLoadingApplications, importHistory,
-    environmentFilter, techStackFilter, searchQuery, simulatedAgeOffset, setSimulatedAgeOffset,
+    environmentFilter, techStackFilter, searchQuery,
     loadApplications, loadDataCenters,
     setEnvironmentFilter, setTechStackFilter, setSearchQuery,
     confidenceFilters, freshnessFilters, statusFilters,
@@ -1033,25 +792,18 @@ export function RuntimeLocationPage() {
   } = store;
 
   const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'heatmap'>('list');
+  const [dcFilter, setDcFilter]       = useState<string>('ALL');
+  const [primaryDcFilter, setPrimaryDcFilter] = useState<string>('ALL');
 
   const setGlobalStatus = useWsStore((s) => s.setGlobalStatus);
 
   const [showImport,    setShowImport]    = useState(false);
-  const [showSeed,      setShowSeed]      = useState(false);
   const [showIncident,  setShowIncident]  = useState(false);
   const [showDiscovery, setShowDiscovery] = useState(false);
-  const [showDemo,      setShowDemo]      = useState(false);
+  const [showGuide,     setShowGuide]     = useState(false);
   const [showHistory,   setShowHistory]   = useState(false);
   const [showLiveFeed,  setShowLiveFeed]  = useState(true);
   const [liveEvents,    setLiveEvents]    = useState<LiveFeedEvent[]>([]);
-
-  const currentStep = simulatedAgeOffset === 0 ? 1
-    : simulatedAgeOffset === 60 ? 2
-    : simulatedAgeOffset === 120 ? 3
-    : simulatedAgeOffset === 180 ? 4
-    : 5;
-
-  const currentStage = STAGES[currentStep - 1];
 
   const handleWsMessage = useCallback((data: unknown) => {
     const msg = data as { type?: string; application_id?: string; application_name?: string; drift_type?: string; detected_dc?: string; expected_dc?: string };
@@ -1062,8 +814,6 @@ export function RuntimeLocationPage() {
         : msg.drift_type ?? 'Drift detected';
       notify.error(`Drift: ${appName}`, driftLabel);
       loadApplications();
-
-      // Add to live events feed
       setLiveEvents(prev => [
         {
           id: `ws-${Date.now()}`,
@@ -1109,35 +859,24 @@ export function RuntimeLocationPage() {
     loadDataCenters();
   }, []);
 
-  useEffect(() => {
-    setLiveEvents(getLiveEventsForStep(currentStep));
-  }, [currentStep]);
+  // DC options from real backend data
+  const dcOptions = useMemo(() => {
+    const names = new Set([
+      ...dataCenters.map(d => d.short_name ?? d.name).filter(Boolean),
+      ...applications.flatMap(a => a.data_centers),
+    ]);
+    return Array.from(names).sort();
+  }, [dataCenters, applications]);
 
-  const simulatedApps = useMemo(() => {
-    return applications.map((app) => {
-      let staleCount = app.stale_source_count || 0;
-      if (simulatedAgeOffset >= 60 && app.environment === 'UAT' && app.application_id === 'PCA') {
-        staleCount += 1;
-      }
-      if (simulatedAgeOffset >= 120 && app.environment === 'PRODUCTION' && app.application_id === 'PCA') {
-        staleCount += 1;
-      }
+  // Primary DC options from real backend data
+  const primaryDcOptions = useMemo(() => {
+    const names = new Set(applications.map(a => a.primary_write_dc).filter(Boolean) as string[]);
+    return Array.from(names).sort();
+  }, [applications]);
 
-      let status = app.alignment_status;
-      if (simulatedAgeOffset >= 180 && app.application_id === 'PCA' && app.environment === 'PRODUCTION') {
-        status = 'DRIFTED';
-      }
-
-      return {
-        ...app,
-        alignment_status: status,
-        stale_source_count: staleCount,
-      };
-    });
-  }, [applications, simulatedAgeOffset]);
 
   const filtered = useMemo(() => {
-    return simulatedApps.filter((app) => {
+    return applications.filter((app) => {
       if (environmentFilter !== 'ALL' && app.environment !== environmentFilter) return false;
       if (techStackFilter !== 'ALL') {
         const realStacks = app.tech_stacks ?? [];
@@ -1145,13 +884,15 @@ export function RuntimeLocationPage() {
         const stacks = realStacks.length > 0 ? realStacks : mockStacks;
         if (stacks.length > 0 && !stacks.includes(techStackFilter)) return false;
       }
+      // Data Center filter
+      if (dcFilter !== 'ALL' && !app.data_centers.includes(dcFilter)) return false;
+      // Primary Authority filter
+      if (primaryDcFilter !== 'ALL' && app.primary_write_dc !== primaryDcFilter) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         if (!app.application_name.toLowerCase().includes(q) &&
             !app.application_id.toLowerCase().includes(q)) return false;
       }
-
-      // Confidence filters (multi-select)
       if (confidenceFilters && confidenceFilters.length > 0) {
         const label = app.overall_confidence === 4 ? 'HIGH'
           : app.overall_confidence === 3 ? 'MEDIUM'
@@ -1159,37 +900,45 @@ export function RuntimeLocationPage() {
           : 'UNKNOWN';
         if (!confidenceFilters.includes(label)) return false;
       }
-
-      // Freshness filters (multi-select)
       if (freshnessFilters && freshnessFilters.length > 0) {
         const freshLabel = app.stale_source_count === 0 ? 'FRESH'
           : app.stale_source_count === 1 ? 'STALE'
           : 'VERY_STALE';
         if (!freshnessFilters.includes(freshLabel)) return false;
       }
-
-      // Status filters (multi-select)
       if (statusFilters && statusFilters.length > 0) {
         const hasDrift = app.alignment_status === 'DRIFTED';
         const hasConflict = app.confidence_label === 'CONFLICT';
-        
         const matchesDrift = statusFilters.includes('DRIFTED') && hasDrift;
         const matchesConflict = statusFilters.includes('CONFLICT') && hasConflict;
-        
         if (!matchesDrift && !matchesConflict) return false;
       }
-
       return true;
     });
-  }, [simulatedApps, environmentFilter, techStackFilter, searchQuery, confidenceFilters, freshnessFilters, statusFilters]);
+  }, [applications, environmentFilter, techStackFilter, searchQuery, confidenceFilters, freshnessFilters, statusFilters, dcFilter, primaryDcFilter]);
 
   const totalStale = useMemo(() => {
-    return simulatedApps.reduce((acc, a) => acc + (a.stale_source_count > 0 ? 1 : 0), 0);
-  }, [simulatedApps]);
+    return applications.reduce((acc, a) => acc + (a.stale_source_count > 0 ? 1 : 0), 0);
+  }, [applications]);
 
-  const uniqueDCs  = useMemo(() => {
-    return new Set(simulatedApps.flatMap((a) => a.data_centers)).size;
-  }, [simulatedApps]);
+  const uniqueDCs = useMemo(() => {
+    return new Set(applications.flatMap((a) => a.data_centers)).size;
+  }, [applications]);
+
+  const hasActiveFilters = environmentFilter !== 'ALL' || techStackFilter !== 'ALL' || searchQuery ||
+    confidenceFilters.length > 0 || freshnessFilters.length > 0 || statusFilters.length > 0 ||
+    dcFilter !== 'ALL' || primaryDcFilter !== 'ALL';
+
+  function clearAllFilters() {
+    setEnvironmentFilter('ALL');
+    setTechStackFilter('ALL');
+    setSearchQuery('');
+    setConfidenceFilters([]);
+    setFreshnessFilters([]);
+    setStatusFilters([]);
+    setDcFilter('ALL');
+    setPrimaryDcFilter('ALL');
+  }
 
   return (
     <div className="flex gap-6 px-6 py-6 max-w-[1600px] mx-auto min-h-[calc(100vh-100px)]">
@@ -1239,7 +988,7 @@ export function RuntimeLocationPage() {
             }}
           >
             <LayoutList className="w-3.5 h-3.5" />
-            Data Coverage
+            Signal Coverage
           </button>
           <button
             onClick={() => setShowIncident(true)}
@@ -1263,7 +1012,7 @@ export function RuntimeLocationPage() {
             }}
           >
             <History className="w-3.5 h-3.5" />
-            History
+            Import History
             {importHistory.length > 0 && (
               <span
                 className="text-[9px] font-bold px-1 py-0.5 rounded-full"
@@ -1272,18 +1021,6 @@ export function RuntimeLocationPage() {
                 {importHistory.length}
               </span>
             )}
-          </button>
-          <button
-            onClick={() => setShowDemo(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12px] font-semibold"
-            style={{
-              background: 'rgba(10,132,255,0.08)',
-              border: '1px solid rgba(10,132,255,0.3)',
-              color: 'var(--primary-500)',
-            }}
-          >
-            <Play className="w-3.5 h-3.5" />
-            Demo
           </button>
           <button
             onClick={() => setShowLiveFeed((v) => !v)}
@@ -1296,21 +1033,21 @@ export function RuntimeLocationPage() {
           >
             <Activity className="w-3.5 h-3.5" />
             Live Feed
-            {currentStep >= 3 && (
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#FF453A] border-2 border-[#1E1E24] rounded-full animate-pulse animate-ping" />
+            {liveEvents.some(e => e.type === 'drift' || e.type === 'conflict') && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#FF453A] border-2 border-[#1E1E24] rounded-full animate-pulse" />
             )}
           </button>
           <button
-            onClick={() => setShowSeed(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold"
+            onClick={() => setShowGuide(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12px] font-semibold"
             style={{
               background: 'var(--app-surface)',
               border: '1px solid var(--app-border)',
-              color: '#30D158',
+              color: 'var(--text-secondary)',
             }}
           >
-            <Zap className="w-3.5 h-3.5" />
-            Seed
+            <BookOpen className="w-3.5 h-3.5" />
+            Guide
           </button>
           <button
             onClick={() => setShowImport(true)}
@@ -1336,42 +1073,30 @@ export function RuntimeLocationPage() {
         />
       </div>
 
-      {/* Signal coverage banner — explicit gap disclosure per problem statement */}
-      {(() => {
-        const gapStacks = ['Object Storage', 'File Storage'];
-        const wipStacks = ['Oracle OEM', 'AVI LB'];
-        const hasGaps = true;
-        return (
-          <div
-            className="rounded-xl px-4 py-3 flex items-start gap-3"
-            style={{ background: 'rgba(255,159,10,0.05)', border: '1px solid rgba(255,159,10,0.2)' }}
-          >
-            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#FF9F0A' }} />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[12px] font-bold" style={{ color: '#FF9F0A' }}>Signal Coverage Gaps</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,159,10,0.12)', color: '#FF9F0A' }}>
-                  explicit — per FAQ §4 & §5
-                </span>
-              </div>
-              <p className="text-[11px] mt-1" style={{ color: 'var(--text-secondary)' }}>
-                <span className="font-semibold" style={{ color: '#FF453A' }}>Not yet integrated: </span>
-                {gapStacks.join(', ')} — no deterministic signals available.
-                {' '}<span className="font-semibold" style={{ color: '#FF9F0A' }}>WIP (confidence capped): </span>
-                {wipStacks.join(', ')} — proprietary API, using sample CSV, confidence held at MEDIUM.
-                {' '}Operators should verify these stacks manually.
-              </p>
-            </div>
-            <button
-              onClick={() => setShowDiscovery(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold flex-shrink-0"
-              style={{ background: 'rgba(255,159,10,0.1)', color: '#FF9F0A', border: '1px solid rgba(255,159,10,0.25)' }}
-            >
-              View Full Gap Analysis
-            </button>
+      {/* Signal coverage status banner — dynamic from real data */}
+      {applications.length > 0 && totalStale > 0 && (
+        <div
+          className="rounded-xl px-4 py-3 flex items-start gap-3"
+          style={{ background: 'rgba(255,159,10,0.05)', border: '1px solid rgba(255,159,10,0.2)' }}
+        >
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#FF9F0A' }} />
+          <div className="flex-1 min-w-0">
+            <span className="text-[12px] font-bold" style={{ color: '#FF9F0A' }}>
+              {totalStale} application{totalStale !== 1 ? 's have' : ' has'} stale data sources
+            </span>
+            <p className="text-[11px] mt-1" style={{ color: 'var(--text-secondary)' }}>
+              Stale sources reduce confidence scores. Review the Data Quality tab on each affected application before taking operational actions.
+            </p>
           </div>
-        );
-      })()}
+          <button
+            onClick={() => setShowDiscovery(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold flex-shrink-0"
+            style={{ background: 'rgba(255,159,10,0.1)', color: '#FF9F0A', border: '1px solid rgba(255,159,10,0.25)' }}
+          >
+            View Signal Coverage
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -1387,6 +1112,52 @@ export function RuntimeLocationPage() {
           options={STACK_OPTIONS}
           label="Tech Stack"
         />
+        {/* Data Center filter — dynamic from real data */}
+        {dcOptions.length > 0 && (
+          <div className="relative">
+            <select
+              value={dcFilter}
+              onChange={(e) => setDcFilter(e.target.value)}
+              className="appearance-none rounded-xl pl-3 pr-8 py-2 text-[12px] font-medium cursor-pointer"
+              style={{
+                background: dcFilter !== 'ALL' ? 'rgba(10,132,255,0.08)' : 'var(--app-surface)',
+                border: `1px solid ${dcFilter !== 'ALL' ? 'rgba(10,132,255,0.3)' : 'var(--app-border)'}`,
+                color: dcFilter !== 'ALL' ? 'var(--primary-500)' : 'var(--text-primary)',
+                outline: 'none',
+              }}
+              aria-label="Data Center"
+            >
+              <option value="ALL">All Data Centers</option>
+              {dcOptions.map((dc) => (
+                <option key={dc} value={dc}>{dc}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
+          </div>
+        )}
+        {/* Primary Authority filter — dynamic from real data */}
+        {primaryDcOptions.length > 0 && (
+          <div className="relative">
+            <select
+              value={primaryDcFilter}
+              onChange={(e) => setPrimaryDcFilter(e.target.value)}
+              className="appearance-none rounded-xl pl-3 pr-8 py-2 text-[12px] font-medium cursor-pointer"
+              style={{
+                background: primaryDcFilter !== 'ALL' ? 'rgba(48,209,88,0.08)' : 'var(--app-surface)',
+                border: `1px solid ${primaryDcFilter !== 'ALL' ? 'rgba(48,209,88,0.3)' : 'var(--app-border)'}`,
+                color: primaryDcFilter !== 'ALL' ? '#30D158' : 'var(--text-primary)',
+                outline: 'none',
+              }}
+              aria-label="Primary Authority DC"
+            >
+              <option value="ALL">All Primary DCs</option>
+              {primaryDcOptions.map((dc) => (
+                <option key={dc} value={dc}>{dc} (Primary)</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
+          </div>
+        )}
         <div
           className="flex items-center gap-2 flex-1 min-w-[180px] rounded-xl px-3 py-2"
           style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
@@ -1395,15 +1166,19 @@ export function RuntimeLocationPage() {
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search applications…"
+            placeholder="Search by app name or ID…"
             className="flex-1 bg-transparent text-[13px] outline-none"
             style={{ color: 'var(--text-primary)' }}
           />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} style={{ color: 'var(--text-muted)' }}>
+              <X className="w-3 h-3" />
+            </button>
+          )}
         </div>
-        <TimeSimulatorSlider />
 
         {/* View Switcher */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/5 flex-shrink-0">
+        <div className="flex items-center gap-1 p-1 rounded-xl flex-shrink-0" style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}>
           {[
             { id: 'list', label: 'List', icon: LayoutList },
             { id: 'kanban', label: 'Kanban', icon: Server },
@@ -1416,10 +1191,10 @@ export function RuntimeLocationPage() {
                 onClick={() => setViewMode(mode.id as any)}
                 className="p-1.5 rounded-lg text-[11px] font-extrabold flex items-center gap-1.5 transition-all"
                 style={viewMode === mode.id ? {
-                  background: 'var(--primary-500)',
-                  color: '#fff',
+                  background: 'var(--accent)',
+                  color: 'var(--text-inverse)',
                 } : {
-                  color: 'rgba(255,255,255,0.4)',
+                  color: 'var(--text-muted)',
                 }}
                 title={`${mode.label} View`}
               >
@@ -1436,11 +1211,11 @@ export function RuntimeLocationPage() {
         
         {/* Confidence Group */}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-white/30">Confidence:</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Confidence:</span>
           <div className="flex items-center gap-1.5 flex-wrap">
             {['HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'].map((lvl) => {
               const active = confidenceFilters.includes(lvl);
-              const color = lvl === 'HIGH' ? '#30D158' : lvl === 'MEDIUM' ? '#FF9F0A' : lvl === 'LOW' ? '#FF453A' : '#8E8E93';
+              const color = lvl === 'HIGH' ? 'var(--success)' : lvl === 'MEDIUM' ? 'var(--warning)' : lvl === 'LOW' ? 'var(--danger)' : 'var(--text-muted)';
               return (
                 <button
                   key={lvl}
@@ -1453,8 +1228,8 @@ export function RuntimeLocationPage() {
                   }}
                   className="px-2 py-0.5 rounded-lg text-[9px] font-bold border transition-all"
                   style={{
-                    background: active ? `${color}15` : 'rgba(255,255,255,0.02)',
-                    borderColor: active ? `${color}60` : 'rgba(255,255,255,0.06)',
+                    background: active ? `${color}15` : 'var(--app-surface)',
+                    borderColor: active ? `${color}60` : 'var(--app-border)',
                     color: active ? color : 'var(--text-muted)',
                   }}
                 >
@@ -1467,11 +1242,11 @@ export function RuntimeLocationPage() {
 
         {/* Freshness Group */}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-white/30">Freshness:</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Freshness:</span>
           <div className="flex items-center gap-1.5 flex-wrap">
             {['FRESH', 'STALE', 'VERY_STALE'].map((lvl) => {
               const active = freshnessFilters.includes(lvl);
-              const color = lvl === 'FRESH' ? '#30D158' : lvl === 'STALE' ? '#FF9F0A' : '#FF453A';
+              const color = lvl === 'FRESH' ? 'var(--success)' : lvl === 'STALE' ? 'var(--warning)' : 'var(--danger)';
               return (
                 <button
                   key={lvl}
@@ -1484,8 +1259,8 @@ export function RuntimeLocationPage() {
                   }}
                   className="px-2 py-0.5 rounded-lg text-[9px] font-bold border transition-all"
                   style={{
-                    background: active ? `${color}15` : 'rgba(255,255,255,0.02)',
-                    borderColor: active ? `${color}60` : 'rgba(255,255,255,0.06)',
+                    background: active ? `${color}15` : 'var(--app-surface)',
+                    borderColor: active ? `${color}60` : 'var(--app-border)',
                     color: active ? color : 'var(--text-muted)',
                   }}
                 >
@@ -1498,11 +1273,11 @@ export function RuntimeLocationPage() {
 
         {/* Status Group */}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-white/30">Status:</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Status:</span>
           <div className="flex items-center gap-1.5 flex-wrap">
             {['DRIFTED', 'CONFLICT'].map((lvl) => {
               const active = statusFilters.includes(lvl);
-              const color = lvl === 'DRIFTED' ? '#FF453A' : '#FF3B30';
+              const color = lvl === 'DRIFTED' ? 'var(--danger)' : 'var(--danger)';
               return (
                 <button
                   key={lvl}
@@ -1515,8 +1290,8 @@ export function RuntimeLocationPage() {
                   }}
                   className="px-2 py-0.5 rounded-lg text-[9px] font-bold border transition-all"
                   style={{
-                    background: active ? `${color}15` : 'rgba(255,255,255,0.02)',
-                    borderColor: active ? `${color}60` : 'rgba(255,255,255,0.06)',
+                    background: active ? `${color}15` : 'var(--app-surface)',
+                    borderColor: active ? `${color}60` : 'var(--app-border)',
                     color: active ? color : 'var(--text-muted)',
                   }}
                 >
@@ -1528,16 +1303,14 @@ export function RuntimeLocationPage() {
         </div>
 
         {/* Reset Filters button if any are active */}
-        {(confidenceFilters.length > 0 || freshnessFilters.length > 0 || statusFilters.length > 0) && (
+        {hasActiveFilters && (
           <button
-            onClick={() => {
-              setConfidenceFilters([]);
-              setFreshnessFilters([]);
-              setStatusFilters([]);
-            }}
-            className="text-[10px] font-semibold text-white/40 hover:text-white transition-colors ml-auto"
+            onClick={clearAllFilters}
+            className="flex items-center gap-1.5 text-[10px] font-semibold transition-colors ml-auto hover:underline"
+            style={{ color: 'var(--text-muted)' }}
           >
-            Clear Active Filters
+            <X className="w-3 h-3" />
+            Clear All Filters
           </button>
         )}
 
@@ -1571,7 +1344,7 @@ export function RuntimeLocationPage() {
                 <div className="px-5 py-6 flex flex-col items-center gap-2">
                   <History className="w-7 h-7" style={{ color: 'var(--text-muted)' }} strokeWidth={1.5} />
                   <p className="text-[12px]" style={{ color: 'var(--text-secondary)' }}>
-                    No imports yet — use Import CSV or Seed to load topology data
+                    No imports yet — use Import CSV to load telemetry files
                   </p>
                 </div>
               ) : (
@@ -1620,46 +1393,7 @@ export function RuntimeLocationPage() {
         )}
       </AnimatePresence>
 
-      {simulatedAgeOffset > 0 && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          className="rounded-2xl p-4 flex items-start gap-3 border relative overflow-hidden backdrop-blur-md mb-2"
-          style={{
-            background: `${currentStage.color}08`,
-            borderColor: `${currentStage.color}30`,
-          }}
-        >
-          <div
-            className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 animate-ping"
-            style={{ background: currentStage.color }}
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider" style={{ background: `${currentStage.color}15`, color: currentStage.color }}>
-                {currentStage.status}
-              </span>
-              <h4 className="text-[12px] font-bold text-white uppercase tracking-wider">
-                Simulation Step {currentStep}/5: {currentStage.label}
-              </h4>
-            </div>
-            <p className="text-[11px] text-white/70 mt-1">
-              {currentStage.desc}
-            </p>
-          </div>
-          <button
-            onClick={() => setSimulatedAgeOffset(0)}
-            className="text-[10px] font-bold px-2.5 py-1 rounded-lg border flex-shrink-0 hover:bg-white/5 transition-colors"
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              borderColor: 'rgba(255,255,255,0.08)',
-              color: '#fff',
-            }}
-          >
-            End Simulation
-          </button>
-        </motion.div>
-      )}
+
 
       {/* Results count when filtered */}
       {(environmentFilter !== 'ALL' || techStackFilter !== 'ALL' || searchQuery) && !isLoadingApplications && (
@@ -1695,18 +1429,21 @@ export function RuntimeLocationPage() {
               No topology data yet
             </p>
             <p className="text-[12px] mt-1.5 max-w-sm" style={{ color: 'var(--text-muted)' }}>
-              Import one of the 4 CSV files to see where your applications are running,
-              or load the sample dataset to explore the full feature.
+              Import telemetry CSV files or trigger a bulk ingest of documents from the backend to populate your application topology.
             </p>
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setShowSeed(true)}
+              onClick={() => setShowGuide(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold"
-              style={{ background: 'rgba(48,209,88,0.1)', border: '1px solid rgba(48,209,88,0.3)', color: '#30D158' }}
+              style={{
+                background: 'var(--app-surface)',
+                border: '1px solid var(--app-border)',
+                color: 'var(--text-secondary)',
+              }}
             >
-              <Zap className="w-3.5 h-3.5" />
-              Load Sample Data
+              <BookOpen className="w-3.5 h-3.5" />
+              View Guide
             </button>
             <button
               onClick={() => setShowImport(true)}
@@ -1733,8 +1470,21 @@ export function RuntimeLocationPage() {
             No applications match your filters
           </p>
           <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
-            Try adjusting the environment or tech stack filters
+            Try adjusting the Environment, Tech Stack, Data Center, or other filters
           </p>
+          {hasActiveFilters && (
+            <button
+              onClick={clearAllFilters}
+              className="mt-2 px-4 py-2 rounded-xl text-[12px] font-semibold transition-all"
+              style={{
+                background: 'var(--app-surface)',
+                border: '1px solid var(--app-border)',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              Clear All Filters
+            </button>
+          )}
         </div>
       ) : (
         <div>
@@ -1757,15 +1507,15 @@ export function RuntimeLocationPage() {
                     key={env}
                     className="rounded-2xl p-4 flex flex-col gap-3.5"
                     style={{
-                      background: 'rgba(20, 20, 25, 0.4)',
-                      border: '1px solid rgba(255,255,255,0.05)',
+                      background: 'var(--app-surface)',
+                      border: '1px solid var(--app-border)',
                     }}
                   >
                     <div className="flex items-center justify-between px-1.5">
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-white/50">
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-[var(--text-muted)]">
                         {env}
                       </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-white/60 font-mono font-bold">
+                      <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold" style={{ background: 'var(--app-bg-muted)', border: '1px solid var(--app-border)', color: 'var(--text-secondary)' }}>
                         {envApps.length}
                       </span>
                     </div>
@@ -1774,7 +1524,7 @@ export function RuntimeLocationPage() {
                         <AppCard key={`${app.application_id}-${app.environment}`} app={app} index={i} />
                       ))}
                       {envApps.length === 0 && (
-                        <div className="text-center py-12 text-[11px] text-white/30 border border-dashed border-white/5 rounded-2xl bg-white/[0.01]">
+                        <div className="text-center py-12 text-[11px] border border-dashed rounded-2xl" style={{ color: 'var(--text-muted)', borderColor: 'var(--app-border)', background: 'var(--app-bg-muted)' }}>
                           No deployments found
                         </div>
                       )}
@@ -1789,23 +1539,23 @@ export function RuntimeLocationPage() {
             <div
               className="rounded-2xl p-6 flex flex-col gap-4"
               style={{
-                background: 'rgba(20, 20, 25, 0.65)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: 'var(--app-surface)',
+                border: '1px solid var(--app-border)',
                 backdropFilter: 'blur(8px)',
               }}
             >
               <div>
-                <h3 className="text-[14px] font-extrabold text-white uppercase tracking-wider">
+                <h3 className="text-[14px] font-extrabold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>
                   Confidence Heatmap Grid
                 </h3>
-                <p className="text-[11px] text-white/40 mt-1">
+                <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
                   A high-density health grid indicating relative confidence of all tracked application deployments.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3 pt-3">
                 {filtered.map((app) => {
                   const conf = app.overall_confidence;
-                  const color = conf === 4 ? '#30D158' : conf === 3 ? '#FF9F0A' : '#FF453A';
+                  const color = conf === 4 ? 'var(--success)' : conf === 3 ? 'var(--warning)' : 'var(--danger)';
                   return (
                     <motion.div
                       key={`${app.application_id}-${app.environment}`}
@@ -1821,7 +1571,7 @@ export function RuntimeLocationPage() {
                       <span className="text-[10px] font-mono font-extrabold" style={{ color }}>
                         {app.application_id.slice(0, 4).toUpperCase()}
                       </span>
-                      <span className="text-[8px] font-bold opacity-60 text-white/70 uppercase">
+                      <span className="text-[8px] font-bold opacity-60 uppercase" style={{ color: 'var(--text-muted)' }}>
                         {app.environment.slice(0, 4)}
                       </span>
 
@@ -1829,31 +1579,31 @@ export function RuntimeLocationPage() {
                       <div
                         className="absolute bottom-full mb-2.5 hidden group-hover:flex flex-col gap-1.5 p-3 rounded-xl z-50 pointer-events-none w-52 text-left shadow-xl backdrop-blur-md"
                         style={{
-                          background: 'rgba(15, 20, 28, 0.95)',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: 'var(--app-surface-raised)',
+                          border: '1px solid var(--app-border)',
                         }}
                       >
-                        <p className="text-[11px] font-extrabold text-white truncate">
+                        <p className="text-[11px] font-extrabold truncate" style={{ color: 'var(--text-primary)' }}>
                           {app.application_name}
                         </p>
-                        <p className="text-[9px] text-white/50 font-bold uppercase tracking-wider">
+                        <p className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                           {app.application_id} · {app.environment}
                         </p>
-                        <div className="flex justify-between items-center mt-1.5 pt-1.5 border-t border-white/5 text-[10px]">
-                          <span className="text-white/40">Confidence Level:</span>
+                        <div className="flex justify-between items-center mt-1.5 pt-1.5 border-t text-[10px]" style={{ borderColor: 'var(--app-border)' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>Confidence Level:</span>
                           <span className="font-extrabold text-[11px]" style={{ color }}>
                             {conf}/4
                           </span>
                         </div>
                         <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-white/40">Primary Authority:</span>
-                          <span className="font-bold text-white">
+                          <span style={{ color: 'var(--text-muted)' }}>Primary Authority:</span>
+                          <span className="font-bold" style={{ color: 'var(--text-primary)' }}>
                             {app.primary_write_dc || 'N/A'}
                           </span>
                         </div>
                         <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-white/40">Active DCs:</span>
-                          <span className="font-medium text-white">
+                          <span style={{ color: 'var(--text-muted)' }}>Active DCs:</span>
+                          <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>
                             {app.data_centers.join(', ')}
                           </span>
                         </div>
@@ -1870,24 +1620,13 @@ export function RuntimeLocationPage() {
       {/* Modals + Panels */}
       <AnimatePresence>
         {showImport    && <ImportModal        onClose={() => setShowImport(false)} />}
-        {showSeed      && <SeedModal          onClose={() => setShowSeed(false)} />}
         {showIncident  && <IncidentModePanel  onClose={() => setShowIncident(false)} />}
         {showDiscovery && <DataDiscoveryPanel onClose={() => setShowDiscovery(false)} />}
       </AnimatePresence>
 
-      {/* Demo walkthrough (rendered outside AnimatePresence for z-index) */}
+      {/* Portal Guide (renders over everything) */}
       <AnimatePresence>
-        {showDemo && (
-          <DemoWalkthroughOverlay
-            onClose={() => setShowDemo(false)}
-            onNavigateTo={(step) => {
-              // Steps 7 and 8 correlate to Incident Mode and Data Discovery panels
-              if (step === 6) { setShowIncident(true); setShowDiscovery(false); }
-              else if (step === 7) { setShowDiscovery(true); setShowIncident(false); }
-              else { setShowIncident(false); setShowDiscovery(false); }
-            }}
-          />
-        )}
+        {showGuide && <PortalGuidePanel onClose={() => setShowGuide(false)} />}
       </AnimatePresence>
       </div> {/* Close Main Content Area */}
 
@@ -1900,7 +1639,7 @@ export function RuntimeLocationPage() {
             exit={{ width: 0, opacity: 0 }}
             className="flex-shrink-0 hidden lg:flex flex-col rounded-2xl border overflow-hidden"
             style={{
-              background: 'rgba(20, 20, 25, 0.45)',
+              background: 'var(--app-surface)',
               borderColor: 'var(--app-border)',
               height: 'calc(100vh - 120px)',
               position: 'sticky',
@@ -1911,16 +1650,17 @@ export function RuntimeLocationPage() {
             <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: 'var(--app-border)', background: 'var(--app-surface-raised)' }}>
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF453A] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF453A]"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--danger)] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--danger)]"></span>
                 </span>
-                <span className="text-[12px] font-bold text-white uppercase tracking-wider">
+                <span className="text-[12px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>
                   Live Operations Feed
                 </span>
               </div>
               <button
                 onClick={() => setShowLiveFeed(false)}
-                className="p-1 rounded hover:bg-white/5 text-white/40 hover:text-white transition-all"
+                className="p-1 rounded transition-all"
+                style={{ color: 'var(--text-muted)' }}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -1929,7 +1669,7 @@ export function RuntimeLocationPage() {
             {/* Sidebar Feed Container */}
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 custom-scrollbar">
               {liveEvents.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-48 gap-2 text-center text-white/30">
+                <div className="flex flex-col items-center justify-center h-48 gap-2 text-center" style={{ color: 'var(--text-muted)' }}>
                   <Activity className="w-6 h-6 animate-pulse" />
                   <span className="text-[11px] font-semibold">No operational events yet</span>
                 </div>
@@ -1940,8 +1680,8 @@ export function RuntimeLocationPage() {
                     onClick={() => handleEventClick(evt)}
                     className="p-3 rounded-xl border flex flex-col gap-1.5 cursor-pointer transition-all hover:translate-x-1"
                     style={{
-                      background: 'rgba(255,255,255,0.02)',
-                      borderColor: 'rgba(255,255,255,0.05)',
+                      background: 'var(--app-surface-raised)',
+                      borderColor: 'var(--app-border)',
                     }}
                     title={evt.application_id ? `Click to view detail for ${evt.application_id}` : undefined}
                   >
@@ -1949,19 +1689,19 @@ export function RuntimeLocationPage() {
                       <span
                         className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded"
                         style={{
-                          background: evt.badgeColor ? `${evt.badgeColor}15` : 'rgba(255,255,255,0.05)',
+                          background: evt.badgeColor ? `${evt.badgeColor}15` : 'var(--app-bg-muted)',
                           color: evt.badgeColor || 'var(--text-muted)',
                         }}
                       >
                         {evt.type.toUpperCase()}
                       </span>
-                      <span className="text-[9px] font-mono text-white/30">{evt.timestamp}</span>
+                      <span className="text-[9px] font-mono" style={{ color: 'var(--text-muted)' }}>{evt.timestamp}</span>
                     </div>
-                    <p className="text-[11px] leading-relaxed text-white/80 font-medium">
+                    <p className="text-[11px] leading-relaxed font-medium" style={{ color: 'var(--text-secondary)' }}>
                       {evt.message}
                     </p>
                     {evt.application_id && (
-                      <div className="flex items-center gap-1 mt-0.5 text-[9px] font-semibold text-[#0A84FF] group hover:underline transition-all">
+                      <div className="flex items-center gap-1 mt-0.5 text-[9px] font-semibold group hover:underline transition-all" style={{ color: 'var(--accent)' }}>
                         <span>Investigate {evt.application_id}</span>
                         <span className="transition-transform group-hover:translate-x-0.5"> →</span>
                       </div>

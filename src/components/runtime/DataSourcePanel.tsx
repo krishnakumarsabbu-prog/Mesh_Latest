@@ -130,19 +130,19 @@ export function DataSourcePanel({ dataSources }: DataSourcePanelProps) {
       )}
 
       {/* Freshness Heatmap */}
-      <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--app-border)', background: 'rgba(20,20,25,0.2)' }}>
-        <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--app-border)', background: 'var(--app-surface)' }}>
+      <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--app-border)', background: 'var(--app-surface)' }}>
+        <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--app-border)', background: 'var(--app-surface-raised)' }}>
           <div className="flex items-center gap-2">
-            <Database className="w-4 h-4 text-white/60" />
-            <span className="text-[13px] font-bold text-white uppercase tracking-wider">Signals Freshness Heatmap</span>
+            <Database className="w-4 h-4 animate-pulse" style={{ color: 'var(--text-muted)' }} />
+            <span className="text-[13px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>Signals Freshness Heatmap</span>
           </div>
-          <span className="text-[10px] text-white/40 font-mono">Updated real-time</span>
+          <span className="text-[10px] font-mono" style={{ color: 'var(--text-muted)' }}>Updated real-time</span>
         </div>
 
         <div className="p-4 overflow-x-auto">
           <div className="min-w-[650px] flex flex-col gap-3">
             {/* Headers */}
-            <div className="grid grid-cols-12 gap-2 text-[10px] font-bold uppercase tracking-widest text-white/40 px-2 pb-1 border-b border-white/5">
+            <div className="grid grid-cols-12 gap-2 text-[10px] font-bold uppercase tracking-widest px-2 pb-1 border-b" style={{ color: 'var(--text-muted)', borderColor: 'var(--app-border)' }}>
               <div className="col-span-4">Source System</div>
               <div className="col-span-5 grid grid-cols-4 gap-2 text-center">
                 <span>0-30m</span>
@@ -171,41 +171,42 @@ export function DataSourcePanel({ dataSources }: DataSourcePanelProps) {
                 ageText = `${(ageMin / 1440).toFixed(1)}d ago`;
               }
 
-              const statusColor = src.status === 'FRESH' ? '#30D158'
-                : src.status === 'STALE' ? '#FF9F0A'
-                : src.status === 'VERY_STALE' ? '#FF453A'
-                : '#8E8E93';
+              const statusColor = src.status === 'FRESH' ? 'var(--success)'
+                : src.status === 'STALE' ? 'var(--warning)'
+                : src.status === 'VERY_STALE' ? 'var(--danger)'
+                : 'var(--text-muted)';
 
               return (
                 <div
                   key={src.source_name}
-                  className="grid grid-cols-12 gap-2 items-center p-2 rounded-xl border transition-all hover:bg-white/[0.02]"
+                  className="grid grid-cols-12 gap-2 items-center p-2 rounded-xl border transition-all hover:bg-[var(--app-surface-hover)]"
                   style={{
-                    borderColor: 'rgba(255,255,255,0.03)',
-                    background: 'rgba(255,255,255,0.01)',
+                    borderColor: 'var(--app-border)',
+                    background: 'var(--app-surface)',
                   }}
                 >
                   {/* Column 1: Source Info */}
                   <div className="col-span-4 min-w-0 pr-2">
                     <div className="flex items-center gap-2">
-                      <Database className="w-3.5 h-3.5 flex-shrink-0 text-white/40" />
-                      <span className="text-[12px] font-bold text-white truncate">
+                      <Database className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--text-muted)' }} />
+                      <span className="text-[12px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>
                         {SOURCE_DISPLAY[src.source_name] ?? src.display_name}
                       </span>
                       {WIP_SOURCES.has(src.source_name) && (
                         <span
-                          className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-[#FF9F0A]/10 text-[#FF9F0A] border border-[#FF9F0A]/20"
+                          className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-[var(--warning-subtle)] text-[var(--warning)] border"
+                          style={{ borderColor: 'var(--warning)' }}
                         >
                           WIP
                         </span>
                       )}
                     </div>
                     {WIP_SOURCES.has(src.source_name) ? (
-                      <p className="text-[9px] mt-0.5 leading-tight" style={{ color: '#FF9F0A', maxWidth: 180 }}>
+                      <p className="text-[9px] mt-0.5 leading-tight" style={{ color: 'var(--warning)', maxWidth: 180 }}>
                         {WIP_GAP_NOTES[src.source_name]}
                       </p>
                     ) : (
-                      <p className="text-[10px] text-white/40 mt-0.5">
+                      <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
                         {src.record_count.toLocaleString()} records ingested
                       </p>
                     )}
@@ -216,9 +217,9 @@ export function DataSourcePanel({ dataSources }: DataSourcePanelProps) {
                     {[0, 1, 2, 3].map((catIndex) => {
                       const isActive = ageCategory === catIndex;
                       
-                      let cellBg = 'rgba(255,255,255,0.02)';
-                      let cellBorder = '1px solid rgba(255,255,255,0.05)';
-                      let textStyle: React.CSSProperties = { color: 'rgba(255,255,255,0.15)' };
+                      let cellBg = 'var(--app-bg-muted)';
+                      let cellBorder = '1px solid var(--app-border)';
+                      let textStyle: React.CSSProperties = { color: 'var(--text-muted)' };
 
                       if (isActive) {
                         cellBg = `${statusColor}15`;
@@ -256,11 +257,11 @@ export function DataSourcePanel({ dataSources }: DataSourcePanelProps) {
                   <div className="col-span-3 flex flex-col items-end gap-1">
                     <div className="flex gap-2">
                       <div className="flex flex-col items-end">
-                        <span className="text-[8px] text-white/30 uppercase font-mono mb-0.5">Topo</span>
+                        <span className="text-[8px] uppercase font-mono mb-0.5" style={{ color: 'var(--text-muted)' }}>Topo</span>
                         <ConfidenceBadge level={src.topology_confidence as 1 | 2 | 3 | 4} />
                       </div>
                       <div className="flex flex-col items-end">
-                        <span className="text-[8px] text-white/30 uppercase font-mono mb-0.5">Traffic</span>
+                        <span className="text-[8px] uppercase font-mono mb-0.5" style={{ color: 'var(--text-muted)' }}>Traffic</span>
                         <ConfidenceBadge level={src.traffic_confidence as 1 | 2 | 3 | 4} />
                       </div>
                     </div>
@@ -268,7 +269,7 @@ export function DataSourcePanel({ dataSources }: DataSourcePanelProps) {
                       className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded mt-0.5"
                       style={{ background: `${statusColor}15`, color: statusColor }}
                     >
-                      {src.status.replace('_', ' ')}
+                      {String(src?.status || 'UNKNOWN').replace('_', ' ')}
                     </span>
                   </div>
                 </div>

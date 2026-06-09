@@ -33,34 +33,34 @@ interface RuntimeDependencyGraphProps {
 // 1. App Node (Center)
 function AppNode({ data }: NodeProps) {
   const d = data as { name: string; confidence: number };
-  const confColor = d.confidence === 4 ? '#30D158' : d.confidence === 3 ? '#FF9F0A' : '#FF453A';
+  const confColor = d.confidence === 4 ? 'var(--success)' : d.confidence === 3 ? 'var(--warning)' : 'var(--danger)';
   
   return (
     <div 
       className="p-4 rounded-2xl border text-center shadow-xl select-none" 
       style={{ 
         width: 240, 
-        background: 'rgba(10, 20, 40, 0.9)', 
-        borderColor: 'rgba(10, 132, 255, 0.5)', 
-        boxShadow: '0 0 25px rgba(10, 132, 255, 0.15)' 
+        background: 'var(--app-surface-raised)', 
+        borderColor: 'var(--accent)', 
+        boxShadow: 'var(--shadow-md)' 
       }}
     >
-      <div className="text-[9px] font-extrabold text-[#0A84FF] uppercase tracking-widest mb-1">
+      <div className="text-[9px] font-extrabold text-[var(--accent)] uppercase tracking-widest mb-1">
         Application Console
       </div>
-      <div className="text-[14px] font-extrabold text-white truncate">{d.name}</div>
-      <div className="mt-2.5 flex items-center justify-center gap-1.5 border-t border-white/5 pt-2">
-        <span className="text-[10px] text-white/50">Overall Confidence:</span>
+      <div className="text-[14px] font-extrabold text-[var(--text-primary)] truncate">{d.name}</div>
+      <div className="mt-2.5 flex items-center justify-center gap-1.5 border-t border-[var(--app-border)] pt-2">
+        <span className="text-[10px] text-[var(--text-muted)]">Overall Confidence:</span>
         <span 
           className="text-[10px] font-extrabold px-2 py-0.5 rounded-full" 
-          style={{ background: `${confColor}18`, color: confColor }}
+          style={{ background: 'var(--accent-subtle)', color: confColor }}
         >
           {d.confidence}/4
         </span>
       </div>
       
-      <Handle type="source" position={Position.Left} id="left" style={{ background: '#0A84FF', width: 8, height: 8 }} />
-      <Handle type="source" position={Position.Right} id="right" style={{ background: '#0A84FF', width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Left} id="left" style={{ background: 'var(--accent)', width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Right} id="right" style={{ background: 'var(--accent)', width: 8, height: 8 }} />
     </div>
   );
 }
@@ -74,37 +74,37 @@ function DCNode({ data }: NodeProps) {
       className="p-3.5 rounded-xl border shadow-lg relative select-none" 
       style={{ 
         width: 190, 
-        background: d.isFailed ? 'rgba(255, 69, 58, 0.08)' : 'rgba(20, 20, 25, 0.9)', 
-        borderColor: d.isFailed ? 'rgba(255, 69, 58, 0.5)' : 'rgba(255, 255, 255, 0.08)',
-        boxShadow: d.isFailed ? '0 0 15px rgba(255, 69, 58, 0.15)' : 'none'
+        background: d.isFailed ? 'var(--danger-subtle)' : 'var(--app-surface)', 
+        borderColor: d.isFailed ? 'var(--danger)' : 'var(--app-border)',
+        boxShadow: d.isFailed ? '0 0 15px rgba(255, 69, 58, 0.15)' : 'var(--shadow-sm)'
       }}
     >
       <div className="flex items-center gap-2 mb-2">
-        <div className="p-1 rounded bg-white/5 flex items-center justify-center">
-          <Server className={`w-3.5 h-3.5 ${d.isFailed ? 'text-[#FF453A] animate-pulse' : 'text-white/80'}`} />
+        <div className="p-1 rounded bg-[var(--app-bg-muted)] flex items-center justify-center">
+          <Server className={`w-3.5 h-3.5 ${d.isFailed ? 'text-[var(--danger)] animate-pulse' : 'text-[var(--text-secondary)]'}`} />
         </div>
-        <span className="text-[11px] font-extrabold text-white tracking-wide truncate">{d.name}</span>
+        <span className="text-[11px] font-extrabold text-[var(--text-primary)] tracking-wide truncate">{d.name}</span>
       </div>
-      <div className="text-[9px] text-white/50 flex flex-col gap-0.5 border-t border-white/5 pt-1.5">
-        <div>Region: <span className="text-white/80 font-medium">{d.region}</span></div>
-        <div>Zone: <span className="text-white/80 font-medium">{d.zone}</span></div>
+      <div className="text-[9px] text-[var(--text-muted)] flex flex-col gap-0.5 border-t border-[var(--app-border)] pt-1.5">
+        <div>Region: <span className="text-[var(--text-secondary)] font-medium">{d.region}</span></div>
+        <div>Zone: <span className="text-[var(--text-secondary)] font-medium">{d.zone}</span></div>
       </div>
       
       {d.isFailed && (
-        <span className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#FF453A] text-white shadow-md animate-bounce">
+        <span className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded text-[8px] font-bold bg-[var(--danger)] text-[var(--text-inverse)] shadow-md animate-bounce">
           OFFLINE
         </span>
       )}
 
       {d.branch === 'left' ? (
         <>
-          <Handle type="target" position={Position.Right} style={{ background: 'rgba(255, 255, 255, 0.25)', width: 6, height: 6 }} />
-          <Handle type="source" position={Position.Left} style={{ background: 'rgba(255, 255, 255, 0.25)', width: 6, height: 6 }} />
+          <Handle type="target" position={Position.Right} style={{ background: 'var(--text-muted)', width: 6, height: 6 }} />
+          <Handle type="source" position={Position.Left} style={{ background: 'var(--text-muted)', width: 6, height: 6 }} />
         </>
       ) : (
         <>
-          <Handle type="target" position={Position.Left} style={{ background: 'rgba(255, 255, 255, 0.25)', width: 6, height: 6 }} />
-          <Handle type="source" position={Position.Right} style={{ background: 'rgba(255, 255, 255, 0.25)', width: 6, height: 6 }} />
+          <Handle type="target" position={Position.Left} style={{ background: 'var(--text-muted)', width: 6, height: 6 }} />
+          <Handle type="source" position={Position.Right} style={{ background: 'var(--text-muted)', width: 6, height: 6 }} />
         </>
       )}
     </div>
@@ -120,7 +120,7 @@ function AssetNode({ data }: NodeProps) {
   const role = d.isPrimary ? 'PRIMARY' : asset.latest_replication_role;
   const isWrite = d.isPrimary || (asset.write_authority && !d.isFailed);
 
-  const stateColor = state?.toUpperCase() === 'ACTIVE' ? '#30D158' : state?.toUpperCase() === 'STANDBY' ? '#FF9F0A' : '#FF453A';
+  const stateColor = state?.toUpperCase() === 'ACTIVE' ? 'var(--success)' : state?.toUpperCase() === 'STANDBY' ? 'var(--warning)' : 'var(--danger)';
 
   return (
     <div 
@@ -131,61 +131,61 @@ function AssetNode({ data }: NodeProps) {
       <div 
         className="rounded-xl overflow-hidden border transition-all duration-200 group-hover:scale-[1.02] shadow-md" 
         style={{ 
-          background: 'rgba(15, 18, 30, 0.95)',
+          background: 'var(--app-surface-raised)',
           borderColor: d.isFailed
-            ? 'rgba(255, 69, 58, 0.45)'
+            ? 'var(--danger)'
             : isWrite
-            ? 'rgba(48, 209, 88, 0.4)'
-            : 'rgba(255, 255, 255, 0.08)',
+            ? 'var(--success)'
+            : 'var(--app-border)',
           boxShadow: d.isFailed
             ? '0 0 15px rgba(255, 69, 58, 0.15)'
             : isWrite
-            ? '0 0 15px rgba(48, 209, 88, 0.1)'
-            : 'none'
+            ? '0 0 15px rgba(0, 176, 116, 0.1)'
+            : 'var(--shadow-sm)'
         }}
       >
         <div 
-          className="px-3 py-2 flex items-center gap-1.5 border-b border-white/5" 
-          style={{ background: isWrite ? 'rgba(48, 209, 88, 0.06)' : 'rgba(255, 255, 255, 0.015)' }}
+          className="px-3 py-2 flex items-center gap-1.5 border-b border-[var(--app-border)]" 
+          style={{ background: isWrite ? 'var(--success-subtle)' : 'var(--app-surface)' }}
         >
-          <div className="p-1 rounded bg-white/5 flex items-center justify-center">
+          <div className="p-1 rounded bg-[var(--app-bg-muted)] flex items-center justify-center">
             <TechStackIcon techStack={asset.tech_stack} size={11} />
           </div>
-          <span className="text-[9px] font-extrabold uppercase tracking-widest text-white/70">
+          <span className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--text-secondary)]">
             {techStackLabel(asset.tech_stack)}
           </span>
           {isWrite ? (
-            <span className="ml-auto text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[#30D158]/10 text-[#30D158] border border-[#30D158]/20 animate-pulse">
+            <span className="ml-auto text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--success-subtle)] text-[var(--success)] border border-[var(--success)]/20 animate-pulse">
               WRITE
             </span>
           ) : (
-            <span className="ml-auto text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-white/5 text-white/60">
+            <span className="ml-auto text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--app-bg-muted)] text-[var(--text-muted)]">
               READ
             </span>
           )}
         </div>
         
         <div className="p-3">
-          <div className="text-[12px] font-bold text-white truncate mb-1">{asset.name}</div>
-          <div className="text-[9px] text-white/40 truncate">{asset.host}</div>
+          <div className="text-[12px] font-bold text-[var(--text-primary)] truncate mb-1">{asset.name}</div>
+          <div className="text-[9px] text-[var(--text-muted)] truncate">{asset.host}</div>
           
-          <div className="flex items-center justify-between text-[10px] mt-2.5 border-t border-white/5 pt-2 text-white/50">
+          <div className="flex items-center justify-between text-[10px] mt-2.5 border-t border-[var(--app-border)] pt-2 text-[var(--text-muted)]">
             <span>State: <span className="font-bold" style={{ color: stateColor }}>{state}</span></span>
-            <span>Role: <span className="font-bold text-white/80">{role || 'NONE'}</span></span>
+            <span>Role: <span className="font-bold text-[var(--text-secondary)]">{role || 'NONE'}</span></span>
           </div>
         </div>
       </div>
       
       {/* Handles */}
       {d.branch === 'left' ? (
-        <Handle type="target" id="dc-link" position={Position.Right} style={{ background: 'rgba(255, 255, 255, 0.25)', width: 6, height: 6 }} />
+        <Handle type="target" id="dc-link" position={Position.Right} style={{ background: 'var(--text-muted)', width: 6, height: 6 }} />
       ) : (
-        <Handle type="target" id="dc-link" position={Position.Left} style={{ background: 'rgba(255, 255, 255, 0.25)', width: 6, height: 6 }} />
+        <Handle type="target" id="dc-link" position={Position.Left} style={{ background: 'var(--text-muted)', width: 6, height: 6 }} />
       )}
       
       {/* Top/Bottom handles for replication connections between components */}
-      <Handle type="source" id="rep-out" position={Position.Top} style={{ background: '#0A84FF', width: 6, height: 6, opacity: 0.6 }} />
-      <Handle type="target" id="rep-in" position={Position.Bottom} style={{ background: '#0A84FF', width: 6, height: 6, opacity: 0.6 }} />
+      <Handle type="source" id="rep-out" position={Position.Top} style={{ background: 'var(--accent)', width: 6, height: 6, opacity: 0.6 }} />
+      <Handle type="target" id="rep-in" position={Position.Bottom} style={{ background: 'var(--accent)', width: 6, height: 6, opacity: 0.6 }} />
     </div>
   );
 }
@@ -326,7 +326,7 @@ export function RuntimeDependencyGraph({
           source: 'app',
           target: `dc-${dcId}`,
           sourceHandle: branch,
-          style: { stroke: 'rgba(255,255,255,0.08)', strokeWidth: 1.5 },
+          style: { stroke: 'var(--app-border)', strokeWidth: 1.5 },
         });
 
         // Position Asset Nodes surrounding parent DC Node
@@ -356,7 +356,7 @@ export function RuntimeDependencyGraph({
             source: `dc-${dcId}`,
             target: `asset-${asset.id}`,
             targetHandle: 'dc-link',
-            style: { stroke: 'rgba(255,255,255,0.08)', strokeWidth: 1.2 },
+            style: { stroke: 'var(--app-border)', strokeWidth: 1.2 },
           });
 
           assetY += 130;
@@ -414,15 +414,15 @@ export function RuntimeDependencyGraph({
           animated: isFlowActive,
           className: isFlowActive ? 'animated-flow-edge' : 'animated-flow-edge-paused',
           style: {
-            stroke: isFlowActive ? '#30D158' : '#FF453A',
+            stroke: isFlowActive ? 'var(--success)' : 'var(--danger)',
             strokeWidth: 2,
             opacity: isFlowActive ? 0.75 : 0.35,
           },
           labelStyle: {
-            fill: '#ffffff',
+            fill: 'var(--text-primary)',
             fontSize: 9,
             fontWeight: '600',
-            background: '#0c0f1d',
+            background: 'var(--app-surface)',
           },
         });
       });
@@ -445,11 +445,11 @@ export function RuntimeDependencyGraph({
       stroke-dasharray: 4, 4;
     }
     .react-flow__edge-textbg {
-      fill: #0c0f1d !important;
+      fill: var(--app-surface) !important;
       rx: 4;
     }
     .react-flow__edge-text {
-      fill: rgba(255, 255, 255, 0.75) !important;
+      fill: var(--text-secondary) !important;
     }
   `;
 
@@ -458,8 +458,8 @@ export function RuntimeDependencyGraph({
       className="flex rounded-2xl overflow-hidden border relative" 
       style={{ 
         height: 520, 
-        background: 'radial-gradient(circle at 50% 50%, #0c0f1d 0%, #07080f 100%)',
-        borderColor: 'rgba(255, 255, 255, 0.05)'
+        background: 'var(--map-container-bg)',
+        borderColor: 'var(--app-border)'
       }}
     >
       <style>{inlineCss}</style>
@@ -481,14 +481,14 @@ export function RuntimeDependencyGraph({
               variant={BackgroundVariant.Dots}
               gap={24}
               size={1}
-              color="rgba(255,255,255,0.02)"
+              color="var(--map-grid-color)"
             />
             <Controls
               style={{
-                background: '#0d111e',
-                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'var(--app-surface)',
+                border: '1px solid var(--app-border)',
                 borderRadius: 12,
-                boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
+                boxShadow: 'var(--shadow-sm)',
               }}
             />
           </ReactFlow>
@@ -501,25 +501,25 @@ export function RuntimeDependencyGraph({
           <div 
             className="absolute top-0 right-0 h-full w-80 border-l flex flex-col z-50 shadow-2xl overflow-y-auto animate-slideInRight"
             style={{ 
-              background: 'rgba(10, 14, 26, 0.98)', 
-              borderColor: 'rgba(255, 255, 255, 0.08)',
+              background: 'var(--app-surface-raised)', 
+              borderColor: 'var(--app-border)',
               backdropFilter: 'blur(12px)'
             }}
           >
             {/* Header */}
-            <div className="p-4 border-b border-white/5 flex items-center justify-between">
+            <div className="p-4 border-b border-[var(--app-border)] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="p-1 rounded bg-white/5 flex items-center justify-center">
+                <div className="p-1 rounded bg-[var(--app-bg-muted)] flex items-center justify-center">
                   <TechStackIcon techStack={selectedAsset.tech_stack} size={13} />
                 </div>
                 <div>
-                  <h4 className="text-[13px] font-bold text-white truncate max-w-[180px]">{selectedAsset.name}</h4>
+                  <h4 className="text-[13px] font-bold text-[var(--text-primary)] truncate max-w-[180px]">{selectedAsset.name}</h4>
                   <p className="text-[9px]" style={{ color: 'var(--text-muted)' }}>Resource Telemetry Audit</p>
                 </div>
               </div>
               <button 
                 onClick={() => setSelectedAsset(null)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/5"
+                className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--app-surface-hover)]"
                 style={{ color: 'var(--text-muted)' }}
               >
                 <X className="w-4 h-4" />
@@ -530,47 +530,47 @@ export function RuntimeDependencyGraph({
             <div className="p-4 flex flex-col gap-4 text-[11px]">
               
               {/* Asset Identity Details */}
-              <div className="flex flex-col gap-1.5 bg-white/5 p-3 rounded-xl border border-white/5">
-                <div className="text-[9px] font-extrabold uppercase text-white/40 tracking-wider mb-1">Infrastructure details</div>
+              <div className="flex flex-col gap-1.5 bg-[var(--app-bg-muted)] p-3 rounded-xl border border-[var(--app-border)]">
+                <div className="text-[9px] font-extrabold uppercase text-[var(--text-muted)] tracking-wider mb-1">Infrastructure details</div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Asset Host:</span>
-                  <span className="text-white font-medium select-all">{selectedAsset.host}</span>
+                  <span className="text-[var(--text-secondary)]">Asset Host:</span>
+                  <span className="text-[var(--text-primary)] font-medium select-all">{selectedAsset.host}</span>
                 </div>
                 {selectedAsset.port && (
                   <div className="flex justify-between">
-                    <span className="text-white/60">Registry Port:</span>
-                    <span className="text-white font-medium">{selectedAsset.port}</span>
+                    <span className="text-[var(--text-secondary)]">Registry Port:</span>
+                    <span className="text-[var(--text-primary)] font-medium">{selectedAsset.port}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-white/60">Platform OS:</span>
-                  <span className="text-white font-medium">{selectedAsset.platform}</span>
+                  <span className="text-[var(--text-secondary)]">Platform OS:</span>
+                  <span className="text-[var(--text-primary)] font-medium">{selectedAsset.platform}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Environment:</span>
-                  <span className="text-white font-medium text-emerald-400">{selectedAsset.environment}</span>
+                  <span className="text-[var(--text-secondary)]">Environment:</span>
+                  <span className="text-[var(--success)] font-medium">{selectedAsset.environment}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Data Center:</span>
-                  <span className="text-white font-bold">{selectedAsset.data_center?.name || 'N/A'}</span>
+                  <span className="text-[var(--text-secondary)]">Data Center:</span>
+                  <span className="text-[var(--text-primary)] font-bold">{selectedAsset.data_center?.name || 'N/A'}</span>
                 </div>
               </div>
 
               {/* Data Consistency Model */}
-              <div className="flex flex-col gap-1.5 bg-white/5 p-3 rounded-xl border border-white/5">
-                <div className="text-[9px] font-extrabold uppercase text-white/40 tracking-wider mb-1">Consistency Model</div>
+              <div className="flex flex-col gap-1.5 bg-[var(--app-bg-muted)] p-3 rounded-xl border border-[var(--app-border)]">
+                <div className="text-[9px] font-extrabold uppercase text-[var(--text-muted)] tracking-wider mb-1">Consistency Model</div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Role Authority:</span>
+                  <span className="text-[var(--text-secondary)]">Role Authority:</span>
                   <span 
                     className="font-extrabold"
-                    style={{ color: selectedAsset.write_authority ? '#30D158' : '#FF9F0A' }}
+                    style={{ color: selectedAsset.write_authority ? 'var(--success)' : 'var(--warning)' }}
                   >
                     {selectedAsset.write_authority ? 'Write Primary' : 'Read Replica'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Sync Pattern:</span>
-                  <span className="text-white font-medium">
+                  <span className="text-[var(--text-secondary)]">Sync Pattern:</span>
+                  <span className="text-[var(--text-primary)] font-medium">
                     {selectedAsset.tech_stack === 'oracle' 
                       ? 'Synchronous (Data Guard)' 
                       : selectedAsset.tech_stack === 'mongodb' 
@@ -579,35 +579,35 @@ export function RuntimeDependencyGraph({
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Last Sync Time:</span>
-                  <span className="text-white font-medium flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-[#30D158]" />
+                  <span className="text-[var(--text-secondary)]">Last Sync Time:</span>
+                  <span className="text-[var(--text-primary)] font-medium flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-[var(--success)]" />
                     {formatRelativeTime(selectedAsset.last_seen_at)}
                   </span>
                 </div>
               </div>
 
               {/* Confidence Matrix evidence */}
-              <div className="flex flex-col gap-2 bg-white/5 p-3 rounded-xl border border-white/5">
-                <div className="text-[9px] font-extrabold uppercase text-white/40 tracking-wider">Source Evidence Audit</div>
+              <div className="flex flex-col gap-2 bg-[var(--app-bg-muted)] p-3 rounded-xl border border-[var(--app-border)]">
+                <div className="text-[9px] font-extrabold uppercase text-[var(--text-muted)] tracking-wider">Source Evidence Audit</div>
                 
                 <div className="flex items-start gap-2.5 mt-1">
-                  <div className="p-1 rounded bg-[#30D158]/10 flex-shrink-0 mt-0.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#30D158]" />
+                  <div className="p-1 rounded bg-[var(--success-subtle)] flex-shrink-0 mt-0.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[var(--success)]" />
                   </div>
                   <div>
-                    <div className="font-semibold text-white">Source Authority: {selectedAsset.data_source}</div>
-                    <div className="text-[9px] text-white/50 mt-0.5">Verified deterministic discovery telemetry.</div>
+                    <div className="font-semibold text-[var(--text-primary)]">Source Authority: {selectedAsset.data_source}</div>
+                    <div className="text-[9px] text-[var(--text-muted)] mt-0.5">Verified deterministic discovery telemetry.</div>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5 mt-1 border-t border-white/5 pt-2">
-                  <div className="p-1 rounded bg-[#0A84FF]/10 flex-shrink-0 mt-0.5">
-                    <Clock className="w-3.5 h-3.5 text-[#0A84FF]" />
+                <div className="flex items-start gap-2.5 mt-1 border-t border-[var(--app-border)] pt-2">
+                  <div className="p-1 rounded bg-[var(--accent-subtle)] flex-shrink-0 mt-0.5">
+                    <Clock className="w-3.5 h-3.5 text-[var(--accent)]" />
                   </div>
                   <div>
-                    <div className="font-semibold text-white">Import Telemetry age</div>
-                    <div className="text-[9px] text-white/50 mt-0.5">Signal timestamp matches design register.</div>
+                    <div className="font-semibold text-[var(--text-primary)]">Import Telemetry age</div>
+                    <div className="text-[9px] text-[var(--text-muted)] mt-0.5">Signal timestamp matches design register.</div>
                   </div>
                 </div>
               </div>
@@ -615,12 +615,12 @@ export function RuntimeDependencyGraph({
               {/* Raw JSON evidence metadata */}
               {selectedAsset.metadata && Object.keys(selectedAsset.metadata).length > 0 && (
                 <div className="flex flex-col gap-1.5">
-                  <div className="text-[9px] font-extrabold uppercase text-white/40 tracking-wider flex items-center gap-1.5">
+                  <div className="text-[9px] font-extrabold uppercase text-[var(--text-muted)] tracking-wider flex items-center gap-1.5">
                     <FileJson className="w-3 h-3" />
                     Raw Source Evidence Fields
                   </div>
                   <pre 
-                    className="p-3 rounded-xl border text-[10px] font-mono text-white/80 overflow-x-auto max-h-[160px] bg-black/60 border-white/5"
+                    className="p-3 rounded-xl border text-[10px] font-mono text-[var(--text-secondary)] overflow-x-auto max-h-[160px] bg-[var(--app-surface)] border-[var(--app-border)]"
                     style={{ scrollbarWidth: 'none' }}
                   >
                     {JSON.stringify(selectedAsset.metadata, null, 2)}

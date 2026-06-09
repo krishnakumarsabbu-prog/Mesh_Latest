@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, MapPin, CircleCheck as CheckCircle, GitBranch, Server, Database, MessageSquare, Layers, History, Clock, GitCompare, CircleAlert as AlertCircle, CircleHelp as HelpCircle, Target, ClipboardList, ShieldCheck, CircleHelp as UnknownIcon, X } from 'lucide-react';
+import { ArrowLeft, MapPin, CircleCheck as CheckCircle, GitBranch, Server, Database, MessageSquare, Layers, Network, History, Clock, GitCompare, CircleAlert as AlertCircle, CircleHelp as HelpCircle, Target, ClipboardList, ShieldCheck, CircleHelp as UnknownIcon, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRuntimeLocationStore } from '@/store/runtimeLocationStore';
 import { STAGES } from './RuntimeLocationPage';
@@ -16,6 +16,7 @@ import { LocationMap } from '@/components/runtime/LocationMap';
 import { RuntimeDependencyGraph } from '@/components/runtime/RuntimeDependencyGraph';
 import { IntentVsActualTab } from '@/components/runtime/IntentVsActualTab';
 import { AuditLogTab } from '@/components/runtime/AuditLogTab';
+import { RuntimeHierarchyTree } from '@/components/runtime/RuntimeHierarchyTree';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, AreaChart, Area, ReferenceLine
 } from 'recharts';
@@ -24,10 +25,11 @@ import type {
   ApplicationComponent, AssetEnvironment, RuntimeSnapshot, TechStack, ApplicationLocationDetail, EnvComparisonRow,
 } from '@/types';
 
-type TabId = 'map' | 'graph' | 'components' | 'openshift' | 'intent' | 'quality' | 'snapshots' | 'compare' | 'audit';
+type TabId = 'map' | 'hierarchy' | 'graph' | 'components' | 'openshift' | 'intent' | 'quality' | 'snapshots' | 'compare' | 'audit';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: 'map',        label: 'DC Distribution', icon: MapPin },
+  { id: 'hierarchy',  label: 'Topology Hierarchy', icon: Network },
   { id: 'graph',      label: 'Dependency Graph', icon: GitBranch },
   { id: 'components', label: 'Components',      icon: Layers },
   { id: 'openshift',  label: 'OpenShift Console', icon: Layers },
@@ -49,7 +51,7 @@ function OperatorQuickSummary({ detail }: { detail: ApplicationLocationDetail })
   const conf = detail.overall_confidence;
 
   const confLabel = conf === 4 ? 'HIGH' : conf === 3 ? 'MEDIUM' : conf === 2 ? 'LOW' : 'UNKNOWN';
-  const confColor = conf === 4 ? '#30D158' : conf === 3 ? '#FF9F0A' : conf === 2 ? '#FF453A' : '#8E8E93';
+  const confColor = conf === 4 ? 'var(--success)' : conf === 3 ? 'var(--warning)' : conf === 2 ? 'var(--danger)' : 'var(--text-muted)';
   const staleCount = detail.data_sources.filter((s) => s.status === 'STALE' || s.status === 'VERY_STALE').length;
   const totalSources = detail.data_sources.length;
   const totalAssets = allAssets.length;
@@ -66,14 +68,14 @@ function OperatorQuickSummary({ detail }: { detail: ApplicationLocationDetail })
       key: 'where',
       label: 'WHERE',
       value: `${activeDCs.length > 0 ? activeDCs.join(' + ') : 'NONE'} (${activeDCs.length} DCs)`,
-      color: activeDCs.length > 0 ? '#30D158' : '#8E8E93',
+      color: activeDCs.length > 0 ? 'var(--success)' : 'var(--text-muted)',
       explanation: `Active compute instances have been detected in ${activeDCs.join(' and ')} via telemetry signals from MongoDB and OpenShift routers. These locations contain active workloads routing production traffic.`,
     },
     {
       key: 'primary',
       label: 'PRIMARY WRITE',
       value: primaryDC,
-      color: primaryDC !== 'NONE' ? '#0A84FF' : '#FF9F0A',
+      color: primaryDC !== 'NONE' ? 'var(--accent)' : 'var(--warning)',
       explanation: `${primaryDC} is classified as PRIMARY because: MongoDB Ops Manager shows rs_state=1 (Primary) for database nodes on host ${primaryHost}. This was ingested 8 minutes ago. AppDynamics shows 94% of transaction load routed through ${primaryDC} nodes. No conflicting signals detected.`,
     },
     {
@@ -87,7 +89,7 @@ function OperatorQuickSummary({ detail }: { detail: ApplicationLocationDetail })
       key: 'drift',
       label: 'DRIFT',
       value: isAligned ? 'ALIGNED ✓' : 'DRIFTED ⚠',
-      color: isAligned ? '#30D158' : '#FF453A',
+      color: isAligned ? 'var(--success)' : 'var(--danger)',
       explanation: isAligned
         ? `The system matches the design intent perfectly: all active locations, tech stacks, and primary write hosts are aligned.`
         : `Drifts detected: ${appDrifts.map(d => d.description).join('; ')}`,
@@ -96,14 +98,14 @@ function OperatorQuickSummary({ detail }: { detail: ApplicationLocationDetail })
       key: 'stale',
       label: 'STALE SOURCES',
       value: `${staleCount}`,
-      color: staleCount > 0 ? '#FF9F0A' : '#30D158',
+      color: staleCount > 0 ? 'var(--warning)' : 'var(--success)',
       explanation: `We have ${staleCount} stale monitoring integrations out of ${totalSources}. Outdated signals: ${detail.data_sources.filter(s => s.status !== 'FRESH').map(s => s.source_name).join(', ') || 'None'}.`,
     },
     {
       key: 'assets',
       label: 'ASSETS',
       value: `${totalAssets}`,
-      color: '#BF5AF2',
+      color: 'var(--info)',
       explanation: `Total of ${totalAssets} compute resources (databases, queues, containers) mapped to this application instance.`,
     },
   ];
@@ -120,10 +122,10 @@ function OperatorQuickSummary({ detail }: { detail: ApplicationLocationDetail })
         );
         const hasConflict = detail.conflicts && detail.conflicts.length > 0;
         const canTrust = !hasConflict && staleCount === 0 && strongSources.length >= 2;
-        const trustColor = canTrust ? '#30D158' : hasConflict ? '#FF453A' : '#FF9F0A';
+        const trustColor = canTrust ? 'var(--success)' : hasConflict ? 'var(--danger)' : 'var(--warning)';
         const trustLabel = canTrust ? 'TRUSTWORTHY' : hasConflict ? 'CONFLICT — DO NOT ACT WITHOUT MANUAL CHECK' : 'CAUTION — Some signals are stale';
-        const trustBg = canTrust ? 'rgba(48,209,88,0.06)' : hasConflict ? 'rgba(255,69,58,0.07)' : 'rgba(255,159,10,0.06)';
-        const trustBorder = canTrust ? 'rgba(48,209,88,0.2)' : hasConflict ? 'rgba(255,69,58,0.3)' : 'rgba(255,159,10,0.2)';
+        const trustBg = canTrust ? 'var(--success-subtle)' : hasConflict ? 'var(--danger-subtle)' : 'var(--warning-subtle)';
+        const trustBorder = canTrust ? 'var(--success)' : hasConflict ? 'var(--danger)' : 'var(--warning)';
         return (
           <div
             className="rounded-xl px-3 py-2 flex items-center gap-3"
@@ -143,14 +145,14 @@ function OperatorQuickSummary({ detail }: { detail: ApplicationLocationDetail })
             </div>
             <div className="relative group flex items-center">
               <span className="text-[9px] font-bold uppercase tracking-widest flex-shrink-0 cursor-help flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
-                2AM READY <HelpCircle className="w-2.5 h-2.5 text-white/40" />
+                2AM READY <HelpCircle className="w-2.5 h-2.5 text-[var(--text-muted)]" />
               </span>
               {/* Hover Tooltip */}
-              <div className="absolute right-0 bottom-full mb-2 hidden group-hover:flex flex-col p-3 rounded-xl z-50 pointer-events-none w-64 text-left shadow-2xl border bg-[#0f141c]/95 border-white/10">
-                <p className="text-[10px] font-bold text-white uppercase tracking-wider">
+              <div className="absolute right-0 bottom-full mb-2 hidden group-hover:flex flex-col p-3 rounded-xl z-50 pointer-events-none w-64 text-left shadow-2xl border bg-[var(--app-surface-raised)] border-[var(--app-border)]">
+                <p className="text-[10px] font-bold text-[var(--text-primary)] uppercase tracking-wider">
                   2 AM Ready Concept
                 </p>
-                <p className="text-[9px] text-white/70 mt-1 leading-normal">
+                <p className="text-[9px] text-[var(--text-secondary)] mt-1 leading-normal">
                   During a high-stress outage, SREs need trust. This banner aggregates signal freshness and conflict counts to prevent engineers from taking destructive recovery actions based on stale or conflicting assertions.
                 </p>
               </div>
@@ -159,16 +161,16 @@ function OperatorQuickSummary({ detail }: { detail: ApplicationLocationDetail })
         );
       })()}
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 divide-y md:divide-y-0 md:divide-x divide-white/5">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 divide-y md:divide-y-0 md:divide-x divide-[var(--app-border)]">
         {items.map((item, idx) => (
           <div key={item.key} className={cn("flex flex-col justify-between min-w-0", idx > 0 ? "pt-2 md:pt-0 md:pl-4" : "")}>
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest truncate">
+              <span className="text-[9px] font-extrabold text-[var(--text-muted)] uppercase tracking-widest truncate">
                 {item.label}
               </span>
               <button
                 onClick={() => setActiveExpKey(activeExpKey === item.key ? null : item.key)}
-                className="w-4 h-4 rounded flex items-center justify-center text-white/30 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+                className="w-4 h-4 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--app-surface-hover)] transition-all cursor-pointer"
                 title="View Explanation"
               >
                 <HelpCircle className="w-2.5 h-2.5" />
@@ -190,21 +192,21 @@ function OperatorQuickSummary({ detail }: { detail: ApplicationLocationDetail })
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="mt-2 p-3 rounded-xl border flex gap-3 items-start overflow-hidden bg-white/[0.02]"
-              style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+              className="mt-2 p-3 rounded-xl border flex gap-3 items-start overflow-hidden bg-[var(--app-bg-muted)]"
+              style={{ borderColor: 'var(--app-border)' }}
             >
-              <UnknownIcon className="w-4 h-4 text-[#0A84FF] mt-0.5 flex-shrink-0" />
+              <UnknownIcon className="w-4 h-4 text-[var(--accent)] mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <h5 className="text-[10px] font-extrabold text-[#0A84FF] uppercase tracking-wider">
+                <h5 className="text-[10px] font-extrabold text-[var(--accent)] uppercase tracking-wider">
                   Assertion Justification: {item.label}
                 </h5>
-                <p className="text-[11px] text-white/85 mt-1 leading-relaxed">
+                <p className="text-[11px] text-[var(--text-secondary)] mt-1 leading-relaxed">
                   {item.explanation}
                 </p>
               </div>
               <button
                 onClick={() => setActiveExpKey(null)}
-                className="text-[10px] text-white/40 hover:text-white font-bold cursor-pointer"
+                className="text-[10px] text-[var(--text-muted)] hover:text-[var(--text-primary)] font-bold cursor-pointer"
               >
                 Close
               </button>
@@ -289,7 +291,7 @@ function ComponentsTable({ components }: { components: ApplicationComponent[] })
                       </td>
                       <td className="px-3 py-2.5 text-center">
                         {asset.write_authority === true && (
-                          <CheckCircle className="w-3.5 h-3.5 mx-auto" style={{ color: '#30D158' }} />
+                          <CheckCircle className="w-3.5 h-3.5 mx-auto" style={{ color: 'var(--success)' }} />
                         )}
                         {asset.write_authority === false && (
                           <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>—</span>
@@ -315,12 +317,12 @@ function ComponentsTable({ components }: { components: ApplicationComponent[] })
                         <div className="flex items-center gap-1">
                           {asset.is_deterministic === false && (
                             <span title="Inferred from hostname pattern">
-                              <GitBranch className="w-3 h-3" style={{ color: '#FF9F0A' }} />
+                              <GitBranch className="w-3 h-3" style={{ color: 'var(--warning)' }} />
                             </span>
                           )}
                           {asset.is_deterministic === true && (
                             <span title="Verified by source control plane">
-                              <CheckCircle className="w-3 h-3" style={{ color: '#30D158' }} />
+                              <CheckCircle className="w-3 h-3" style={{ color: 'var(--success)' }} />
                             </span>
                           )}
                           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
@@ -343,14 +345,14 @@ function ComponentsTable({ components }: { components: ApplicationComponent[] })
 // ─── Snapshot timeline chart ─────────────────────────────────────────────────
 
 const ROLE_COLOR: Record<string, string> = {
-  PRIMARY:          '#30D158',
-  ACTIVE:           '#30D158',
-  SECONDARY:        '#0A84FF',
-  PHYSICAL_STANDBY: '#0A84FF',
-  PASSIVE:          '#0A84FF',
-  STANDBY:          '#FF9F0A',
-  INACTIVE:         '#8E8E93',
-  UNKNOWN:          '#8E8E93',
+  PRIMARY:          'var(--success)',
+  ACTIVE:           'var(--success)',
+  SECONDARY:        'var(--accent)',
+  PHYSICAL_STANDBY: 'var(--accent)',
+  PASSIVE:          'var(--accent)',
+  STANDBY:          'var(--warning)',
+  INACTIVE:         'var(--text-muted)',
+  UNKNOWN:          'var(--text-muted)',
 };
 
 function SnapshotTimeline({ snapshots }: { snapshots: RuntimeSnapshot[] }) {
@@ -432,7 +434,7 @@ function SnapshotTimeline({ snapshots }: { snapshots: RuntimeSnapshot[] }) {
   };
 
   const currentStatus = data[data.length - 1]?.status ?? 'ALIGNED';
-  const strokeColor = currentStatus === 'ALIGNED' ? '#30D158' : '#FF453A';
+  const strokeColor = currentStatus === 'ALIGNED' ? 'var(--success)' : 'var(--danger)';
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -441,25 +443,25 @@ function SnapshotTimeline({ snapshots }: { snapshots: RuntimeSnapshot[] }) {
         : pData.confidence === 3 ? 'Moderate (3/4)'
         : pData.confidence === 2 ? 'Low (2/4)'
         : 'Critical (1/4)';
-      const confColor = pData.confidence === 4 ? '#30D158'
-        : pData.confidence === 3 ? '#FF9F0A'
-        : pData.confidence === 2 ? '#FF9F0A'
-        : '#FF453A';
+      const confColor = pData.confidence === 4 ? 'var(--success)'
+        : pData.confidence === 3 ? 'var(--warning)'
+        : pData.confidence === 2 ? 'var(--warning)'
+        : 'var(--danger)';
 
       return (
         <div className="rounded-xl p-3 flex flex-col gap-1.5 border backdrop-blur-md shadow-2xl"
-             style={{ background: 'rgba(15, 20, 28, 0.95)', borderColor: 'rgba(255, 255, 255, 0.1)' }}>
-          <p className="text-[10px] text-white/40 uppercase font-mono font-bold">{pData.timeLabel}</p>
+             style={{ background: 'var(--app-surface-raised)', borderColor: 'var(--app-border)' }}>
+          <p className="text-[10px] text-[var(--text-muted)] uppercase font-mono font-bold">{pData.timeLabel}</p>
           <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ background: pData.status === 'ALIGNED' ? '#30D158' : '#FF453A' }} />
-            <span className="text-[12px] font-bold text-white uppercase tracking-wider">{pData.status}</span>
+            <span className="w-2.5 h-2.5 rounded-full" style={{ background: pData.status === 'ALIGNED' ? 'var(--success)' : 'var(--danger)' }} />
+            <span className="text-[12px] font-bold text-[var(--text-primary)] uppercase tracking-wider">{pData.status}</span>
           </div>
-          <div className="text-[11px] text-white/70 mt-1 flex flex-col gap-1">
+          <div className="text-[11px] text-[var(--text-secondary)] mt-1 flex flex-col gap-1">
             <div>Confidence Score: <span className="font-mono font-semibold" style={{ color: confColor }}>{confText}</span></div>
-            <div>Drift Count: <span className="font-mono font-semibold text-white">{pData.drifts}</span></div>
-            <div>Primary DC: <span className="font-mono font-semibold text-white">{pData.primaryDc}</span></div>
+            <div>Drift Count: <span className="font-mono font-semibold text-[var(--text-primary)]">{pData.drifts}</span></div>
+            <div>Primary DC: <span className="font-mono font-semibold text-[var(--text-primary)]">{pData.primaryDc}</span></div>
           </div>
-          <p className="text-[9px] text-white/40 mt-1 italic">Click point to replay this state</p>
+          <p className="text-[9px] text-[var(--text-muted)] mt-1 italic">Click point to replay this state</p>
         </div>
       );
     }
@@ -470,21 +472,21 @@ function SnapshotTimeline({ snapshots }: { snapshots: RuntimeSnapshot[] }) {
     <div className="rounded-xl border p-4 flex flex-col gap-3" style={{ borderColor: 'var(--app-border)', background: 'var(--app-surface)' }}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[13px] font-bold uppercase tracking-wider text-white">
+          <p className="text-[13px] font-bold uppercase tracking-wider text-[var(--text-primary)]">
             Historical Snapshots & Alignment Trend
           </p>
-          <p className="text-[10px] text-white/40">
+          <p className="text-[10px] text-[var(--text-muted)]">
             Interactive Area Chart · Click nodes to replay historical drift events
           </p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#30D158' }} />
-            <span className="text-[10px] font-bold text-white/60">ALIGNED</span>
+            <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--success)' }} />
+            <span className="text-[10px] font-bold text-[var(--text-secondary)]">ALIGNED</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#FF453A' }} />
-            <span className="text-[10px] font-bold text-white/60">DRIFTED</span>
+            <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--danger)' }} />
+            <span className="text-[10px] font-bold text-[var(--text-secondary)]">DRIFTED</span>
           </div>
         </div>
       </div>
@@ -498,10 +500,10 @@ function SnapshotTimeline({ snapshots }: { snapshots: RuntimeSnapshot[] }) {
                 <stop offset="95%" stopColor={strokeColor} stopOpacity={0.01}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-            <XAxis dataKey="timeLabel" tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.4)' }} />
-            <YAxis domain={[0, 4]} tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.4)' }} />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.08)' }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" vertical={false} />
+            <XAxis dataKey="timeLabel" tick={{ fontSize: 9, fill: 'var(--text-muted)' }} />
+            <YAxis domain={[0, 4]} tick={{ fontSize: 9, fill: 'var(--text-muted)' }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--app-border)' }} />
             <Area
               type="monotone"
               dataKey="confidence"
@@ -509,9 +511,9 @@ function SnapshotTimeline({ snapshots }: { snapshots: RuntimeSnapshot[] }) {
               strokeWidth={2}
               fillOpacity={1}
               fill="url(#snapshotColorGrad)"
-              activeDot={{ r: 5, strokeWidth: 1, stroke: '#fff' }}
+              activeDot={{ r: 5, strokeWidth: 1, stroke: 'var(--text-primary)' }}
             />
-            <ReferenceLine x="Now" stroke="rgba(255,255,255,0.2)" strokeDasharray="2 2" />
+            <ReferenceLine x="Now" stroke="var(--text-muted)" strokeDasharray="2 2" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -598,13 +600,13 @@ function SnapshotsTab({ snapshots }: { snapshots: RuntimeSnapshot[] }) {
                 <td className="px-3 py-2.5">
                   {snap.is_deterministic ? (
                     <div className="flex items-center gap-1">
-                      <CheckCircle className="w-3.5 h-3.5" style={{ color: '#30D158' }} />
-                      <span className="text-[10px]" style={{ color: '#30D158' }}>Verified</span>
+                      <CheckCircle className="w-3.5 h-3.5" style={{ color: 'var(--success)' }} />
+                      <span className="text-[10px]" style={{ color: 'var(--success)' }}>Verified</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-1">
-                      <GitBranch className="w-3.5 h-3.5" style={{ color: '#FF9F0A' }} />
-                      <span className="text-[10px]" style={{ color: '#FF9F0A' }}>Inferred</span>
+                      <GitBranch className="w-3.5 h-3.5" style={{ color: 'var(--warning)' }} />
+                      <span className="text-[10px]" style={{ color: 'var(--warning)' }}>Inferred</span>
                     </div>
                   )}
                 </td>
@@ -620,11 +622,11 @@ function SnapshotsTab({ snapshots }: { snapshots: RuntimeSnapshot[] }) {
 // ─── Compare Environments tab ─────────────────────────────────────────────────
 
 const STATUS_CONFIG = {
-  consistent:   { label: 'Consistent',  color: '#30D158', bg: 'rgba(48,209,88,0.1)',   border: 'rgba(48,209,88,0.25)',  Icon: CheckCircle },
-  inconsistent: { label: 'Inconsistent', color: '#FF453A', bg: 'rgba(255,69,58,0.1)',  border: 'rgba(255,69,58,0.25)',  Icon: AlertCircle },
-  prod_only:    { label: 'PROD only',   color: '#0A84FF', bg: 'rgba(10,132,255,0.1)',  border: 'rgba(10,132,255,0.25)', Icon: Server },
-  uat_only:     { label: 'UAT only',    color: '#FF9F0A', bg: 'rgba(255,159,10,0.1)',  border: 'rgba(255,159,10,0.25)', Icon: HelpCircle },
-  dr_only:      { label: 'DR only',     color: '#30D158', bg: 'rgba(48,209,88,0.1)',   border: 'rgba(48,209,88,0.25)',  Icon: HelpCircle },
+  consistent:   { label: 'Consistent',  color: 'var(--success)', bg: 'var(--success-subtle)',   border: 'var(--success)',  Icon: CheckCircle },
+  inconsistent: { label: 'Inconsistent', color: 'var(--danger)', bg: 'var(--danger-subtle)',  border: 'var(--danger)',  Icon: AlertCircle },
+  prod_only:    { label: 'PROD only',   color: 'var(--accent)', bg: 'var(--accent-subtle)',  border: 'var(--accent)', Icon: Server },
+  uat_only:     { label: 'UAT only',    color: 'var(--warning)', bg: 'var(--warning-subtle)',  border: 'var(--warning)', Icon: HelpCircle },
+  dr_only:      { label: 'DR only',     color: 'var(--success)', bg: 'var(--success-subtle)',   border: 'var(--success)',  Icon: HelpCircle },
 } as const;
 
 function EnvCell({ role, dc, confidence }: { role?: string; dc?: string; confidence?: number }) {
@@ -740,11 +742,11 @@ function CompareEnvsTab({ appId }: { appId: string }) {
       {counts.inconsistent > 0 && (
         <div
           className="rounded-xl px-4 py-3 flex items-start gap-2.5"
-          style={{ background: 'rgba(255,69,58,0.07)', border: '1px solid rgba(255,69,58,0.25)' }}
+          style={{ background: 'var(--danger-subtle)', border: '1px solid var(--danger)' }}
         >
-          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#FF453A' }} />
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--danger)' }} />
           <p className="text-[12px]" style={{ color: 'var(--text-secondary)' }}>
-            <span className="font-semibold" style={{ color: '#FF453A' }}>
+            <span className="font-semibold" style={{ color: 'var(--danger)' }}>
               {counts.inconsistent} asset{counts.inconsistent !== 1 ? 's are' : ' is'} inconsistent
             </span>{' '}
             between PRODUCTION and UAT — the same asset has different roles in each environment. Manual review recommended.
@@ -763,13 +765,13 @@ function CompareEnvsTab({ appId }: { appId: string }) {
               <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--app-border)' }}>
                 Component
               </th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: '#0A84FF', borderBottom: '1px solid var(--app-border)', background: 'rgba(10,132,255,0.04)' }}>
+              <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--accent)', borderBottom: '1px solid var(--app-border)', background: 'var(--accent-subtle)' }}>
                 PRODUCTION
               </th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: '#FF9F0A', borderBottom: '1px solid var(--app-border)', background: 'rgba(255,159,10,0.04)' }}>
+              <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--warning)', borderBottom: '1px solid var(--app-border)', background: 'var(--warning-subtle)' }}>
                 UAT
               </th>
-              <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: '#30D158', borderBottom: '1px solid var(--app-border)', background: 'rgba(48,209,88,0.04)' }}>
+              <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--success)', borderBottom: '1px solid var(--app-border)', background: 'var(--success-subtle)' }}>
                 DR (STANDBY)
               </th>
               <th className="px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--app-border)' }}>
@@ -785,7 +787,7 @@ function CompareEnvsTab({ appId }: { appId: string }) {
                   key={i}
                   style={{
                     borderBottom: '1px solid var(--app-border)',
-                    background: row.status === 'inconsistent' ? 'rgba(255,69,58,0.03)' : 'transparent',
+                    background: row.status === 'inconsistent' ? 'var(--danger-subtle)' : 'transparent',
                   }}
                 >
                   <td className="px-3 py-3">
@@ -880,48 +882,48 @@ function OpenShiftTab({ detail }: { detail: ApplicationLocationDetail }) {
       <div
         className="rounded-2xl p-5 flex flex-col gap-4 animate-scale-in"
         style={{
-          background: 'var(--sidebar-bg)',
-          color: '#FFFFFF',
+          background: 'var(--app-surface-raised)',
+          color: 'var(--text-primary)',
           boxShadow: 'var(--shadow-lg)',
-          border: '1px solid rgba(255,255,255,0.06)'
+          border: '1px solid var(--app-border)'
         }}
       >
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgba(255,255,255,0.1)' }}
+              style={{ background: 'var(--app-bg-muted)' }}
             >
-              <Layers className="w-5 h-5 text-white animate-pulse" />
+              <Layers className="w-5 h-5 text-[var(--accent)] animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <p className="text-[15px] font-bold text-white">OpenShift Container Platform</p>
-                <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold tracking-wider" style={{ background: '#0064FA', color: '#FFFFFF' }}>
+                <p className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>OpenShift Container Platform</p>
+                <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold tracking-wider" style={{ background: 'var(--accent)', color: 'var(--text-inverse)' }}>
                   ACTIVE CLUSTER
                 </span>
               </div>
-              <p className="text-[11px] text-white/60 mt-0.5">
-                Cluster: <span className="font-mono text-white">ocp-prod-us-east-1</span> · Namespace: <span className="font-mono text-white">{detail.application_id.toLowerCase()}-prod</span>
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                Cluster: <span className="font-mono font-bold" style={{ color: 'var(--text-primary)' }}>ocp-prod-us-east-1</span> · Namespace: <span className="font-mono font-bold" style={{ color: 'var(--text-primary)' }}>{detail.application_id.toLowerCase()}-prod</span>
               </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-[10px] text-white/50 uppercase tracking-wider">Pods Running</p>
-              <p className="text-[16px] font-mono font-bold text-[#30D158]">
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Pods Running</p>
+              <p className="text-[16px] font-mono font-bold text-[var(--success)]">
                 {detail.components.reduce((a, c) => a + c.assets.length, 0)} / {detail.components.reduce((a, c) => a + c.assets.length, 0)} Ready
               </p>
             </div>
-            <div className="w-px h-8 bg-white/10" />
+            <div className="w-px h-8 bg-[var(--app-border)]" />
             <div className="text-right">
-              <p className="text-[10px] text-white/50 uppercase tracking-wider">Cluster CPU</p>
-              <p className="text-[16px] font-mono font-bold text-[#0064FA]">34.2%</p>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Cluster CPU</p>
+              <p className="text-[16px] font-mono font-bold text-[var(--accent)]">34.2%</p>
             </div>
-            <div className="w-px h-8 bg-white/10" />
+            <div className="w-px h-8 bg-[var(--app-border)]" />
             <div className="text-right">
-              <p className="text-[10px] text-white/50 uppercase tracking-wider">Cluster Memory</p>
-              <p className="text-[16px] font-mono font-bold text-[#BF5AF2]">4.8 GB / 16 GB</p>
+              <p className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Cluster Memory</p>
+              <p className="text-[16px] font-mono font-bold text-[var(--warning)]">4.8 GB / 16 GB</p>
             </div>
           </div>
         </div>
@@ -978,9 +980,9 @@ function OpenShiftTab({ detail }: { detail: ApplicationLocationDetail }) {
                 <span
                   className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full"
                   style={{
-                    background: activeReplicas === totalReplicas ? 'rgba(48,209,88,0.08)' : 'rgba(255,159,10,0.08)',
-                    color: activeReplicas === totalReplicas ? '#30D158' : '#FF9F0A',
-                    border: activeReplicas === totalReplicas ? '1px solid rgba(48,209,88,0.2)' : '1px solid rgba(255,159,10,0.2)'
+                    background: activeReplicas === totalReplicas ? 'var(--success-subtle)' : 'var(--warning-subtle)',
+                    color: activeReplicas === totalReplicas ? 'var(--success)' : 'var(--warning)',
+                    border: activeReplicas === totalReplicas ? '1px solid var(--success)' : '1px solid var(--warning)'
                   }}
                 >
                   {activeReplicas}/{totalReplicas} Pods
@@ -1054,7 +1056,7 @@ function OpenShiftTab({ detail }: { detail: ApplicationLocationDetail }) {
                       className="rounded-xl p-4 flex flex-col gap-3 transition-shadow"
                       style={{
                         background: 'var(--app-bg-subtle)',
-                        border: isPrimary ? '1.5px solid rgba(48,209,88,0.35)' : '1px solid var(--app-border)'
+                        border: isPrimary ? '1.5px solid var(--success)' : '1px solid var(--app-border)'
                       }}
                     >
                       {/* Node Header */}
@@ -1062,7 +1064,7 @@ function OpenShiftTab({ detail }: { detail: ApplicationLocationDetail }) {
                         <div className="min-w-0 flex items-center gap-2">
                           <div
                             className="w-2.5 h-2.5 rounded-full animate-pulse-soft"
-                            style={{ background: asset.latest_operational_state === 'ACTIVE' ? '#30D158' : '#FF9F0A' }}
+                            style={{ background: asset.latest_operational_state === 'ACTIVE' ? 'var(--success)' : 'var(--warning)' }}
                           />
                           <div>
                             <p className="text-[12px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>
@@ -1088,9 +1090,9 @@ function OpenShiftTab({ detail }: { detail: ApplicationLocationDetail }) {
                       <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-dashed" style={{ borderColor: 'var(--app-border)' }}>
                         <div className="flex items-center gap-1">
                           {asset.is_deterministic ? (
-                            <span className="text-[9px] font-bold text-[#30D158] bg-[rgba(48,209,88,0.08)] px-1.5 py-0.5 rounded">VERIFIED SOURCE</span>
+                            <span className="text-[9px] font-bold text-[var(--success)] bg-[var(--success-subtle)] px-1.5 py-0.5 rounded">VERIFIED SOURCE</span>
                           ) : (
-                            <span className="text-[9px] font-bold text-[#FF9F0A] bg-[rgba(255,159,10,0.08)] px-1.5 py-0.5 rounded">INFERRED SOURCE</span>
+                            <span className="text-[9px] font-bold text-[var(--warning)] bg-[var(--warning-subtle)] px-1.5 py-0.5 rounded">INFERRED SOURCE</span>
                           )}
                         </div>
                         <button
@@ -1101,7 +1103,7 @@ function OpenShiftTab({ detail }: { detail: ApplicationLocationDetail }) {
                               logs: generateMockLogs(`pod-${comp.tech_stack}-${i + 1}`, comp.tech_stack)
                             });
                           }}
-                          className="px-2.5 py-1 rounded-lg text-[10px] font-semibold text-white transition-opacity hover:opacity-90"
+                          className="px-2.5 py-1 rounded-lg text-[10px] font-semibold text-[var(--text-inverse)] transition-opacity hover:opacity-90"
                           style={{ background: 'var(--accent)' }}
                         >
                           View Live Logs
@@ -1122,36 +1124,36 @@ function OpenShiftTab({ detail }: { detail: ApplicationLocationDetail }) {
           <div className="absolute inset-0 bg-black/60 backdrop-blur-xs" onClick={() => setActiveLogPod(null)} />
           <div
             className="relative rounded-2xl w-full max-w-2xl overflow-hidden flex flex-col shadow-2xl animate-scale-in"
-            style={{ background: '#0F141C', border: '1px solid rgba(255,255,255,0.08)' }}
+            style={{ background: 'var(--app-surface-raised)', border: '1px solid var(--app-border)' }}
           >
             {/* Terminal Header */}
-            <div className="px-4 py-3 flex items-center justify-between bg-[#161D28] border-b border-white/5">
+            <div className="px-4 py-3 flex items-center justify-between bg-[var(--app-surface-hover)] border-b border-[var(--app-border)]">
               <div className="flex items-center gap-2">
                 <div className="flex gap-1.5">
                   <span className="w-3 h-3 rounded-full bg-[#FF5F56]" />
                   <span className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
                   <span className="w-3 h-3 rounded-full bg-[#27C93F]" />
                 </div>
-                <span className="text-[12px] font-mono font-bold text-white/80 ml-2">
+                <span className="text-[12px] font-mono font-bold text-[var(--text-secondary)] ml-2">
                   oc logs {activeLogPod.name} --tail=100 -f
                 </span>
               </div>
               <button
                 onClick={() => setActiveLogPod(null)}
-                className="text-white/60 hover:text-white text-[12px] font-semibold px-2 py-0.5 rounded hover:bg-white/10"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-[12px] font-semibold px-2 py-0.5 rounded hover:bg-[var(--app-surface-hover)]"
               >
                 Close
               </button>
             </div>
 
             {/* Terminal Body */}
-            <div className="p-4 h-72 overflow-y-auto font-mono text-[11px] leading-relaxed text-[#00E599] bg-[#0F141C]">
+            <div className="p-4 h-72 overflow-y-auto font-mono text-[11px] leading-relaxed text-[var(--success)] bg-[var(--app-surface-raised)]">
               {activeLogPod.logs.map((log, index) => (
                 <p key={index} className="whitespace-pre-wrap">
                   {log}
                 </p>
               ))}
-              <p className="text-white/40 mt-2 animate-pulse-soft">_ [Streaming active log tail...]</p>
+              <p className="text-[var(--text-muted)] mt-2 animate-pulse-soft">_ [Streaming active log tail...]</p>
             </div>
           </div>
         </div>
@@ -1177,7 +1179,7 @@ function TimeSimulatorSlider() {
 
   return (
     <div
-      className="flex items-center gap-3 px-3 py-1.5 rounded-2xl flex-shrink-0 relative group border bg-white/5 border-white/5"
+      className="flex items-center gap-3 px-3 py-1.5 rounded-2xl flex-shrink-0 relative group border bg-[var(--app-surface)] border-[var(--app-border)]"
       style={{
         borderColor: `${currentStage.color}25`,
         boxShadow: `0 0 10px ${currentStage.color}05`,
@@ -1190,7 +1192,7 @@ function TimeSimulatorSlider() {
       
       <div className="flex flex-col gap-0.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[8px] font-extrabold uppercase tracking-widest text-white/40">
+          <span className="text-[8px] font-extrabold uppercase tracking-widest text-[var(--text-muted)]">
             Timeline Step
           </span>
           <span className="text-[9px] font-extrabold font-mono" style={{ color: currentStage.color }}>
@@ -1217,20 +1219,20 @@ function TimeSimulatorSlider() {
       <div
         className="absolute bottom-full mb-3 right-1/2 translate-x-1/2 hidden group-hover:flex flex-col gap-2 p-3 rounded-2xl z-50 pointer-events-none w-64 text-left shadow-2xl backdrop-blur-md transition-all border"
         style={{
-          background: 'rgba(15, 20, 28, 0.96)',
-          borderColor: 'rgba(255, 255, 255, 0.1)',
+          background: 'var(--app-surface-raised)',
+          borderColor: 'var(--app-border)',
         }}
       >
         <div className="flex items-center justify-between">
-          <span className="text-[9px] font-bold text-white/40 uppercase">Timeline Status</span>
+          <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase">Timeline Status</span>
           <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded" style={{ background: `${currentStage.color}15`, color: currentStage.color }}>
             {currentStage.status}
           </span>
         </div>
-        <p className="text-[11px] font-extrabold text-white mt-1">
+        <p className="text-[11px] font-extrabold text-[var(--text-primary)] mt-1">
           {currentStage.label}
         </p>
-        <p className="text-[9px] text-white/60 leading-relaxed">
+        <p className="text-[9px] text-[var(--text-secondary)] leading-relaxed">
           {currentStage.desc}
         </p>
       </div>
@@ -1378,36 +1380,36 @@ export function ApplicationLocationDetailPage() {
       <div 
         className="rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 border relative overflow-hidden backdrop-blur-md"
         style={{
-          background: 'linear-gradient(135deg, rgba(10, 108, 255, 0.12) 0%, rgba(15, 20, 28, 0.9) 100%)',
-          borderColor: 'rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+          background: 'var(--map-container-bg)',
+          borderColor: 'var(--app-border)',
+          boxShadow: 'var(--shadow-md)',
         }}
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
             <button
               onClick={() => navigate('/runtime-location')}
-              className="flex items-center gap-1 text-[11px] font-bold text-white/50 hover:text-white transition-colors uppercase tracking-widest mr-2"
+              className="flex items-center gap-1 text-[11px] font-bold text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors uppercase tracking-widest mr-2"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Back
             </button>
             <span
-              className="text-[9px] font-extrabold px-2 py-0.5 rounded bg-white/5 text-white/60 border border-white/5 uppercase tracking-wider"
+              className="text-[9px] font-extrabold px-2 py-0.5 rounded bg-[var(--app-bg-muted)] text-[var(--text-secondary)] border border-[var(--app-border)] uppercase tracking-wider"
             >
               {detail.application_id}
             </span>
           </div>
 
           <div className="flex items-center gap-3.5 flex-wrap">
-            <h1 className="text-[26px] font-extrabold text-white tracking-tight leading-none">
+            <h1 className="text-[26px] font-extrabold text-[var(--text-primary)] tracking-tight leading-none">
               {detail.application_name}
             </h1>
             <ConfidenceBadge level={detail.overall_confidence} size="md" />
             
             {staleCount > 0 && (
               <span
-                className="text-[10px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1 border bg-[#FF9F0A]/10 text-[#FF9F0A] border-[#FF9F0A]/20"
+                className="text-[10px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1 border bg-[var(--warning-subtle)] text-[var(--warning)] border-[var(--warning)]/20"
               >
                 {staleCount} STALE
               </span>
@@ -1415,14 +1417,14 @@ export function ApplicationLocationDetailPage() {
             
             {detail.conflicts.length > 0 && (
               <span
-                className="text-[10px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1 border bg-[#FF453A]/10 text-[#FF453A] border-[#FF453A]/20"
+                className="text-[10px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1 border bg-[var(--danger-subtle)] text-[var(--danger)] border-[var(--danger)]/20"
               >
                 {detail.conflicts.length} CONFLICTS
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-4 mt-3 flex-wrap text-white/40 text-[12px] font-medium">
+          <div className="flex items-center gap-4 mt-3 flex-wrap text-[var(--text-muted)] text-[12px] font-medium">
             <p>
               {detail.components.length} component{detail.components.length !== 1 ? 's' : ''} ·{' '}
               {detail.components.reduce((a, c) => a + c.assets.length, 0)} assets
@@ -1435,7 +1437,7 @@ export function ApplicationLocationDetailPage() {
                 .pop();
               if (!lastImport) return null;
               return (
-                <div className="flex items-center gap-1.5 border-l border-white/10 pl-4">
+                <div className="flex items-center gap-1.5 border-l border-[var(--app-border)] pl-4">
                   <Clock className="w-3.5 h-3.5" />
                   <span>
                     Last Ingested: {formatRelativeTime(lastImport)}
@@ -1449,7 +1451,7 @@ export function ApplicationLocationDetailPage() {
         {/* Environment switcher + Time Simulator on right of header */}
         <div className="flex flex-col md:flex-row items-center gap-4 flex-shrink-0">
           <TimeSimulatorSlider />
-          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white/5 border border-white/5">
+          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[var(--app-surface-raised)] border border-[var(--app-border)]">
             {ENV_OPTIONS.map((env) => (
               <button
                 key={env}
@@ -1458,11 +1460,11 @@ export function ApplicationLocationDetailPage() {
                   'px-4 py-2 rounded-xl text-[12px] font-extrabold transition-all uppercase tracking-wider',
                 )}
                 style={env === envParam ? {
-                  background: 'var(--primary-500)',
-                  color: '#fff',
-                  boxShadow: '0 2px 10px rgba(0, 108, 255, 0.3)',
+                  background: 'var(--accent)',
+                  color: 'var(--text-inverse)',
+                  boxShadow: 'var(--shadow-sm)',
                 } : {
-                  color: 'rgba(255, 255, 255, 0.4)',
+                  color: 'var(--text-muted)',
                 }}
               >
                 {env}
@@ -1484,7 +1486,7 @@ export function ApplicationLocationDetailPage() {
           }}
         >
           <div
-            className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 animate-ping"
+            className="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 animate-ping"
             style={{ background: currentStage.color }}
           />
           <div className="flex-1 min-w-0">
@@ -1492,21 +1494,21 @@ export function ApplicationLocationDetailPage() {
               <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider" style={{ background: `${currentStage.color}15`, color: currentStage.color }}>
                 {currentStage.status}
               </span>
-              <h4 className="text-[12px] font-bold text-white uppercase tracking-wider">
+              <h4 className="text-[12px] font-bold text-[var(--text-primary)] uppercase tracking-wider">
                 Simulation Step {currentStep}/5: {currentStage.label}
               </h4>
             </div>
-            <p className="text-[11px] text-white/70 mt-1">
+            <p className="text-[11px] text-[var(--text-secondary)] mt-1">
               {currentStage.desc}
             </p>
           </div>
           <button
             onClick={() => setSimulatedAgeOffset(0)}
-            className="text-[10px] font-bold px-2.5 py-1 rounded-lg border flex-shrink-0 hover:bg-white/5 transition-colors"
+            className="text-[10px] font-bold px-2.5 py-1 rounded-lg border flex-shrink-0 hover:bg-[var(--app-surface-hover)] transition-colors"
             style={{
-              background: 'rgba(255,255,255,0.03)',
-              borderColor: 'rgba(255,255,255,0.08)',
-              color: '#fff',
+              background: 'var(--app-surface)',
+              borderColor: 'var(--app-border)',
+              color: 'var(--text-primary)',
             }}
           >
             End Simulation
@@ -1516,38 +1518,38 @@ export function ApplicationLocationDetailPage() {
 
       {/* Cockpit summary band */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-2xl p-4 flex flex-col justify-between border bg-white/[0.01] border-white/5 backdrop-blur-md">
-          <span className="text-[10px] font-extrabold text-white/40 uppercase tracking-widest">Active Data Centers</span>
-          <span className="text-[24px] font-extrabold text-white mt-2">
+        <div className="rounded-2xl p-4 flex flex-col justify-between border bg-[var(--app-surface)] border-[var(--app-border)] backdrop-blur-md">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>Active Data Centers</span>
+          <span className="text-[24px] font-extrabold text-[var(--text-primary)] mt-2">
             {new Set(detail.components.flatMap(c => c.assets.map(a => a.data_center?.short_name).filter(Boolean))).size}
           </span>
-          <span className="text-[10px] text-white/30 mt-1">Configured sites</span>
+          <span className="text-[10px] mt-1" style={{ color: 'var(--text-secondary)' }}>Configured sites</span>
         </div>
 
-        <div className="rounded-2xl p-4 flex flex-col justify-between border bg-white/[0.01] border-white/5 backdrop-blur-md">
-          <span className="text-[10px] font-extrabold text-white/40 uppercase tracking-widest">Compute Resources</span>
-          <span className="text-[24px] font-extrabold text-white mt-2">
+        <div className="rounded-2xl p-4 flex flex-col justify-between border bg-[var(--app-surface)] border-[var(--app-border)] backdrop-blur-md">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>Compute Resources</span>
+          <span className="text-[24px] font-extrabold text-[var(--text-primary)] mt-2">
             {detail.components.reduce((acc, c) => acc + c.assets.length, 0)}
           </span>
-          <span className="text-[10px] text-white/30 mt-1">Containers, DBs, queues</span>
+          <span className="text-[10px] mt-1" style={{ color: 'var(--text-secondary)' }}>Containers, DBs, queues</span>
         </div>
 
-        <div className="rounded-2xl p-4 flex flex-col justify-between border bg-white/[0.01] border-white/5 backdrop-blur-md">
-          <span className="text-[10px] font-extrabold text-white/40 uppercase tracking-widest">Integrations Freshness</span>
-          <span className="text-[24px] font-extrabold text-[#30D158] mt-2">
+        <div className="rounded-2xl p-4 flex flex-col justify-between border bg-[var(--app-surface)] border-[var(--app-border)] backdrop-blur-md">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>Integrations Freshness</span>
+          <span className="text-[24px] font-extrabold text-[var(--success)] mt-2">
             {detail.data_sources.length > 0 ? (
               `${Math.round((detail.data_sources.filter(s => s.status === 'FRESH').length / detail.data_sources.length) * 100)}%`
             ) : '100%'}
           </span>
-          <span className="text-[10px] text-white/30 mt-1">Signals up-to-date</span>
+          <span className="text-[10px] mt-1" style={{ color: 'var(--text-secondary)' }}>Signals up-to-date</span>
         </div>
 
-        <div className="rounded-2xl p-4 flex flex-col justify-between border bg-white/[0.01] border-white/5 backdrop-blur-md">
-          <span className="text-[10px] font-extrabold text-white/40 uppercase tracking-widest">Active Drift Violations</span>
-          <span className={`text-[24px] font-extrabold mt-2 ${appDrifts.length > 0 ? 'text-[#FF453A] animate-pulse-soft' : 'text-white/60'}`}>
+        <div className="rounded-2xl p-4 flex flex-col justify-between border bg-[var(--app-surface)] border-[var(--app-border)] backdrop-blur-md">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>Active Drift Violations</span>
+          <span className={`text-[24px] font-extrabold mt-2 ${appDrifts.length > 0 ? 'text-[var(--danger)] animate-pulse-soft' : 'text-[var(--text-secondary)]'}`}>
             {appDrifts.length}
           </span>
-          <span className="text-[10px] text-white/30 mt-1">Non-aligned settings</span>
+          <span className="text-[10px] mt-1" style={{ color: 'var(--text-secondary)' }}>Non-aligned settings</span>
         </div>
       </div>
 
@@ -1563,7 +1565,7 @@ export function ApplicationLocationDetailPage() {
       {/* Tabs */}
       <div
         className="flex items-center gap-1.5 p-1 rounded-2xl w-fit overflow-x-auto max-w-full"
-        style={{ background: 'rgba(20, 20, 25, 0.5)', border: '1px solid rgba(255,255,255,0.06)' }}
+        style={{ background: 'var(--app-surface-raised)', border: '1px solid var(--app-border)' }}
       >
         {TABS.map(({ id, label, icon: Icon }) => {
           const isIntent = id === 'intent';
@@ -1577,11 +1579,11 @@ export function ApplicationLocationDetailPage() {
                 'flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-extrabold transition-all relative overflow-hidden flex-shrink-0 uppercase tracking-wider',
               )}
               style={activeTab === id ? {
-                background: 'rgba(255, 255, 255, 0.08)',
-                color: '#fff',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'var(--app-surface-hover)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--app-border)',
               } : {
-                color: 'rgba(255, 255, 255, 0.4)',
+                color: 'var(--text-muted)',
                 border: '1px solid transparent',
               }}
             >
@@ -1589,13 +1591,13 @@ export function ApplicationLocationDetailPage() {
               <span>{label}</span>
 
               {isIntent && appDrifts.length > 0 && (
-                <span className="flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-[#FF453A] text-white text-[9px] font-extrabold ml-1.5">
+                <span className="flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-[var(--danger)] text-[var(--text-inverse)] text-[9px] font-extrabold ml-1.5">
                   {appDrifts.length}
                 </span>
               )}
 
               {isQuality && staleCount > 0 && (
-                <span className="flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-[#FF9F0A] text-white text-[9px] font-extrabold ml-1.5">
+                <span className="flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-[var(--warning)] text-[var(--text-inverse)] text-[9px] font-extrabold ml-1.5">
                   {staleCount}
                 </span>
               )}
@@ -1603,7 +1605,7 @@ export function ApplicationLocationDetailPage() {
               {activeTab === id && (
                 <motion.div
                   layoutId="activeTabUnderline"
-                  className="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-blue-500 to-[#00E599]"
+                  className="absolute bottom-0 left-2 right-2 h-0.5 bg-[var(--accent)]"
                   transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                 />
               )}
@@ -1639,6 +1641,9 @@ export function ApplicationLocationDetailPage() {
                 setPromotedDcId={setPromotedDcId}
                 onSelectEvidence={(ev) => setSelectedEvidence(ev)}
               />
+            )}
+            {activeTab === 'hierarchy' && (
+              <RuntimeHierarchyTree detail={detail} />
             )}
             {activeTab === 'graph' && (
               <RuntimeDependencyGraph 
@@ -1684,23 +1689,23 @@ export function ApplicationLocationDetailPage() {
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed right-0 top-0 bottom-0 w-80 sm:w-96 z-50 p-6 shadow-2xl flex flex-col gap-4 border-l overflow-y-auto"
-              style={{ background: 'var(--app-bg-dark, #0a0e1a)', borderColor: 'var(--app-border)' }}
+              style={{ background: 'var(--app-surface-raised)', borderColor: 'var(--app-border)' }}
             >
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center justify-between border-b border-[var(--app-border)] pb-3">
                 <div>
                   <span className="text-[10px] uppercase font-mono font-bold tracking-wider" style={{
-                    color: selectedEvidence.type === 'deterministic' ? '#30D158'
-                      : selectedEvidence.type === 'inferred' ? '#FF9F0A' : '#8E8E93'
+                    color: selectedEvidence.type === 'deterministic' ? 'var(--success)'
+                      : selectedEvidence.type === 'inferred' ? 'var(--warning)' : 'var(--text-muted)'
                   }}>
                     {selectedEvidence.type} Evidence Record
                   </span>
-                  <h3 className="text-[15px] font-bold text-white mt-0.5">
+                  <h3 className="text-[15px] font-bold text-[var(--text-primary)] mt-0.5">
                     Source: {selectedEvidence.sourceName}
                   </h3>
                 </div>
                 <button
                   onClick={() => setSelectedEvidence(null)}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/5 text-white/50 hover:text-white cursor-pointer"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--app-surface-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -1708,24 +1713,24 @@ export function ApplicationLocationDetailPage() {
 
               <div className="flex flex-col gap-3">
                 <div>
-                  <p className="text-[10px] text-white/40 uppercase font-semibold">Asset Name</p>
-                  <p className="text-[12px] font-mono text-white/95 mt-0.5 font-semibold bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/5">
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase font-semibold">Asset Name</p>
+                  <p className="text-[12px] font-mono text-[var(--text-primary)] mt-0.5 font-semibold bg-[var(--app-bg-muted)] px-2.5 py-1.5 rounded-lg border border-[var(--app-border)]">
                     {selectedEvidence.assetName}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-[10px] text-white/40 uppercase font-semibold mb-1">Signal Parameters</p>
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase font-semibold mb-1">Signal Parameters</p>
                   <div className="flex flex-col gap-2">
                     {selectedEvidence.details.map((detail, idx) => (
-                      <div key={idx} className="text-[11px] text-white/80 border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                      <div key={idx} className="text-[11px] text-[var(--text-secondary)] border-b border-[var(--app-border)] pb-2 last:border-0 last:pb-0">
                         {detail}
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="mt-4 p-3 rounded-lg border text-[11px] text-white/50 leading-relaxed bg-white/[0.01]" style={{ borderColor: 'var(--app-border)' }}>
+                <div className="mt-4 p-3 rounded-lg border text-[11px] text-[var(--text-muted)] leading-relaxed bg-[var(--app-bg-muted)]" style={{ borderColor: 'var(--app-border)' }}>
                   This snapshot evidence represents real-time telemetry captured by the HealthMesh sync agent and verified against active endpoint network listeners.
                 </div>
               </div>
