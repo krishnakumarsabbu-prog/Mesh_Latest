@@ -196,7 +196,7 @@ function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         
         {/* Left: App Info */}
-        <div className="flex flex-col gap-1 min-w-[200px] max-w-[250px]">
+        <div className="flex flex-col gap-1 min-w-[200px] max-w-[320px]">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[15px] font-extrabold truncate" style={{ color: 'var(--text-primary)' }}>
               {app.application_name}
@@ -208,9 +208,40 @@ function AppCard({ app, index = 0 }: { app: ApplicationLocationSummary; index?: 
               {app.environment}
             </span>
           </div>
-          <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--text-muted)' }}>
-            {app.application_id}
-          </span>
+          
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] font-bold tracking-wider uppercase font-mono" style={{ color: 'var(--text-muted)' }}>
+              ID: {app.application_id}
+            </span>
+            {app.project_id && (
+              <>
+                <span className="text-[10px] text-[var(--text-muted)]">•</span>
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/projects/${app.project_id}`);
+                  }}
+                  className="inline-flex items-center gap-1 text-[10px] font-bold text-[var(--accent)] hover:underline bg-[rgba(10,132,255,0.08)] px-2 py-0.5 rounded-full border border-[rgba(10,132,255,0.15)] cursor-pointer"
+                  title={`View operational health for ${app.project_name}`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+                  {app.project_name} Health →
+                </span>
+              </>
+            )}
+          </div>
+
+          {app.lob_name && (
+            <div className="flex items-center gap-1.5 mt-1 text-[10px] text-[var(--text-secondary)] font-medium">
+              <span className="px-1.5 py-0.2 rounded bg-[var(--app-bg-muted)] border border-[var(--app-border)] text-[var(--text-muted)] text-[8px] uppercase tracking-wider font-semibold">
+                LOB: {app.lob_name}
+              </span>
+              <span className="w-1 h-1 rounded-full bg-[var(--app-border)]" />
+              <span className="text-[10px] font-semibold text-[var(--text-secondary)]">
+                Team: {app.team_name}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Center: Mini Distribution Bar */}
@@ -435,14 +466,18 @@ function ImportModal({ onClose }: { onClose: () => void }) {
     const detected = detectSourceType(f.name);
     setDetectedSource(detected);
     setManualSource(null);
-    // Read first few lines for preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string ?? '';
-      const lines = text.split(/\r?\n/).filter(Boolean).slice(0, 4);
-      setPreviewLines(lines);
-    };
-    reader.readAsText(f.slice(0, 4096));
+    if (f.name.toLowerCase().endsWith('.xlsx')) {
+      setPreviewLines(['[Binary Excel Workbook]', 'Metadata and sheet tables will be dynamically extracted on import.']);
+    } else {
+      // Read first few lines for preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string ?? '';
+        const lines = text.split(/\r?\n/).filter(Boolean).slice(0, 4);
+        setPreviewLines(lines);
+      };
+      reader.readAsText(f.slice(0, 4096));
+    }
   }
 
   function clearFile() {
@@ -516,10 +551,10 @@ function ImportModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-[16px] font-bold" style={{ color: 'var(--text-primary)' }}>
-              Import Topology CSV
+              Import Telemetry & CMDB Data
             </h3>
             <p className="text-[12px] mt-1" style={{ color: 'var(--text-muted)' }}>
-              Upload one of the 4 supported files — source is auto-detected from the filename.
+              Upload any telemetry, topology, or metrics file — source is auto-detected from the filename.
             </p>
           </div>
           <button onClick={onClose} className="p-1 rounded-lg" style={{ color: 'var(--text-muted)' }}>
@@ -567,15 +602,15 @@ function ImportModal({ onClose }: { onClose: () => void }) {
           >
             <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
             <p className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>
-              Drop CSV file here or click to browse
+              Drop CSV, Excel, or JSON file here or click to browse
             </p>
             <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
-              Accepted: .csv files only
+              Accepted: .csv, .xlsx, .json files
             </p>
             <input
               ref={fileRef}
               type="file"
-              accept=".csv,.CSV"
+              accept=".csv,.xlsx,.json,.CSV,.XLSX,.JSON"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -1393,8 +1428,8 @@ export function RuntimeLocationPage() {
                   </p>
                 </div>
               ) : (
-                <div className="divide-y" style={{ borderColor: 'var(--app-border)' }}>
-                  {importHistory.slice(0, 8).map((item) => (
+                <div className="divide-y max-h-[350px] overflow-y-auto" style={{ borderColor: 'var(--app-border)' }}>
+                  {importHistory.map((item) => (
                     <div key={item.id} className="px-5 py-3 flex items-center gap-4">
                       <div
                         className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"

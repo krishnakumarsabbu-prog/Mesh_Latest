@@ -362,8 +362,8 @@ function SnapshotTimeline({ snapshots }: { snapshots: RuntimeSnapshot[] }) {
     return sorted.map((snap) => ({
       timeLabel: new Date(snap.snapshot_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       confidence: snap.confidence_level,
-      status: snap.operational_state === 'DRIFTED' ? 'DRIFTED' : 'ALIGNED',
-      drifts: snap.operational_state === 'DRIFTED' ? 1 : 0,
+      status: (snap.operational_state as string) === 'DRIFTED' ? 'DRIFTED' : 'ALIGNED',
+      drifts: (snap.operational_state as string) === 'DRIFTED' ? 1 : 0,
       primaryDc: snap.replication_role || 'UNKNOWN',
     }));
   }, [snapshots]);
@@ -1177,6 +1177,36 @@ export function ApplicationLocationDetailPage() {
             )}
           </div>
 
+          {detail.lob_name && (
+            <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+              <span 
+                className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-[rgba(255,45,85,0.1)] text-[#FF2D55] border border-[#FF2D55]/20 flex items-center gap-1"
+                title={`Line of Business: ${detail.lob_name}`}
+              >
+                LOB: {detail.lob_name}
+              </span>
+              <span className="text-[12px] text-[var(--text-muted)]">/</span>
+              <span 
+                className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-[rgba(10,132,255,0.1)] text-[#0A84FF] border border-[#0A84FF]/20 flex items-center gap-1"
+                title={`Owning Team: ${detail.team_name}`}
+              >
+                Team: {detail.team_name}
+              </span>
+              {detail.project_id && (
+                <>
+                  <span className="text-[12px] text-[var(--text-muted)]">/</span>
+                  <button
+                    onClick={() => navigate(`/projects/${detail.project_id}`)}
+                    className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-[rgba(52,199,89,0.1)] text-[#34C759] border border-[#34C759]/20 hover:bg-[rgba(52,199,89,0.2)] transition-all flex items-center gap-1 cursor-pointer"
+                    title={`Click to view health dashboard for project: ${detail.project_name}`}
+                  >
+                    Project: {detail.project_name} (Health Dashboard ↗)
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-4 mt-3 flex-wrap text-[var(--text-muted)] text-[12px] font-medium">
             <p>
               {detail.components.length} component{detail.components.length !== 1 ? 's' : ''} ·{' '}
@@ -1269,6 +1299,99 @@ export function ApplicationLocationDetailPage() {
           {detail.conflicts.map((c, i) => (
             <ConflictAlert key={i} conflict={c} onResolve={() => loadDetail(appId!, envParam)} />
           ))}
+        </div>
+      )}
+
+      {/* Telemetry Integrations & Deep Links Cockpit */}
+      {detail.telemetry_links && detail.telemetry_links.length > 0 && (
+        <div 
+          className="rounded-3xl p-5 border flex flex-col gap-4 backdrop-blur-md animate-fade-in"
+          style={{
+            background: 'var(--app-surface)',
+            borderColor: 'var(--app-border)',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Layers className="w-5 h-5 text-[var(--accent)]" />
+              <div className="flex flex-col">
+                <h2 className="text-[14px] font-extrabold text-[var(--text-primary)] tracking-tight">
+                  Cross-Platform Telemetry Cockpit
+                </h2>
+                <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
+                  Direct telemetry channels mapped from application connector registry
+                </p>
+              </div>
+            </div>
+            <span className="text-[9px] font-extrabold px-2 py-0.5 rounded bg-[rgba(10,132,255,0.1)] text-[var(--accent)] border border-[rgba(10,132,255,0.15)] uppercase tracking-wider">
+              {detail.telemetry_links.length} Active Channels
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5">
+            {detail.telemetry_links.map((link) => {
+              // Custom logos or icons for the connectors
+              const getConnectorIcon = (slug: string) => {
+                switch(slug) {
+                  case 'openshift': return <Server className="w-4 h-4" />;
+                  case 'mongodb': return <Database className="w-4 h-4" />;
+                  case 'oracle-oem': return <Database className="w-4 h-4" />;
+                  case 'appdynamics': return <Layers className="w-4 h-4" />;
+                  case 'grafana': return <GitBranch className="w-4 h-4" />;
+                  default: return <Server className="w-4 h-4" />;
+                }
+              };
+
+              return (
+                <motion.a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ y: -3, scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-2xl p-3.5 flex flex-col gap-3 justify-between border cursor-pointer transition-all duration-300 relative overflow-hidden group"
+                  style={{
+                    background: 'var(--app-surface-raised)',
+                    borderColor: 'var(--app-border)',
+                  }}
+                >
+                  {/* Decorative glow matching connector color */}
+                  <div 
+                    className="absolute -right-6 -top-6 w-12 h-12 rounded-full blur-xl opacity-10 group-hover:opacity-30 transition-opacity duration-300"
+                    style={{ background: link.color || '#0A84FF' }}
+                  />
+
+                  <div className="flex items-center justify-between">
+                    <span 
+                      className="p-2 rounded-xl flex items-center justify-center text-[var(--text-inverse)]"
+                      style={{ background: link.color || '#0A84FF' }}
+                    >
+                      {getConnectorIcon(link.slug)}
+                    </span>
+                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider bg-[rgba(52,199,89,0.1)] text-[#34C759] border border-[#34C759]/10">
+                      Live
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-0.5 mt-2">
+                    <span className="text-[11px] font-extrabold text-[var(--text-primary)] truncate" title={link.name}>
+                      {link.name}
+                    </span>
+                    <span className="text-[8px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                      {link.category}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-1 text-[10px] font-extrabold text-[var(--accent)] group-hover:underline">
+                    <span>Open Telemetry</span>
+                    <span>→</span>
+                  </div>
+                </motion.a>
+              );
+            })}
+          </div>
         </div>
       )}
 

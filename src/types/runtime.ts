@@ -66,6 +66,22 @@ export interface ApplicationLocationSummary {
   last_updated?: string;
   tech_stacks?: TechStack[];
   alignment_status?: AlignmentStatus;
+  project_id?: string;
+  project_name?: string;
+  team_id?: string;
+  team_name?: string;
+  lob_id?: string;
+  lob_name?: string;
+}
+
+export interface TelemetryLink {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  url: string;
+  color?: string;
+  icon?: string;
 }
 
 export interface DataSourceInfo {
@@ -95,6 +111,13 @@ export interface ApplicationLocationDetail {
   components: ApplicationComponent[];
   data_sources: DataSourceInfo[];
   conflicts: SourceConflict[];
+  project_id?: string;
+  project_name?: string;
+  team_id?: string;
+  team_name?: string;
+  lob_id?: string;
+  lob_name?: string;
+  telemetry_links?: TelemetryLink[];
 }
 
 export interface RuntimeSnapshot {

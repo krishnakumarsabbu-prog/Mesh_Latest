@@ -62,6 +62,7 @@ class ApplicationIntent(Base):
 
     application_id = Column(String, primary_key=True, index=True)
     application_name = Column(String, nullable=False)
+    project_id = Column(String, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
     intended_active_dcs = Column(JSON, nullable=False)  # e.g., ["IBB1", "SHV"]
     intended_primary_dc = Column(String, nullable=False)  # e.g., "IBB1"
     intended_environments = Column(JSON, nullable=True)  # e.g., ["PRODUCTION"]
@@ -71,6 +72,7 @@ class ApplicationIntent(Base):
     alignment_status = Column(String, default="UNKNOWN")  # ALIGNED | DRIFTED | UNKNOWN
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 
 class SourceProposal(Base):

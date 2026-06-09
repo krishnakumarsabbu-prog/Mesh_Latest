@@ -43,6 +43,7 @@ _REFERENCE_INTENTS = [
         "failover_type": "MANUAL",
         "replication_model": "READ_REPLICA",
         "required_tech_stacks": ["oracle", "mongodb"],
+        "project_id": "project-pca",
     },
     {
         "application_id": "BILLING",
@@ -53,6 +54,7 @@ _REFERENCE_INTENTS = [
         "failover_type": "AUTOMATIC",
         "replication_model": "SINGLE_WRITER",
         "required_tech_stacks": ["ibm_mq", "mssql"],
+        "project_id": "project-billing",
     },
     {
         "application_id": "CLAIMS",
@@ -63,6 +65,7 @@ _REFERENCE_INTENTS = [
         "failover_type": "AUTOMATIC",
         "replication_model": "SINGLE_WRITER",
         "required_tech_stacks": ["kafka", "ocp"],
+        "project_id": "project-claims",
     },
 ]
 
@@ -166,6 +169,7 @@ async def seed_reference_data() -> None:
     try:
         async with AsyncSessionLocal() as session:
             await _seed_data_centers(session)
+            await _seed_business_hierarchy(session)
             await _seed_intents(session)
             await _seed_proposals(session)
             await _seed_builtin_rules(session)
@@ -269,11 +273,15 @@ async def _seed_intents(session: AsyncSession) -> None:
         result = await session.execute(
             select(ApplicationIntent).where(ApplicationIntent.application_id == intent_data["application_id"])
         )
-        if result.scalar_one_or_none():
+        existing = result.scalar_one_or_none()
+        if existing:
+            if existing.project_id != intent_data.get("project_id"):
+                existing.project_id = intent_data.get("project_id")
             continue
         intent = ApplicationIntent(
             application_id=intent_data["application_id"],
             application_name=intent_data["application_name"],
+            project_id=intent_data.get("project_id"),
             intended_active_dcs=intent_data["intended_active_dcs"],
             intended_primary_dc=intent_data["intended_primary_dc"],
             intended_environments=intent_data["intended_environments"],
@@ -286,6 +294,133 @@ async def _seed_intents(session: AsyncSession) -> None:
 
     if seeded:
         logger.info(f"  [seed] {seeded} application intents created")
+
+
+async def _seed_business_hierarchy(session: AsyncSession) -> None:
+    from app.models.lob import Lob
+    from app.models.team import Team
+    from app.models.project import Project
+    from app.models.project_connector import ProjectConnector, ProjectConnectorStatus
+    from app.models.connector_catalog import ConnectorCatalogEntry
+    from app.models.user import User
+    import json
+
+    # Get a user to act as creator
+    user_res = await session.execute(select(User).limit(1))
+    admin_user = user_res.scalar_one_or_none()
+    admin_user_id = admin_user.id if admin_user else None
+
+    # LOBs
+    lobs_data = [
+        {"id": "lob-healthcare", "name": "Healthcare Services", "slug": "healthcare-services", "color": "#FF2D55", "icon": "activity"},
+        {"id": "lob-finance", "name": "Finance Operations", "slug": "finance-operations", "color": "#34C759", "icon": "dollar-sign"},
+        {"id": "lob-insurance", "name": "Insurance Services", "slug": "insurance-services", "color": "#AF52DE", "icon": "shield"}
+    ]
+
+    for l_data in lobs_data:
+        existing = await session.execute(select(Lob).where(Lob.id == l_data["id"]))
+        if not existing.scalar_one_or_none():
+            lob = Lob(
+                id=l_data["id"],
+                name=l_data["name"],
+                slug=l_data["slug"],
+                color=l_data["color"],
+                icon=l_data["icon"],
+                tenant_id="default",
+                created_by=admin_user_id
+            )
+            session.add(lob)
+            logger.info(f"  [seed] Created LOB: {lob.name}")
+
+    # Teams
+    teams_data = [
+        {"id": "team-clinical", "name": "Clinical Systems", "slug": "clinical-systems", "lob_id": "lob-healthcare", "color": "#FF9F0A", "icon": "users"},
+        {"id": "team-billing", "name": "Billing Payments", "slug": "billing-payments", "lob_id": "lob-finance", "color": "#5AC8FA", "icon": "users"},
+        {"id": "team-claims", "name": "Claims Processing", "slug": "claims-processing-team", "lob_id": "lob-insurance", "color": "#5856D6", "icon": "users"}
+    ]
+
+    for t_data in teams_data:
+        existing = await session.execute(select(Team).where(Team.id == t_data["id"]))
+        if not existing.scalar_one_or_none():
+            team = Team(
+                id=t_data["id"],
+                name=t_data["name"],
+                slug=t_data["slug"],
+                lob_id=t_data["lob_id"],
+                color=t_data["color"],
+                icon=t_data["icon"],
+                tenant_id="default",
+                created_by=admin_user_id
+            )
+            session.add(team)
+            logger.info(f"  [seed] Created Team: {team.name}")
+
+    # Projects
+    projects_data = [
+        {"id": "project-pca", "name": "Patient Care Portal", "slug": "patient-care-portal", "team_id": "team-clinical", "lob_id": "lob-healthcare", "color": "#FF2D55", "environment": "production"},
+        {"id": "project-billing", "name": "Billing Operations", "slug": "billing-operations", "team_id": "team-billing", "lob_id": "lob-finance", "color": "#34C759", "environment": "production"},
+        {"id": "project-claims", "name": "Claims Processing", "slug": "claims-processing", "team_id": "team-claims", "lob_id": "lob-insurance", "color": "#AF52DE", "environment": "production"}
+    ]
+
+    for p_data in projects_data:
+        existing = await session.execute(select(Project).where(Project.id == p_data["id"]))
+        if not existing.scalar_one_or_none():
+            project = Project(
+                id=p_data["id"],
+                name=p_data["name"],
+                slug=p_data["slug"],
+                team_id=p_data["team_id"],
+                lob_id=p_data["lob_id"],
+                color=p_data["color"],
+                environment=p_data["environment"],
+                created_by=admin_user_id
+            )
+            session.add(project)
+            logger.info(f"  [seed] Created Project: {project.name}")
+
+            # Assign default connectors
+            connector_slugs = []
+            if p_data["id"] == "project-pca":
+                connector_slugs = ["oracle-oem", "mongodb", "appdynamics", "grafana", "openshift"]
+            elif p_data["id"] == "project-billing":
+                connector_slugs = ["ibm-mq", "mssql", "appdynamics", "grafana", "openshift"]
+            elif p_data["id"] == "project-claims":
+                connector_slugs = ["kafka", "openshift", "appdynamics", "grafana"]
+
+            for slug in connector_slugs:
+                cat_res = await session.execute(select(ConnectorCatalogEntry).where(ConnectorCatalogEntry.slug == slug))
+                catalog = cat_res.scalar_one_or_none()
+                if catalog:
+                    pc_check = await session.execute(
+                        select(ProjectConnector).where(
+                            ProjectConnector.project_id == p_data["id"],
+                            ProjectConnector.catalog_entry_id == catalog.id
+                        )
+                    )
+                    if not pc_check.scalar_one_or_none():
+                        api_url = f"https://{slug}.corp.internal/apps/{p_data['id']}"
+                        if slug == "openshift":
+                            api_url = f"https://console.ocp-prod-us-east-1.corp.internal/k8s/ns/{p_data['slug']}-prod"
+                        elif slug == "appdynamics":
+                            api_url = f"https://appdynamics.corp.internal/controller/#/location/{p_data['slug']}"
+                        elif slug == "grafana":
+                            api_url = f"https://grafana.corp.internal/d/{p_data['slug']}-telemetry"
+                        elif slug == "mongodb":
+                            api_url = f"https://mongodb-admin.corp.internal/cluster/{p_data['slug']}"
+
+                        pc = ProjectConnector(
+                            id=str(uuid.uuid4()),
+                            project_id=p_data["id"],
+                            catalog_entry_id=catalog.id,
+                            name=f"{catalog.name} ({p_data['name']})",
+                            description=f"Auto-seeded {catalog.name} connector for telemetry monitoring",
+                            config=json.dumps({"api_url": api_url}),
+                            status=ProjectConnectorStatus.CONFIGURED,
+                            is_enabled=True,
+                            assigned_by=admin_user_id
+                        )
+                        session.add(pc)
+                        logger.info(f"    [seed] Assigned connector {slug} to project {p_data['name']}")
 
 
 async def _seed_proposals(session: AsyncSession) -> None:

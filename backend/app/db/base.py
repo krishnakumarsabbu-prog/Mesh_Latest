@@ -87,6 +87,7 @@ async def init_db():
             # Add new application intent columns
             for col_def in [
                 "ALTER TABLE application_intents ADD COLUMN alignment_status VARCHAR DEFAULT 'UNKNOWN';",
+                "ALTER TABLE application_intents ADD COLUMN project_id VARCHAR;",
             ]:
                 try:
                     await conn.execute(text(col_def))

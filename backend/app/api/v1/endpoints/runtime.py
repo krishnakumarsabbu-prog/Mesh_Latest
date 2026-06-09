@@ -253,9 +253,19 @@ async def get_applications(db: AsyncSession = Depends(get_db)):
         if a.last_seen_at > group["last_updated"]:
             group["last_updated"] = a.last_seen_at
 
-    # Load intents for alignment status
-    intent_res = await db.execute(select(ApplicationIntent))
-    intents_map = {i.application_id: i for i in intent_res.scalars().all()}
+    # Load projects, teams, lobs for metadata linking
+    from app.models.project import Project
+    from app.models.team import Team
+    from app.models.lob import Lob
+
+    proj_res = await db.execute(select(Project))
+    projects_map = {p.id: p for p in proj_res.scalars().all()}
+
+    team_res = await db.execute(select(Team))
+    teams_map = {t.id: t for t in team_res.scalars().all()}
+
+    lob_res = await db.execute(select(Lob))
+    lobs_map = {l.id: l for l in lob_res.scalars().all()}
 
     summaries = []
     for key, data in app_groups.items():
@@ -275,8 +285,26 @@ async def get_applications(db: AsyncSession = Depends(get_db)):
             conf_label = {4: "HIGH", 3: "MEDIUM", 2: "LOW", 1: "UNKNOWN"}.get(conf_numeric, "MEDIUM")
             conf_score = {4: 90, 3: 65, 2: 45, 1: 0}.get(conf_numeric, 65)
 
-        intent = intents_map.get(app_id)
+        intent = intents.get(app_id)
         alignment_status = intent.alignment_status if intent else "UNKNOWN"
+
+        # Linked metadata
+        project_id = intent.project_id if intent else None
+        project_name = None
+        team_id = None
+        team_name = None
+        lob_id = None
+        lob_name = None
+
+        if project_id and project_id in projects_map:
+            p = projects_map[project_id]
+            project_name = p.name
+            team_id = p.team_id
+            lob_id = p.lob_id
+            if team_id and team_id in teams_map:
+                team_name = teams_map[team_id].name
+            if lob_id and lob_id in lobs_map:
+                lob_name = lobs_map[lob_id].name
 
         summaries.append({
             "application_id": app_id,
@@ -291,7 +319,13 @@ async def get_applications(db: AsyncSession = Depends(get_db)):
             "asset_count": data["asset_count"],
             "stale_source_count": 0,
             "alignment_status": alignment_status,
-            "last_updated": data["last_updated"].isoformat() + "Z"
+            "last_updated": data["last_updated"].isoformat() + "Z",
+            "project_id": project_id,
+            "project_name": project_name,
+            "team_id": team_id,
+            "team_name": team_name,
+            "lob_id": lob_id,
+            "lob_name": lob_name,
         })
 
     return summaries
@@ -319,8 +353,73 @@ async def get_application_detail(app_id: str, environment: str = "PRODUCTION", d
         if is_match and a.environment == environment:
             app_assets.append(a)
 
+    # Resolve LOB, Team, Project Hierarchy and Telemetry deep links
+    intent_res = await db.execute(select(ApplicationIntent).where(ApplicationIntent.application_id == app_id))
+    intent = intent_res.scalar_one_or_none()
+
+    project_id = intent.project_id if intent else None
+    project_name = None
+    team_id = None
+    team_name = None
+    lob_id = None
+    lob_name = None
+    telemetry_links = []
+
+    if project_id:
+        from app.models.project import Project
+        from app.models.team import Team
+        from app.models.lob import Lob
+        from app.models.project_connector import ProjectConnector
+        from app.models.connector_catalog import ConnectorCatalogEntry
+        import json
+
+        proj_res = await db.execute(select(Project).where(Project.id == project_id))
+        proj = proj_res.scalar_one_or_none()
+        if proj:
+            project_name = proj.name
+            team_id = proj.team_id
+            lob_id = proj.lob_id
+
+            if team_id:
+                t_res = await db.execute(select(Team).where(Team.id == team_id))
+                t_val = t_res.scalar_one_or_none()
+                if t_val:
+                    team_name = t_val.name
+            
+            if lob_id:
+                l_res = await db.execute(select(Lob).where(Lob.id == lob_id))
+                l_val = l_res.scalar_one_or_none()
+                if l_val:
+                    lob_name = l_val.name
+
+            # Fetch project connectors
+            pc_res = await db.execute(
+                select(ProjectConnector, ConnectorCatalogEntry)
+                .join(ConnectorCatalogEntry, ProjectConnector.catalog_entry_id == ConnectorCatalogEntry.id)
+                .where(ProjectConnector.project_id == project_id, ProjectConnector.is_enabled == True)
+            )
+            for pc, catalog in pc_res.all():
+                url = None
+                try:
+                    config_data = json.loads(pc.config) if pc.config else {}
+                    url = config_data.get("api_url") or config_data.get("base_url") or config_data.get("url") or config_data.get("connection_string")
+                except Exception:
+                    pass
+                
+                if not url:
+                    url = f"https://{catalog.slug}.corp.internal/apps/{app_id.lower()}"
+
+                telemetry_links.append({
+                    "id": pc.id,
+                    "name": pc.name,
+                    "slug": catalog.slug,
+                    "category": catalog.category,
+                    "url": url,
+                    "color": catalog.color or "#0A84FF",
+                    "icon": catalog.icon or "link"
+                })
+
     if not app_assets:
-        # Fallback to empty shell or raise 404
         return {
             "application_id": app_id,
             "application_name": app_id.replace("_", " ").title(),
@@ -328,7 +427,14 @@ async def get_application_detail(app_id: str, environment: str = "PRODUCTION", d
             "overall_confidence": 3,
             "components": [],
             "data_sources": [],
-            "conflicts": []
+            "conflicts": [],
+            "project_id": project_id,
+            "project_name": project_name,
+            "team_id": team_id,
+            "team_name": team_name,
+            "lob_id": lob_id,
+            "lob_name": lob_name,
+            "telemetry_links": telemetry_links,
         }
 
     # Group into components based on tech stack/asset type
@@ -419,7 +525,14 @@ async def get_application_detail(app_id: str, environment: str = "PRODUCTION", d
         "confidence_score": conf_score,
         "components": components,
         "data_sources": data_sources,
-        "conflicts": conflicts
+        "conflicts": conflicts,
+        "project_id": project_id,
+        "project_name": project_name,
+        "team_id": team_id,
+        "team_name": team_name,
+        "lob_id": lob_id,
+        "lob_name": lob_name,
+        "telemetry_links": telemetry_links,
     }
 
 @router.get("/datacenters", response_model=List[Dict[str, Any]])
@@ -1204,10 +1317,61 @@ async def import_csv(
     source_type: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
-    content_bytes = await file.read()
-    content = content_bytes.decode("utf-8")
+    import io
+    import csv
+    import uuid
+    from datetime import datetime
     
-    result = await parse_and_insert_csv(file.filename, content, source_type, db)
+    content_bytes = await file.read()
+    
+    if file.filename.endswith(".xlsx"):
+        try:
+            import openpyxl
+            f_buf = io.BytesIO(content_bytes)
+            wb = openpyxl.load_workbook(f_buf, read_only=True, data_only=True)
+            ws = wb.active
+            rows_list = list(ws.iter_rows(values_only=True))
+            wb.close()
+            if len(rows_list) < 2:
+                return {
+                    "id": str(uuid.uuid4()),
+                    "source_name": source_type or "xlsx",
+                    "file_name": file.filename,
+                    "imported_at": datetime.utcnow().isoformat() + "Z",
+                    "record_count": 0,
+                    "status": "FAILED",
+                    "errors": ["XLSX file is empty"]
+                }
+            headers = [str(h or '').strip() for h in rows_list[0]]
+            csv_buf = io.StringIO()
+            writer = csv.writer(csv_buf)
+            writer.writerow(headers)
+            for data_row in rows_list[1:]:
+                writer.writerow([str(c or '') for c in data_row])
+            content = csv_buf.getvalue()
+            csv_fname = file.filename.replace(".xlsx", ".csv")
+            result = await parse_and_insert_csv(csv_fname, content, source_type, db)
+        except ImportError:
+            result = {
+                "assets_created": 0,
+                "errors": ["openpyxl not installed on backend"],
+                "source": source_type or "xlsx",
+                "status": "FAILED"
+            }
+        except Exception as e:
+            result = {
+                "assets_created": 0,
+                "errors": [str(e)],
+                "source": source_type or "xlsx",
+                "status": "FAILED"
+            }
+    elif file.filename.endswith(".json"):
+        content = content_bytes.decode("utf-8", errors="ignore")
+        result = await parse_and_insert_json_file(file.filename, content, db)
+    else:
+        content = content_bytes.decode("utf-8", errors="ignore")
+        result = await parse_and_insert_csv(file.filename, content, source_type, db)
+        
     assets_created = result["assets_created"]
     errors = result["errors"]
     source = result["source"]
