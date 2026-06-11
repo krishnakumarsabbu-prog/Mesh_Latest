@@ -21,6 +21,7 @@ interface NavItem {
 
 const operationsNavItems: NavItem[] = [
   { label: 'Runtime Location', href: '/runtime-location', icon: MapPin, description: 'Where is my app running?' },
+  { label: 'Runtime Truth', href: '/runtime-truth', icon: ShieldCheck, description: 'Can this app process transactions now?' },
 ];
 
 const adminNavItems: NavItem[] = [];

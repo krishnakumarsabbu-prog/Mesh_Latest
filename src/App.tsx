@@ -12,6 +12,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 // Lazily loaded pages
 const RuntimeLocationPage = React.lazy(() => import('./pages/RuntimeLocationPage').then(m => ({ default: m.RuntimeLocationPage })));
 const ApplicationLocationDetailPage = React.lazy(() => import('./pages/ApplicationLocationDetailPage').then(m => ({ default: m.ApplicationLocationDetailPage })));
+const RuntimeTruthPage = React.lazy(() => import('./pages/RuntimeTruthPage').then(m => ({ default: m.RuntimeTruthPage })));
 
 function PageSkeleton() {
   return (
@@ -58,6 +59,7 @@ export default function App() {
             <Route index element={<Navigate to="/runtime-location" replace />} />
             <Route path="runtime-location" element={<Lazy><RuntimeLocationPage /></Lazy>} />
             <Route path="runtime-location/:appId" element={<Lazy><ApplicationLocationDetailPage /></Lazy>} />
+            <Route path="runtime-truth" element={<Lazy><RuntimeTruthPage /></Lazy>} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
