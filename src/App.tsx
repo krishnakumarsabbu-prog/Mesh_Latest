@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { LoginPage } from '@/pages/LoginPage';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { useAuthStore } from '@/store/authStore';
+import { ChatWidget } from '@/components/chat/ChatWidget';
 
 // Eagerly loaded — small and needed on every route
 import { NotFoundPage } from '@/pages/NotFoundPage';
@@ -60,6 +61,7 @@ export default function App() {
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
+        <ChatWidget />
       </BrowserRouter>
     </ErrorBoundary>
   );
