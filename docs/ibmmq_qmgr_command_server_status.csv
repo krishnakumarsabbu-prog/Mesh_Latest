@@ -1,0 +1,11 @@
+_name_,agent_hostname,description,env,exported_qmgr,hostname,instance,job,mq_namespace,platform,qmgr,cluster,Value
+ibmmq_qmgr_command_server_status,mq4uprdga01.wellsfargo.net,IBM MQ QMgr Command Server,PRODUCTION,EL4UR1V,mq4uprdga01.wellsfargo.net,1414,ibm-mq,PROD_NS,UNIX,EL4UR1V,PROD_CLUSTER,1
+ibmmq_qmgr_command_server_status,mq4uprdga02.wellsfargo.net,IBM MQ QMgr Command Server,PRODUCTION,EL4UR2V,mq4uprdga02.wellsfargo.net,1414,ibm-mq,PROD_NS,UNIX,EL4UR2V,PROD_CLUSTER,1
+ibmmq_qmgr_command_server_status,mq4uprdma01.wellsfargo.net,IBM MQ QMgr Command Server,PRODUCTION,UR1MAMQ,mq4uprdma01.wellsfargo.net,1414,ibm-mq,PROD_NS,UNIX,UR1MAMQ,PROD_CLUSTER,1
+ibmmq_qmgr_command_server_status,mq4uprdma02.wellsfargo.net,IBM MQ QMgr Command Server,PRODUCTION,UR2MAMQ,mq4uprdma02.wellsfargo.net,1414,ibm-mq,PROD_NS,UNIX,UR2MAMQ,PROD_CLUSTER,1
+ibmmq_qmgr_command_server_status,mq4uatga01.wellsfargo.net,IBM MQ QMgr Command Server,UAT,UATGA1V,mq4uatga01.wellsfargo.net,1414,ibm-mq,UAT_NS,UNIX,UATGA1V,UAT_CLUSTER,1
+ibmmq_qmgr_command_server_status,mq4uatga02.wellsfargo.net,IBM MQ QMgr Command Server,UAT,UATGA2V,mq4uatga02.wellsfargo.net,1414,ibm-mq,UAT_NS,UNIX,UATGA2V,UAT_CLUSTER,1
+ibmmq_qmgr_command_server_status,mq4uatma01.wellsfargo.net,IBM MQ QMgr Command Server,UAT,UATMA1V,mq4uatma01.wellsfargo.net,1414,ibm-mq,UAT_NS,UNIX,UATMA1V,UAT_CLUSTER,1
+ibmmq_qmgr_command_server_status,mq4uprdga03.wellsfargo.net,IBM MQ QMgr Command Server,PRODUCTION,1AUTHBMQ,mq4uprdga03.wellsfargo.net,1414,ibm-mq,PROD_NS,UNIX,1AUTHBMQ,,1
+ibmmq_qmgr_command_server_status,mq4uprdma03.wellsfargo.net,IBM MQ QMgr Command Server,PRODUCTION,SSPMQ01,mq4uprdma03.wellsfargo.net,1414,ibm-mq,PROD_NS,UNIX,SSPMQ01,,1
+ibmmq_qmgr_command_server_status,mq4uprdga04.wellsfargo.net,IBM MQ QMgr Command Server,PRODUCTION,CAPMU01,mq4uprdga04.wellsfargo.net,1414,ibm-mq,PROD_NS,UNIX,CAPMU01,CAPMU_CLUSTER,1

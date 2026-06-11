@@ -1,0 +1,13 @@
+__name__,agent_hostname,collector_id,env,instance,job,role_name,target_name,Value
+oem_db_role_data,oem-agent01.wellsfargo.net,col-001,PRODUCTION,U6170052_DB01,oracle-oem,PRIMARY,U6170052_DANUXL6170DB01,1
+oem_db_role_data,oem-agent01.wellsfargo.net,col-001,PRODUCTION,U6170052_DB02,oracle-oem,PHYSICAL STANDBY,U6170052_DANUXL6170DB02,1
+oem_db_role_data,oem-agent01.wellsfargo.net,col-002,PRODUCTION,CAPMU_DB01,oracle-oem,PRIMARY,CAPMU_CAPMUDB01PRD,1
+oem_db_role_data,oem-agent01.wellsfargo.net,col-002,PRODUCTION,CAPMU_DB02,oracle-oem,PHYSICAL STANDBY,CAPMU_CAPMUDB02PRD,1
+oem_db_role_data,oem-agent02.wellsfargo.net,col-003,PRODUCTION,1AUTHB_DB01,oracle-oem,PRIMARY,1AUTHB_AUTHUDB01PRD,1
+oem_db_role_data,oem-agent02.wellsfargo.net,col-003,PRODUCTION,1AUTHB_DB02,oracle-oem,PHYSICAL STANDBY,1AUTHB_AUTHUDB02PRD,1
+oem_db_role_data,oem-agent02.wellsfargo.net,col-004,PRODUCTION,10AM_DB01,oracle-oem,PRIMARY,10AM_CTDSDB01PRD,1
+oem_db_role_data,oem-agent02.wellsfargo.net,col-004,PRODUCTION,10AM_DB02,oracle-oem,PHYSICAL STANDBY,10AM_CTDSDB02PRD,1
+oem_db_role_data,oem-agent03.wellsfargo.net,col-005,UAT,U6170052_UATDB01,oracle-oem,PRIMARY,U6170052_DANUXL6170UAT01,1
+oem_db_role_data,oem-agent03.wellsfargo.net,col-005,UAT,CAPMU_UATDB01,oracle-oem,PRIMARY,CAPMU_CAPMUUATDB01,1
+oem_db_role_data,oem-agent03.wellsfargo.net,col-006,PRODUCTION,1SSP_DB01,oracle-oem,PRIMARY,1SSP_SSPUDB01PRD,1
+oem_db_role_data,oem-agent03.wellsfargo.net,col-006,PRODUCTION,1SSP_DB02,oracle-oem,PHYSICAL STANDBY,1SSP_SSPUDB02PRD,1

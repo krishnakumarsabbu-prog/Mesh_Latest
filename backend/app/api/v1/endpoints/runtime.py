@@ -52,7 +52,9 @@ def detect_source_type(file_name: str) -> str:
         return "ocp"
     if "jobs_application" in f or "batch" in f or "batch_processing" in f:
         return "batch"
-    if "appdynamics" in f or "appdynamic" in f or "node_inventory" in f or "traffic_raw" in f or "sploc" in f:
+    if "sploc" in f or "wf_dc" in f:
+        return "cmdb"
+    if "appdynamics" in f or "appdynamic" in f or "node_inventory" in f or "traffic_raw" in f:
         return "appdynamics"
     return "cmdb"
 
@@ -1230,12 +1232,21 @@ async def parse_and_insert_csv(
 
         else:  # CMDB / SPLOC / fallback
             # Check if this is a SPLOC traffic file
-            is_sploc = "wf_dc" in reader.fieldnames and "app_id" in reader.fieldnames
+            fieldnames = reader.fieldnames or []
+            is_sploc = "wf_dc" in fieldnames and "app_id" in fieldnames
+            _SPLOC_DC_MAP = {
+                "OXM": {"name": "DC Georgia Production", "short_name": "GA-PRD"},
+                "WEC": {"name": "DC Maryland Production", "short_name": "MA-PRD"},
+                "GA": {"name": "DC Georgia Production", "short_name": "GA-PRD"},
+                "MA": {"name": "DC Maryland Production", "short_name": "MA-PRD"},
+            }
             if is_sploc:
                 for row in reader:
                     app_id = row.get("app_id") or "UNKNOWN"
-                    app_name = f"{app_id} Application"
+                    app_full = row.get("app_full_name") or f"{app_id} Application"
+                    app_name = app_full if app_full else f"{app_id} Application"
                     dc_short = row.get("wf_dc") or "UNK"
+                    dc_info = _SPLOC_DC_MAP.get(dc_short.upper(), {"name": f"DC {dc_short}", "short_name": dc_short})
                     service = row.get("sf_service") or row.get("wf_acln") or "unknown-service"
                     avg_value = row.get("avg_value") or "0"
                     total_value = row.get("total_value") or "0"
@@ -1244,7 +1255,7 @@ async def parse_and_insert_csv(
                     if not service or not app_id:
                         continue
 
-                    dc = await get_or_create_dc(db, {"name": f"DC {dc_short}", "short_name": dc_short})
+                    dc = await get_or_create_dc(db, dc_info)
 
                     asset = RuntimeAsset(
                         id=str(uuid.uuid4()),
@@ -1252,7 +1263,7 @@ async def parse_and_insert_csv(
                         asset_type="COMPUTE_NODE",
                         tech_stack="java",
                         environment="PRODUCTION",
-                        host=f"{service.lower()}.{dc_short.lower()}.healthmesh.ai",
+                        host=f"{service.lower()}.{dc_info['short_name'].lower()}.healthmesh.ai",
                         platform="LINUX",
                         data_center_short=dc.short_name,
                         latest_confidence_level=4,
@@ -2013,10 +2024,6 @@ async def import_all_docs(db: AsyncSession = Depends(get_db)):
         db.add(intent)
         
     await db.commit()
-
-    # 3. Inject synthetic representative assets for tech stacks where xlsx files are empty
-    synthetic_count = await _inject_synthetic_assets(db)
-    total_assets += synthetic_count
 
     await db.commit()
 

@@ -21,7 +21,6 @@ import {
   EnvComparisonRow,
 } from '@/types';
 import {
-  getMockSnapshots,
   getAppTechStacks,
 } from '@/lib/runtimeLocationMock';
 import {
@@ -276,16 +275,10 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
     const env = environment ?? 'PRODUCTION';
     try {
       const res = await runtimeApi.getSnapshots(appId, env);
-      if (res.data && res.data.length > 0) {
-        set({ snapshots: res.data });
-        return;
-      }
+      set({ snapshots: res.data ?? [] });
     } catch {
-      // Backend not seeded yet — fall back to mock
+      set({ snapshots: [] });
     }
-    // Fallback: derive from mock data
-    const snaps = getMockSnapshots(appId, env);
-    set({ snapshots: snaps });
   },
 
   loadDataCenters: async () => {
