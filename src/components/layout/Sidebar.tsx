@@ -20,34 +20,14 @@ interface NavItem {
 }
 
 const operationsNavItems: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, description: 'Overview & metrics' },
-  { label: 'Operations', href: '/operations', icon: Layers, description: 'LOBs, Teams & Projects' },
-  { label: 'Health Monitor', href: '/health', icon: Activity, description: 'Real-time health' },
   { label: 'Runtime Location', href: '/runtime-location', icon: MapPin, description: 'Where is my app running?' },
-  { label: 'Topology', href: '/topology', icon: Network, description: 'Live infrastructure graph' },
-  { label: 'Analytics', href: '/analytics', icon: BarChart2, description: 'Historical trends & SLA' },
-  { label: 'AI Assistant', href: '/chatbot', icon: MessageSquare, description: 'Intelligence layer' },
 ];
 
-const adminNavItems: NavItem[] = [
-  { label: 'Lines of Business', href: '/lobs', icon: Building2, description: 'Manage LOBs' },
-  { label: 'Sub-LOBs', href: '/sublobs', icon: Building2, description: 'Manage Sub-LOBs' },
-  { label: 'Teams Cmd Center', href: '/teams-command-center', icon: UsersRound, description: 'Organizational health' },
-  { label: 'Teams List', href: '/teams', icon: Users, description: 'Manage teams' },
-  { label: 'Projects', href: '/components', icon: Layers, description: 'Manage projects' },
-  { label: 'Components', href: '/projects', icon: FolderOpen, description: 'All components' },
-  { label: 'Dashboard Builder', href: '/dashboard-builder', icon: LayoutTemplate, description: 'Template builder' },
-  { label: 'Integrations', href: '/connector-catalog', icon: Plug, description: 'Connectors & catalog' },
-  { label: 'Health Rules', href: '/rules', icon: Shield, description: 'Configurable rules engine' },
-];
+const adminNavItems: NavItem[] = [];
 
-const rbacNavItems: NavItem[] = [
-  { label: 'Roles & Permissions', href: '/roles', icon: ShieldCheck, description: 'RBAC management' },
-];
+const rbacNavItems: NavItem[] = [];
 
-const systemNavItems: NavItem[] = [
-  { label: 'Settings', href: '/settings', icon: Settings, description: 'Configuration' },
-];
+const systemNavItems: NavItem[] = [];
 
 function NavTooltip({ label, description }: { label: string; description?: string }) {
   return (

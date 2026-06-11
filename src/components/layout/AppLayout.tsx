@@ -3,8 +3,6 @@ import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { NotificationContainer } from '@/components/ui/Notification';
-import { CommandPalette } from '@/components/search/CommandPalette';
-import { FloatingChatWidget } from '@/components/chat/FloatingChatWidget';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { useThemeStore } from '@/store/themeStore';
@@ -21,7 +19,7 @@ function PageTransition({ children }: { children: React.ReactNode }) {
 
 export function AppLayout() {
   const { isAuthenticated } = useAuthStore();
-  const { sidebarCollapsed, commandPaletteOpen, openCommandPalette, closeCommandPalette } = useUIStore();
+  const { sidebarCollapsed } = useUIStore();
   const { theme } = useThemeStore();
 
   useEffect(() => {
@@ -36,17 +34,6 @@ export function AppLayout() {
     document.body.style.background = 'var(--app-bg)';
     document.body.style.color = 'var(--text-primary)';
   }, [theme]);
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        openCommandPalette();
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [openCommandPalette]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -74,10 +61,8 @@ export function AppLayout() {
           </PageTransition>
         </div>
       </main>
-      <CommandPalette open={commandPaletteOpen} onClose={closeCommandPalette} />
 
       <NotificationContainer />
-      <FloatingChatWidget />
     </div>
   );
 }

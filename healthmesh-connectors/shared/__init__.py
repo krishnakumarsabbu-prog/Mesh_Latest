@@ -1,1 +1,0 @@
-# HealthMesh Shared Package

@@ -33,8 +33,6 @@ _scheduler_task = None
 async def lifespan(app: FastAPI):
     global _scheduler_task
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
-    from app.connectors.base.registry import initialize_registry
-    initialize_registry()
     await init_db()
     logger.info("Database initialized")
 
@@ -61,18 +59,8 @@ async def lifespan(app: FastAPI):
                 pass
             logger.error(f"Failed to auto-import telemetry docs on startup: {e}", exc_info=True)
 
-    from app.services.aggregation_scheduler import aggregation_scheduler
-    _scheduler_task = asyncio.ensure_future(aggregation_scheduler.run_scheduled_refresh())
-    logger.info("Aggregation scheduler started")
-
     yield
 
-    if _scheduler_task and not _scheduler_task.done():
-        _scheduler_task.cancel()
-        try:
-            await _scheduler_task
-        except asyncio.CancelledError:
-            pass
     logger.info("Shutting down")
 
 

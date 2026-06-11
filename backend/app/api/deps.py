@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from app.db.base import get_db
 from app.services.auth_service import auth_service
-from app.services.rbac_service import rbac_service
 from app.models.user import User, UserRole
 
 bearer_scheme = HTTPBearer()
@@ -87,21 +86,6 @@ async def require_project_admin(current_user: User = Depends(get_current_user)) 
 
 def check_permission(user: User, allowed_roles: set) -> bool:
     return user.role in allowed_roles
-
-
-def require_permission(entity: str, action: str):
-    async def _dependency(
-        current_user: User = Depends(get_current_user),
-        db: AsyncSession = Depends(get_db),
-    ) -> User:
-        has_perm = await rbac_service.user_has_permission(db, current_user.role.value, entity, action)
-        if not has_perm:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Permission denied: {entity}:{action}",
-            )
-        return current_user
-    return _dependency
 
 
 async def require_rbac_manage(current_user: User = Depends(get_current_user)) -> User:

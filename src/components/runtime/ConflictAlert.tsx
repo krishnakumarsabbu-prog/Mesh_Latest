@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TriangleAlert as AlertTriangle, GitBranch, ShieldAlert, Loader } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/runtimeLocationMock';
 import type { SourceConflict } from '@/types';
-import apiClient from '@/lib/api';
+import { runtimeApi } from '@/lib/api';
 
 interface ConflictAlertProps {
   conflict: SourceConflict;
@@ -15,7 +15,7 @@ export function ConflictAlert({ conflict, onResolve }: ConflictAlertProps) {
   const handleResolve = async (authoritativeSource: string) => {
     setResolving(authoritativeSource);
     try {
-      await apiClient.post('/runtime-location/conflicts/resolve', {
+      await runtimeApi.resolveConflict({
         asset_name: conflict.asset_name,
         authoritative_source: authoritativeSource,
       });

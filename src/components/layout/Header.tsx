@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  Bell, Search, LogOut, ChevronDown, Settings, User as UserIcon,
-  Command, ChevronRight, Layers, Zap, CircleCheck as CheckCircle2,
+  Bell, LogOut, ChevronDown, Settings, User as UserIcon,
+  ChevronRight, Layers, Zap, CircleCheck as CheckCircle2,
   Radio, Wifi, WifiOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -10,7 +10,6 @@ import { useAuthStore } from '@/store/authStore';
 import { Link } from 'react-router-dom';
 import { ROLE_LABELS } from '@/lib/permissions';
 import { BreadcrumbItem } from '@/types';
-import { GlobalSearch } from '@/components/ui/GlobalSearch';
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 import { useWsStore } from '@/store/wsStore';
 import type { WsStatus } from '@/hooks/useWebSocket';
@@ -330,21 +329,6 @@ export function Header() {
   const { sidebarCollapsed, breadcrumbs, pageTitle } = useUIStore();
   const { user } = useAuthStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-
-  const openSearch = useCallback(() => setSearchOpen(true), []);
-  const closeSearch = useCallback(() => setSearchOpen(false), []);
-
-  useEffect(() => {
-    function handler(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setSearchOpen(v => !v);
-      }
-    }
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, []);
 
   return (
     <>
@@ -382,41 +366,6 @@ export function Header() {
           <WorkspaceSwitcher />
 
           <ThemeSwitcher />
-
-          {/* Search bar */}
-          <button
-            onClick={openSearch}
-            className="hidden md:flex items-center gap-1.5 pl-2.5 pr-2 py-1 rounded-[4px] text-[12px] transition-all duration-150"
-            style={{
-              background: 'var(--app-bg-subtle)',
-              border: '1px solid var(--app-border)',
-              color: 'var(--text-muted)',
-              width: '152px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--accent)';
-              e.currentTarget.style.color = 'var(--text-secondary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--app-border)';
-              e.currentTarget.style.color = 'var(--text-muted)';
-            }}
-            aria-label="Open global search (⌘K)"
-          >
-            <Search className="w-3 h-3 flex-shrink-0" />
-            <span className="flex-1 text-left text-[11.5px]">Search…</span>
-            <div
-              className="flex items-center gap-0.5 px-1 py-0.5 rounded-[3px] text-[9.5px] font-semibold flex-shrink-0"
-              style={{
-                background: 'var(--app-surface-hover)',
-                color: 'var(--text-muted)',
-                border: '1px solid var(--app-border)',
-                fontFamily: "'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', monospace",
-              }}
-            >
-              <Command className="w-2 h-2" />K
-            </div>
-          </button>
 
           <NotificationBell />
 
@@ -464,8 +413,6 @@ export function Header() {
           </div>
         </div>
       </header>
-
-      <GlobalSearch open={searchOpen} onClose={closeSearch} />
     </>
   );
 }

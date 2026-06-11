@@ -105,7 +105,7 @@ async def init_db():
     else:
         logger.info("Database seeding skipped (SEED_DB=false)")
 
-    await _seed_rbac_permissions()
+    # await _seed_rbac_permissions()
 
     # Always seed runtime reference data (idempotent)
     from app.db.seed import seed_reference_data

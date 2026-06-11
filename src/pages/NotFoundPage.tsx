@@ -14,8 +14,8 @@ export function NotFoundPage() {
         </div>
         <h1 className="text-6xl font-bold text-neutral-900 tracking-tight mb-2">404</h1>
         <p className="text-lg text-neutral-500 mb-8">Page not found</p>
-        <Button icon={<ArrowLeft className="w-4 h-4" />} onClick={() => navigate('/dashboard')}>
-          Back to Dashboard
+        <Button icon={<ArrowLeft className="w-4 h-4" />} onClick={() => navigate('/runtime-location')}>
+          Back to Runtime Cockpit
         </Button>
       </div>
     </div>

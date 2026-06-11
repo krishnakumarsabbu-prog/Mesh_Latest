@@ -302,7 +302,7 @@ export function LoginPage() {
     document.documentElement.classList.add('dark');
   }, []);
 
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated) return <Navigate to="/runtime-location" replace />;
 
   const handleDemoSelect = (account: DemoAccount) => {
     setSelectedDemo(account);
@@ -327,7 +327,7 @@ export function LoginPage() {
         : await authApi.register(form.email, form.full_name, form.password);
       setAuth(res.data.user, res.data.access_token, res.data.refresh_token);
       notify.success(`Welcome${res.data.user.full_name ? `, ${res.data.user.full_name.split(' ')[0]}` : ''}!`);
-      navigate('/dashboard');
+      navigate('/runtime-location');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Something went wrong. Please try again.';
       setError(msg);
