@@ -1,12 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  MapPin, Search, Upload, RefreshCw, Building2, Server,
-  TriangleAlert as AlertTriangle, ChevronDown, CircleCheck as CheckCircle,
-  Database, Siren, LayoutList, History, CircleAlert as AlertCircle,
-  FileText, X, Activity, BookOpen, Filter, ArrowLeft, ArrowRight, Zap, Play, Check, ShieldAlert, Cpu, Clock, HelpCircle, User
-} from 'lucide-react';
+import { MapPin, Search, Upload, RefreshCw, Building2, Server, TriangleAlert as AlertTriangle, ChevronDown, CircleCheck as CheckCircle, Database, Siren, LayoutList, History, CircleAlert as AlertCircle, FileText, X, Activity, BookOpen, Filter, ArrowLeft, ArrowRight, Zap, Play, Check, ShieldAlert, Cpu, Clock, CircleHelp as HelpCircle, User, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   useRuntimeLocationStore,
@@ -2434,6 +2429,33 @@ export function RuntimeLocationPage() {
                           })}
                         </div>
                       </div>
+
+                      {/* Runtime Truth quick-access button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/runtime-truth?appId=${group.appId}&env=${firstDep?.environment || 'PRODUCTION'}`);
+                        }}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[9px] font-bold uppercase tracking-wider transition-all duration-150 hover:scale-105 flex-shrink-0"
+                        style={{
+                          background: 'var(--app-bg-subtle)',
+                          borderColor: 'var(--app-border)',
+                          color: 'var(--text-muted)',
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.borderColor = '#006CFF';
+                          (e.currentTarget as HTMLButtonElement).style.color = '#006CFF';
+                          (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,108,255,0.08)';
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--app-border)';
+                          (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+                          (e.currentTarget as HTMLButtonElement).style.background = 'var(--app-bg-subtle)';
+                        }}
+                      >
+                        <ShieldCheck className="w-3 h-3" />
+                        <span>Runtime Truth</span>
+                      </button>
 
                       {/* Right pointing chevron */}
                       <ArrowRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[#7800FF] group-hover:translate-x-1 transition-all" />

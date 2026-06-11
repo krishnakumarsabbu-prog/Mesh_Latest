@@ -20,11 +20,13 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, AreaChart, Area, ReferenceLine
 } from 'recharts';
 import { formatRelativeTime } from '@/lib/runtimeLocationMock';
+import { computeVerdict, buildServiceTopology, buildTimeline, buildDiscoveredSignals } from '@/lib/runtimeTruthEngine';
+import { ServiceTopologyMap } from '@/components/runtime/ServiceTopologyMap';
 import type {
   ApplicationComponent, AssetEnvironment, RuntimeSnapshot, TechStack, ApplicationLocationDetail, EnvComparisonRow,
 } from '@/types';
 
-type TabId = 'map' | 'hierarchy' | 'graph' | 'components' | 'openshift' | 'intent' | 'quality' | 'snapshots' | 'compare' | 'audit';
+type TabId = 'map' | 'hierarchy' | 'graph' | 'components' | 'openshift' | 'intent' | 'quality' | 'snapshots' | 'compare' | 'audit' | 'runtime-truth';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: 'map',        label: 'DC Distribution', icon: MapPin },
@@ -35,8 +37,9 @@ const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: 'intent',     label: 'Intent vs Actual', icon: Target },
   { id: 'quality',    label: 'Data Quality',    icon: Database },
   { id: 'snapshots',  label: 'Snapshots',       icon: History },
-  { id: 'compare',    label: 'Compare Envs',    icon: GitCompare },
-  { id: 'audit',      label: 'Audit Log',       icon: ClipboardList },
+  { id: 'compare',       label: 'Compare Envs',    icon: GitCompare },
+  { id: 'audit',         label: 'Audit Log',       icon: ClipboardList },
+  { id: 'runtime-truth', label: 'Runtime Truth',   icon: ShieldCheck },
 ];
 
 // ─── Operator Quick Summary Band ─────────────────────────────────────────────
@@ -1055,6 +1058,153 @@ function OpenShiftTab({ detail }: { detail: ApplicationLocationDetail }) {
 
 const ENV_OPTIONS: AssetEnvironment[] = ['PRODUCTION', 'UAT', 'DR'];
 
+// ─── Runtime Truth Tab ────────────────────────────────────────────────────────
+
+function RuntimeTruthTab({ detail }: { detail: ApplicationLocationDetail }) {
+  const { snapshots, drifts } = useRuntimeLocationStore();
+  const verdict = useMemo(() => computeVerdict(detail, drifts, snapshots), [detail, drifts, snapshots]);
+  const topology = useMemo(() => buildServiceTopology(detail), [detail]);
+  const timeline = useMemo(() => buildTimeline(detail, snapshots, drifts), [detail, snapshots, drifts]);
+  const signals = useMemo(() => buildDiscoveredSignals(detail), [detail]);
+
+  const verdictColor = verdict.canServeTransactions
+    ? (verdict.confidence >= 70 ? 'var(--success)' : 'var(--warning)')
+    : 'var(--danger)';
+
+  const confBar = (val: number, max = 25) => (
+    <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--app-bg-muted)' }}>
+      <div className="h-full rounded-full" style={{ width: `${(val / max) * 100}%`, background: verdictColor }} />
+    </div>
+  );
+
+  const riskColor = verdict.risk === 'LOW' ? 'var(--success)' : verdict.risk === 'MEDIUM' ? 'var(--warning)' : 'var(--danger)';
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Verdict banner */}
+      <div className="rounded-2xl border p-4 flex items-center gap-4" style={{ borderColor: verdictColor, background: `color-mix(in srgb, ${verdictColor} 8%, var(--app-surface))` }}>
+        <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: `color-mix(in srgb, ${verdictColor} 18%, transparent)` }}>
+          <ShieldCheck className="w-6 h-6" style={{ color: verdictColor }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[22px] font-extrabold" style={{ color: verdictColor }}>{verdict.confidence}%</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: verdictColor }}>
+              {verdict.canServeTransactions ? 'CAN SERVE TRANSACTIONS' : 'CANNOT SERVE TRANSACTIONS'}
+            </span>
+          </div>
+          <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">{verdict.verdictSummary}</p>
+        </div>
+        <div className="flex-shrink-0 flex flex-col items-end gap-1">
+          <span className="text-[9px] font-bold uppercase text-[var(--text-muted)]">Risk Level</span>
+          <span className="text-[13px] font-extrabold uppercase" style={{ color: riskColor }}>{verdict.risk}</span>
+        </div>
+      </div>
+
+      {/* Confidence breakdown */}
+      <div className="rounded-xl border p-4" style={{ borderColor: 'var(--app-border)', background: 'var(--app-surface)' }}>
+        <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3">Confidence Breakdown</p>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-2.5">
+          {[
+            { label: 'Freshness', score: verdict.confidenceBreakdown.freshness },
+            { label: 'Determinism', score: verdict.confidenceBreakdown.determinism },
+            { label: 'Agreement', score: verdict.confidenceBreakdown.agreement },
+            { label: 'Coverage', score: verdict.confidenceBreakdown.coverage },
+          ].map(({ label, score }) => (
+            <div key={label} className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold text-[var(--text-secondary)] w-22 flex-shrink-0">{label}</span>
+              {confBar(score)}
+              <span className="text-[10px] font-mono font-bold text-[var(--text-primary)] w-8 text-right">{score}/25</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Service topology map */}
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">Service Topology</p>
+        <ServiceTopologyMap topology={topology} />
+      </div>
+
+      {/* Authority matrix */}
+      <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--app-border)' }}>
+        <div className="px-4 py-2.5 border-b" style={{ borderColor: 'var(--app-border)', background: 'var(--app-surface)' }}>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Component Authority Matrix</p>
+        </div>
+        <div className="divide-y divide-[var(--app-border)]">
+          {verdict.components.map(ca => (
+            <div key={ca.id} className="px-4 py-2.5 flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-bold text-[var(--text-primary)] truncate">{ca.name}</p>
+                <p className="text-[9px] text-[var(--text-muted)] font-mono">{ca.authoritative} — {ca.failoverType}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase"
+                  style={{ background: ca.canFailover ? 'var(--success-subtle)' : 'var(--danger-subtle)', color: ca.canFailover ? 'var(--success)' : 'var(--danger)' }}>
+                  {ca.canFailover ? 'FAILOVER OK' : 'NO FAILOVER'}
+                </span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded border font-mono text-[var(--text-muted)]" style={{ borderColor: 'var(--app-border)' }}>
+                  {ca.type}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">Operational Timeline</p>
+        <div className="relative pl-5">
+          <div className="absolute left-2 top-0 bottom-0 w-px" style={{ background: 'var(--app-border)' }} />
+          {timeline.slice(0, 8).map((ev, i) => (
+            <div key={i} className="relative mb-3 last:mb-0">
+              <div className="absolute -left-[13px] top-1 w-2 h-2 rounded-full border-2"
+                style={{ background: ev.impact === 'CRITICAL' ? 'var(--danger)' : ev.impact === 'WARNING' ? 'var(--warning)' : 'var(--success)', borderColor: 'var(--app-surface)' }} />
+              <div className="pl-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-bold uppercase tracking-wider"
+                    style={{ color: ev.impact === 'CRITICAL' ? 'var(--danger)' : ev.impact === 'WARNING' ? 'var(--warning)' : 'var(--text-muted)' }}>
+                    {ev.type}
+                  </span>
+                  <span className="text-[9px] text-[var(--text-muted)]">{ev.relativeTime}</span>
+                </div>
+                <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">{ev.detail}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Discovered signals */}
+      <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--app-border)' }}>
+        <div className="px-4 py-2.5 border-b" style={{ borderColor: 'var(--app-border)', background: 'var(--app-surface)' }}>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Discovered Runtime Signals</p>
+        </div>
+        <div className="divide-y divide-[var(--app-border)]">
+          {signals.map(sig => (
+            <div key={sig.id} className="px-4 py-2.5 flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-bold text-[var(--text-primary)] truncate">{sig.displayName}</p>
+                <p className="text-[9px] font-mono text-[var(--text-muted)]">{sig.signalName} · {sig.apiSource}</p>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <span className="text-[9px] px-1.5 py-0.5 rounded uppercase font-bold"
+                  style={{ background: sig.confidence >= 75 ? 'var(--success-subtle)' : sig.confidence >= 45 ? 'var(--warning-subtle)' : 'var(--danger-subtle)', color: sig.confidence >= 75 ? 'var(--success)' : sig.confidence >= 45 ? 'var(--warning)' : 'var(--danger)' }}>
+                  {sig.confidence}%
+                </span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded border text-[var(--text-muted)] uppercase" style={{ borderColor: 'var(--app-border)' }}>
+                  {sig.deterministic ? 'DET' : 'INF'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // TimeSimulatorSlider removed
 
 export function ApplicationLocationDetailPage() {
@@ -1499,6 +1649,7 @@ export function ApplicationLocationDetailPage() {
             {activeTab === 'snapshots' && <SnapshotsTab snapshots={snapshots} />}
             {activeTab === 'compare' && <CompareEnvsTab appId={appId!} />}
             {activeTab === 'audit' && <AuditLogTab />}
+            {activeTab === 'runtime-truth' && <RuntimeTruthTab detail={detail} />}
           </motion.div>
         </AnimatePresence>
       </div>
