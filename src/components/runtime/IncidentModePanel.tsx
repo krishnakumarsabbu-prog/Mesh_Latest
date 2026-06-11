@@ -409,10 +409,10 @@ export function IncidentModePanel({ onClose }: Props) {
           style={{ borderTop: '1px solid var(--app-border)' }}
         >
           <div className="flex flex-col">
-            <p className="text-[10px] font-bold text-white/50">
+            <p className="text-[10px] font-bold text-[var(--text-muted)]">
               Simulation only — no changes are made.
             </p>
-            <p className="text-[9px] text-white/35 mt-0.5 leading-normal max-w-[280px]">
+            <p className="text-[9px] text-[var(--text-disabled)] mt-0.5 leading-normal max-w-[280px]">
               Production runs in a decoupled, transaction-isolated sandbox memory layer (no database mutations).
             </p>
           </div>

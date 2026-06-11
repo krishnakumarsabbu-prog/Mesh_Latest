@@ -7,10 +7,14 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+connect_args = {"timeout": 30}
+if settings.DATABASE_URL and "sqlite" in settings.DATABASE_URL:
+    connect_args["uri"] = True
+
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
-    connect_args={"timeout": 30}
+    connect_args=connect_args
 )
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 

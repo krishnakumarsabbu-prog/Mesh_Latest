@@ -1377,9 +1377,13 @@ async def parse_and_insert_csv(
         "status": status
     }
 
+@router.get("/import", response_model=Dict[str, Any])
+async def import_all_docs_get(db: AsyncSession = Depends(get_db)):
+    return await import_all_docs(db=db)
+
 @router.post("/import", response_model=Dict[str, Any])
 async def import_csv(
-    file: UploadFile = File(...),
+    file: Optional[UploadFile] = File(None),
     source_type: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
@@ -1388,6 +1392,9 @@ async def import_csv(
     import uuid
     from datetime import datetime
     
+    if file is None:
+        return await import_all_docs(db=db)
+        
     content_bytes = await file.read()
     
     if file.filename.endswith(".xlsx"):
