@@ -653,6 +653,66 @@ function DataDiscoveryMarketplace({ signals }: { signals: DiscoveredSignal[] }) 
 
 // ─── Runtime DNA Graph ─────────────────────────────────────────────────────────
 
+function VerticalDNAHelix({ confidence, isConflict }: { confidence: number; isConflict: boolean }) {
+  const steps = 24;
+  const height = 320;
+  const width = 80;
+  const amplitude = 18;
+  const center = width / 2;
+  const points: { y: number; x1: number; x2: number }[] = [];
+  
+  for (let i = 0; i <= steps; i++) {
+    const y = (i / steps) * height;
+    const angle = (i / steps) * Math.PI * 4; // 2 full turns
+    const x1 = center + amplitude * Math.sin(angle);
+    const x2 = center - amplitude * Math.sin(angle);
+    points.push({ y, x1, x2 });
+  }
+
+  const pathA = `M ${points[0].x1} ${points[0].y} ` + points.map(p => `L ${p.x1} ${p.y}`).join(' ');
+  const pathB = `M ${points[0].x2} ${points[0].y} ` + points.map(p => `L ${p.x2} ${p.y}`).join(' ');
+
+  const color = isConflict ? '#FF453A' : confidence > 70 ? '#30D158' : confidence > 45 ? '#FF9F0A' : '#EF4444';
+
+  return (
+    <svg width={width} height={height} className="overflow-visible select-none">
+      <defs>
+        <linearGradient id="dnaGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.8} />
+          <stop offset="50%" stopColor={color} stopOpacity={0.8} />
+          <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.8} />
+        </linearGradient>
+      </defs>
+      
+      {/* Base pairs (connecting lines) */}
+      {points.filter((_, idx) => idx % 2 === 0).map((p, idx) => (
+        <line
+          key={idx}
+          x1={p.x1}
+          y1={p.y}
+          x2={p.x2}
+          y2={p.y}
+          stroke="var(--app-border-medium)"
+          strokeWidth={1}
+          strokeOpacity={0.4}
+        />
+      ))}
+      
+      {/* Helix strands */}
+      <path d={pathA} fill="none" stroke="url(#dnaGlow)" strokeWidth={2.5} strokeLinecap="round" />
+      <path d={pathB} fill="none" stroke="url(#dnaGlow)" strokeWidth={2.5} strokeLinecap="round" strokeDasharray="3 2" />
+      
+      {/* Base pair connection nodes */}
+      {points.filter((_, idx) => idx % 3 === 0).map((p, idx) => (
+        <React.Fragment key={idx}>
+          <circle cx={p.x1} cy={p.y} r={3} fill="var(--accent)" className="animate-pulse" />
+          <circle cx={p.x2} cy={p.y} r={3} fill={color} />
+        </React.Fragment>
+      ))}
+    </svg>
+  );
+}
+
 function RuntimeDNAGraph({ verdict }: { verdict: RuntimeVerdict }) {
   const isConflict = verdict.authoritativeSite === 'CONFLICT';
   const isUnknown  = verdict.authoritativeSite === 'UNKNOWN';
@@ -671,24 +731,29 @@ function RuntimeDNAGraph({ verdict }: { verdict: RuntimeVerdict }) {
         <Network className="w-4 h-4 text-[var(--accent)]" />
         <span className="text-[13px] font-bold uppercase tracking-wider text-[var(--text-primary)]">Runtime DNA — Authority Chain</span>
       </div>
-      <div className="p-6 flex flex-col items-center gap-0">
-        {nodes.map((node, i) => (
-          <React.Fragment key={node.id}>
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
-              className="rounded-2xl px-5 py-3 flex flex-col items-center gap-1 w-72 border"
-              style={{ background: `${node.color}12`, borderColor: `${node.color}50`, boxShadow: `0 0 12px ${node.color}20` }}>
-              <span className="text-[13px] font-extrabold text-center leading-tight" style={{ color: node.color }}>{node.label}</span>
-              <span className="text-[9px] uppercase tracking-widest font-bold text-[var(--text-muted)]">{node.sub}</span>
-            </motion.div>
-            {i < nodes.length - 1 && (
-              <div className="flex flex-col items-center py-1">
-                <div className="w-px h-4 bg-[var(--app-border)]" />
-                <ChevronDown className="w-3 h-3 text-[var(--text-muted)]" />
-                <div className="w-px h-4 bg-[var(--app-border)]" />
-              </div>
-            )}
-          </React.Fragment>
-        ))}
+      <div className="p-6 flex items-center justify-center gap-8 md:gap-12">
+        <div className="flex-shrink-0">
+          <VerticalDNAHelix confidence={verdict.confidence} isConflict={isConflict} />
+        </div>
+        <div className="flex flex-col items-center gap-0">
+          {nodes.map((node, i) => (
+            <React.Fragment key={node.id}>
+              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
+                className="rounded-2xl px-5 py-3 flex flex-col items-center gap-1 w-64 border"
+                style={{ background: `${node.color}12`, borderColor: `${node.color}50`, boxShadow: `0 0 12px ${node.color}20` }}>
+                <span className="text-[12px] font-extrabold text-center leading-tight truncate max-w-full" style={{ color: node.color }}>{node.label}</span>
+                <span className="text-[9px] uppercase tracking-widest font-bold text-[var(--text-muted)]">{node.sub}</span>
+              </motion.div>
+              {i < nodes.length - 1 && (
+                <div className="flex flex-col items-center py-1">
+                  <div className="w-px h-3 bg-[var(--app-border)]" />
+                  <ChevronDown className="w-3 h-3 text-[var(--text-muted)]" />
+                  <div className="w-px h-3 bg-[var(--app-border)]" />
+                </div>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
       </div>
     </div>
   );

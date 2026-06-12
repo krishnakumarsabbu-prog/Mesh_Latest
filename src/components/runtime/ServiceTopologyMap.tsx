@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ReactFlow,
   Background, Controls, MiniMap, useNodesState, useEdgesState,
@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Database, MessageSquare, Server, Layers, Network, CircleCheck as CheckCircle2, GitBranch, CircleAlert as AlertCircle, CircleHelp as HelpCircle, Activity, TrendingUp, ChartBar as BarChart2, Filter, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ServiceNode, ServiceEdge, ServiceTopologyData } from '@/lib/runtimeTruthEngine';
+import dagre from 'dagre';
 
 // ─── Health colour helpers ────────────────────────────────────────────────────
 
@@ -408,42 +409,20 @@ function FilterPanel({ filters, onChange }: { filters: Filters; onChange: (f: Fi
 
 // ─── Layout helper ─────────────────────────────────────────────────────────────
 
-function buildFlowElements(topology: ServiceTopologyData, filters: Filters, onSelectNode: (n: ServiceNode) => void, onSelectEdge: (e: ServiceEdge) => void): { nodes: Node[]; edges: Edge[] } {
-  // Group nodes by DC and type
+function buildFlowElements(
+  topology: ServiceTopologyData,
+  filters: Filters,
+  onSelectNode: (n: ServiceNode) => void,
+  onSelectEdge: (e: ServiceEdge) => void
+): { nodes: Node[]; edges: Edge[] } {
   const filtered = topology.nodes.filter(n =>
     filters.health.has(n.health) &&
     n.errorRate >= filters.minErrorRate &&
     n.p95Latency <= filters.maxP95
   );
 
-  // Layout: group by DC column
-  const dcGroups = new Map<string, ServiceNode[]>();
-  filtered.forEach(n => {
-    if (!dcGroups.has(n.dc)) dcGroups.set(n.dc, []);
-    dcGroups.get(n.dc)!.push(n);
-  });
-
-  const NODE_WIDTH = 180;
-  const NODE_HEIGHT = 110;
-  const COL_GAP = 250;
-  const ROW_GAP = 140;
-
-  const flowNodes: Node[] = [];
-  let colIdx = 0;
-  dcGroups.forEach((nodes, dc) => {
-    nodes.forEach((n, rowIdx) => {
-      flowNodes.push({
-        id: n.id,
-        type: 'serviceNode',
-        position: { x: colIdx * COL_GAP, y: rowIdx * ROW_GAP },
-        data: { node: n, onSelect: onSelectNode } as ServiceNodeData,
-        style: { width: NODE_WIDTH },
-      });
-    });
-    colIdx++;
-  });
-
   const filteredIds = new Set(filtered.map(n => n.id));
+
   const flowEdges: Edge[] = topology.edges
     .filter(e => filteredIds.has(e.source) && filteredIds.has(e.target))
     .map(e => ({
@@ -454,6 +433,54 @@ function buildFlowElements(topology: ServiceTopologyData, filters: Filters, onSe
       data: { edge: e, onSelect: onSelectEdge } as ServiceEdgeData,
       animated: e.type === 'traffic',
     }));
+
+  const dcGroups = new Map<string, ServiceNode[]>();
+  filtered.forEach(n => {
+    if (!dcGroups.has(n.dc)) dcGroups.set(n.dc, []);
+    dcGroups.get(n.dc)!.push(n);
+  });
+
+  const NODE_WIDTH = 180;
+  const NODE_HEIGHT = 110;
+  const COL_GAP = 320;
+
+  const flowNodes: Node[] = [];
+  let colIdx = 0;
+
+  dcGroups.forEach((groupNodes, dc) => {
+    const g = new dagre.graphlib.Graph();
+    g.setDefaultEdgeLabel(() => ({}));
+    g.setGraph({ rankdir: 'TB', ranksep: 50, nodesep: 35 });
+
+    groupNodes.forEach(n => {
+      g.setNode(n.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    });
+
+    const groupNodeIds = new Set(groupNodes.map(n => n.id));
+    flowEdges.forEach(e => {
+      if (groupNodeIds.has(e.source) && groupNodeIds.has(e.target)) {
+        g.setEdge(e.source, e.target);
+      }
+    });
+
+    dagre.layout(g);
+
+    groupNodes.forEach(n => {
+      const nodePos = g.node(n.id);
+      flowNodes.push({
+        id: n.id,
+        type: 'serviceNode',
+        position: {
+          x: colIdx * COL_GAP + (nodePos.x - NODE_WIDTH / 2),
+          y: nodePos.y - NODE_HEIGHT / 2,
+        },
+        data: { node: n, onSelect: onSelectNode } as ServiceNodeData,
+        style: { width: NODE_WIDTH },
+      });
+    });
+
+    colIdx++;
+  });
 
   return { nodes: flowNodes, edges: flowEdges };
 }
@@ -474,13 +501,14 @@ export function ServiceTopologyMap({ topology }: { topology: ServiceTopologyData
     [topology, filters]
   );
 
-  const [nodes, , onNodesChange] = useNodesState(flowNodes);
-  const [edges, , onEdgesChange] = useEdgesState(flowEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(flowEdges);
 
-  // Sync nodes/edges when topology or filters change
-  const nodesKey = flowNodes.map(n => n.id).join(',');
-  const finalNodes = useMemo(() => flowNodes, [nodesKey]);
-  const finalEdges = useMemo(() => flowEdges, [nodesKey]);
+  // Sync state when flowNodes or flowEdges change
+  useEffect(() => {
+    setNodes(flowNodes);
+    setEdges(flowEdges);
+  }, [flowNodes, flowEdges, setNodes, setEdges]);
 
   const nodeLabel = (id: string) => topology.nodes.find(n => n.id === id)?.label ?? id;
 
@@ -497,8 +525,10 @@ export function ServiceTopologyMap({ topology }: { topology: ServiceTopologyData
   return (
     <div className="rounded-2xl border overflow-hidden relative" style={{ height: 520, background: 'var(--app-bg-subtle)', borderColor: 'var(--app-border)' }}>
       <ReactFlow
-        nodes={finalNodes}
-        edges={finalEdges}
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView

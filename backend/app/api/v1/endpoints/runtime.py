@@ -252,6 +252,25 @@ def detect_conflicts(assets: List[RuntimeAsset]) -> List[Dict[str, Any]]:
 
     return conflicts
 
+def get_primary_write_dc(assets) -> Optional[str]:
+    # Try active write authority
+    for a in assets:
+        if a.write_authority and a.latest_operational_state == "ACTIVE" and a.data_center_short:
+            return a.data_center_short
+    # Try any write authority
+    for a in assets:
+        if a.write_authority and a.data_center_short:
+            return a.data_center_short
+    # Try any active asset
+    for a in assets:
+        if a.latest_operational_state == "ACTIVE" and a.data_center_short:
+            return a.data_center_short
+    # Try any asset
+    for a in assets:
+        if a.data_center_short:
+            return a.data_center_short
+    return None
+
 # ─── API Endpoints ───────────────────────────────────────────────────────────
 
 @router.get("/applications", response_model=List[Dict[str, Any]])
@@ -365,6 +384,7 @@ async def get_applications(db: AsyncSession = Depends(get_db)):
             "application_name": data["application_name"],
             "environment": data["environment"],
             "data_centers": list(data["data_centers"]),
+            "primary_write_dc": get_primary_write_dc(group_assets),
             "tech_stacks": list(data["tech_stacks"]),
             "overall_confidence": conf_numeric,
             "confidence_label": conf_label,
@@ -574,6 +594,7 @@ async def get_application_detail(app_id: str, environment: str = "PRODUCTION", d
         "application_id": app_id,
         "application_name": app_assets[0].metadata_json.get("application_name", app_id) if app_assets[0].metadata_json else app_id,
         "environment": environment,
+        "primary_write_dc": get_primary_write_dc(app_assets),
         "overall_confidence": min_conf,
         "confidence_label": conf_label,
         "confidence_score": conf_score,
@@ -1970,6 +1991,20 @@ async def import_all_docs(db: AsyncSession = Depends(get_db)):
         except Exception as file_exc:
             logger.error(f"Failed to import file {fname}: {file_exc}")
             errors.append(f"{fname}: {str(file_exc)}")
+
+    # Inject synthetic/placeholder assets to cover empty/missing sheets
+    try:
+        synthetic_count = await _inject_synthetic_assets(db)
+        total_assets += synthetic_count
+        imported_files.append({
+            "file": "synthetic_placeholders",
+            "source": "synthetic",
+            "count": synthetic_count,
+            "status": "SUCCESS"
+        })
+    except Exception as synth_exc:
+        logger.error(f"Failed to inject synthetic assets: {synth_exc}")
+        errors.append(f"synthetic_placeholders: {str(synth_exc)}")
             
     # 2. Auto-generate design intents for newly discovered apps (skip existing seeded ones)
     result = await db.execute(select(RuntimeAsset))
