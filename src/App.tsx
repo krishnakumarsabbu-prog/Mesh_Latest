@@ -11,6 +11,8 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 
 // Lazily loaded pages
 const RuntimeLocationPage = React.lazy(() => import('./pages/RuntimeLocationPage').then(m => ({ default: m.RuntimeLocationPage })));
+const LOBViewPage = React.lazy(() => import('./pages/LOBViewPage').then(m => ({ default: m.LOBViewPage })));
+const NeighbourhoodViewPage = React.lazy(() => import('./pages/NeighbourhoodViewPage').then(m => ({ default: m.NeighbourhoodViewPage })));
 const ApplicationLocationDetailPage = React.lazy(() => import('./pages/ApplicationLocationDetailPage').then(m => ({ default: m.ApplicationLocationDetailPage })));
 const RuntimeTruthPage = React.lazy(() => import('./pages/RuntimeTruthPage').then(m => ({ default: m.RuntimeTruthPage })));
 const UsersPage = React.lazy(() => import('./pages/UsersPage').then(m => ({ default: m.UsersPage })));
@@ -62,6 +64,8 @@ export default function App() {
             <Route path="runtime-location" element={<Lazy><RuntimeLocationPage /></Lazy>} />
             <Route path="runtime-location/:appId" element={<Lazy><ApplicationLocationDetailPage /></Lazy>} />
             <Route path="runtime-truth" element={<Lazy><RuntimeTruthPage /></Lazy>} />
+            <Route path="lob-view" element={<Lazy><LOBViewPage /></Lazy>} />
+            <Route path="neighbourhood-view" element={<Lazy><NeighbourhoodViewPage /></Lazy>} />
             <Route path="users" element={<Lazy><UsersPage /></Lazy>} />
             <Route path="audit" element={<Lazy><AuditPage /></Lazy>} />
           </Route>
