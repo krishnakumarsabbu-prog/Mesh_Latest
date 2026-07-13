@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Building2, FolderOpen, Plug, Activity, MessageSquare,
   Settings, ChevronLeft, ChevronRight, Users, LogOut, Shield, FileText,
   UsersRound, LayoutTemplate, ShieldCheck, MapPin, Network, Eye,
-  ChartBar as BarChart2, Layers,
+  ChartBar as BarChart2, Layers, Boxes,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/store/uiStore';
@@ -20,6 +20,7 @@ interface NavItem {
 }
 
 const operationsNavItems: NavItem[] = [
+  { label: 'Digital Twin Explorer', href: '/digital-twin', icon: Eye, description: 'Enterprise Digital Twin & Knowledge Graph' },
   { label: 'Runtime Location', href: '/runtime-location', icon: MapPin, description: 'Where is my app running?' },
   { label: 'Runtime Truth', href: '/runtime-truth', icon: ShieldCheck, description: 'Can this app process transactions now?' },
   { label: 'LOB View', href: '/lob-view', icon: Layers, description: 'Lines of Business health & telemetry' },

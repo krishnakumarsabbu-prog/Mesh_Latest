@@ -18,6 +18,7 @@ const RuntimeTruthPage = React.lazy(() => import('./pages/RuntimeTruthPage').the
 const UsersPage = React.lazy(() => import('./pages/UsersPage').then(m => ({ default: m.UsersPage })));
 const AuditPage = React.lazy(() => import('./pages/AuditPage').then(m => ({ default: m.AuditPage })));
 const OntologyExplorerPage = React.lazy(() => import('./pages/OntologyExplorerPage').then(m => ({ default: m.OntologyExplorerPage })));
+const DigitalTwinExplorerPage = React.lazy(() => import('./pages/DigitalTwinExplorerPage').then(m => ({ default: m.DigitalTwinExplorerPage })));
 
 
 function PageSkeleton() {
@@ -69,6 +70,7 @@ export default function App() {
             <Route path="lob-view" element={<Lazy><LOBViewPage /></Lazy>} />
             <Route path="neighbourhood-view" element={<Lazy><NeighbourhoodViewPage /></Lazy>} />
             <Route path="ontology-explorer" element={<Lazy><OntologyExplorerPage /></Lazy>} />
+            <Route path="digital-twin" element={<Lazy><DigitalTwinExplorerPage /></Lazy>} />
             <Route path="users" element={<Lazy><UsersPage /></Lazy>} />
             <Route path="audit" element={<Lazy><AuditPage /></Lazy>} />
 

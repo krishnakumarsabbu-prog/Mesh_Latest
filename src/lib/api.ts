@@ -118,3 +118,13 @@ export const runtimeApi = {
   compareEnvs: (appId: string) =>
     apiClient.get(`/runtime-location/compare-envs/${appId}`),
 };
+
+export const digitalTwinApi = {
+  getApplications: () => apiClient.get('/digital-twin/applications'),
+  getGraph: (appId: string, environment: string = 'PRODUCTION') =>
+    apiClient.get('/digital-twin/graph', { params: { app_id: appId, environment } }),
+  simulate: (data: { app_id: string; environment?: string; scenario: string; target?: string }) =>
+    apiClient.post('/digital-twin/simulate', data),
+  aiQuery: (data: { app_id: string; environment?: string; question: string }) =>
+    apiClient.post('/digital-twin/ai-query', data),
+};
