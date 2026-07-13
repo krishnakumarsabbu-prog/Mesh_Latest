@@ -13,6 +13,10 @@ import { PropertyInspectorPanel } from '@/components/digital-twin/PropertyInspec
 import { TimelinePanel } from '@/components/digital-twin/TimelinePanel';
 import { SimulationPanel } from '@/components/digital-twin/SimulationPanel';
 import { AICopilotPanel } from '@/components/digital-twin/AICopilotPanel';
+import {
+  DependenciesPanel, InfrastructurePanel, RuntimePanel,
+  BusinessPanel, ObservabilityPanel, SecurityPanel,
+} from '@/components/digital-twin/TabPanels';
 
 const NAV_TABS = [
   { id: 'topology', label: 'Topology', icon: Network },
@@ -94,9 +98,71 @@ export function DigitalTwinExplorerPage() {
     );
   }, [applications, searchQuery]);
 
-  const showSimulation = activeView === 'simulation';
-  const showAI = activeView === 'ai';
-  const showTimelineOnly = activeView === 'timeline';
+  const showOntologySidebar = activeView === 'topology' || activeView === 'knowledge';
+  const showPropertyInspector = ['topology', 'knowledge', 'dependencies', 'infrastructure', 'runtime', 'observability', 'security'].includes(activeView);
+  const showTimelineBottom = ['topology', 'knowledge', 'dependencies', 'infrastructure', 'runtime', 'business', 'observability', 'security'].includes(activeView);
+
+  const renderCenterPanel = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#3B82F6' }} />
+        </div>
+      );
+    }
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full">
+          <p className="text-[12px] font-semibold" style={{ color: '#FF003C' }}>{error}</p>
+        </div>
+      );
+    }
+    if (nodes.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full">
+          <Network className="w-10 h-10 mb-3 opacity-20" style={{ color: '#667085' }} />
+          <p className="text-[12px] font-medium" style={{ color: '#667085' }}>No graph data</p>
+          <p className="text-[10px] mt-1" style={{ color: '#475467' }}>Select an application to build the knowledge graph</p>
+        </div>
+      );
+    }
+
+    switch (activeView) {
+      case 'topology':
+      case 'knowledge':
+        return (
+          <KnowledgeGraphPanel
+            nodes={nodes}
+            edges={edges}
+            selectedNodeId={selectedNodeId}
+            impactedNodeIds={impactedNodeIds}
+            onSelectNode={selectNode}
+          />
+        );
+      case 'dependencies':
+        return <DependenciesPanel nodes={nodes} edges={edges} onSelectNode={selectNode} />;
+      case 'infrastructure':
+        return <InfrastructurePanel nodes={nodes} onSelectNode={selectNode} />;
+      case 'runtime':
+        return <RuntimePanel nodes={nodes} hero={hero} onSelectNode={selectNode} />;
+      case 'business':
+        return <BusinessPanel hero={hero} properties={properties} />;
+      case 'observability':
+        return <ObservabilityPanel nodes={nodes} properties={properties} onSelectNode={selectNode} />;
+      case 'security':
+        return <SecurityPanel nodes={nodes} properties={properties} onSelectNode={selectNode} />;
+      default:
+        return (
+          <KnowledgeGraphPanel
+            nodes={nodes}
+            edges={edges}
+            selectedNodeId={selectedNodeId}
+            impactedNodeIds={impactedNodeIds}
+            onSelectNode={selectNode}
+          />
+        );
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: '#0B1020' }}>
@@ -281,9 +347,9 @@ export function DigitalTwinExplorerPage() {
         </div>
       )}
 
-      {/* ─── Main 5-Panel Layout ─── */}
+      {/* ─── Main Layout ─── */}
       <div className="flex-1 flex gap-2 p-2 overflow-hidden">
-        {showSimulation ? (
+        {activeView === 'simulation' ? (
           /* ─── Simulation Full View ─── */
           <div
             className="flex-1 rounded-[16px] border border-white/[0.05] overflow-hidden"
@@ -298,20 +364,14 @@ export function DigitalTwinExplorerPage() {
               onClear={clearSimulation}
             />
           </div>
-        ) : showAI ? (
+        ) : activeView === 'ai' ? (
           /* ─── AI Copilot Full View ─── */
           <div className="flex-1 flex gap-2">
             <div
               className="flex-1 rounded-[16px] border border-white/[0.05] overflow-hidden"
-              style={{ background: 'rgba(18,24,38,0.6)' }}
+              style={{ background: 'rgba(11,16,32,0.4)' }}
             >
-              <KnowledgeGraphPanel
-                nodes={nodes}
-                edges={edges}
-                selectedNodeId={selectedNodeId}
-                impactedNodeIds={impactedNodeIds}
-                onSelectNode={selectNode}
-              />
+              {renderCenterPanel()}
             </div>
             <div
               className="w-[380px] flex-shrink-0 rounded-[16px] border border-white/[0.05] overflow-hidden"
@@ -326,46 +386,23 @@ export function DigitalTwinExplorerPage() {
             </div>
           </div>
         ) : (
-          /* ─── Standard 5-Panel Layout ─── */
+          /* ─── Standard Layout (ontology sidebar + center + property inspector) ─── */
           <>
-            {/* Left Panel - Ontology Tree */}
-            <div
-              className="w-[280px] flex-shrink-0 rounded-[16px] border border-white/[0.05] overflow-hidden"
-              style={{ background: 'rgba(18,24,38,0.6)' }}
-            >
-              <OntologyTreePanel ontology={ontology} />
-            </div>
+            {showOntologySidebar && (
+              <div
+                className="w-[280px] flex-shrink-0 rounded-[16px] border border-white/[0.05] overflow-hidden"
+                style={{ background: 'rgba(18,24,38,0.6)' }}
+              >
+                <OntologyTreePanel ontology={ontology} />
+              </div>
+            )}
 
-            {/* Center Panel - Knowledge Graph */}
             <div
               className="flex-1 rounded-[16px] border border-white/[0.05] overflow-hidden relative"
               style={{ background: 'rgba(11,16,32,0.4)' }}
             >
-              {loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#3B82F6' }} />
-                </div>
-              ) : error ? (
-                <div className="flex flex-col items-center justify-center h-full">
-                  <p className="text-[12px] font-semibold" style={{ color: '#FF003C' }}>{error}</p>
-                </div>
-              ) : nodes.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full">
-                  <Network className="w-10 h-10 mb-3 opacity-20" style={{ color: '#667085' }} />
-                  <p className="text-[12px] font-medium" style={{ color: '#667085' }}>No graph data</p>
-                  <p className="text-[10px] mt-1" style={{ color: '#475467' }}>Select an application to build the knowledge graph</p>
-                </div>
-              ) : (
-                <KnowledgeGraphPanel
-                  nodes={nodes}
-                  edges={edges}
-                  selectedNodeId={selectedNodeId}
-                  impactedNodeIds={impactedNodeIds}
-                  onSelectNode={selectNode}
-                />
-              )}
+              {renderCenterPanel()}
 
-              {/* Simulation overlay indicator */}
               {simulationResult && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
@@ -384,19 +421,20 @@ export function DigitalTwinExplorerPage() {
               )}
             </div>
 
-            {/* Right Panel - Property Inspector */}
-            <div
-              className="w-[300px] flex-shrink-0 rounded-[16px] border border-white/[0.05] overflow-hidden"
-              style={{ background: 'rgba(18,24,38,0.6)' }}
-            >
-              <PropertyInspectorPanel properties={properties} selectedNode={selectedNode} />
-            </div>
+            {showPropertyInspector && (
+              <div
+                className="w-[300px] flex-shrink-0 rounded-[16px] border border-white/[0.05] overflow-hidden"
+                style={{ background: 'rgba(18,24,38,0.6)' }}
+              >
+                <PropertyInspectorPanel properties={properties} selectedNode={selectedNode} />
+              </div>
+            )}
           </>
         )}
       </div>
 
       {/* ─── Bottom Panel - Timeline ─── */}
-      {!showSimulation && !showAI && (
+      {showTimelineBottom && (
         <div
           className="h-[100px] flex-shrink-0 mx-2 mb-2 rounded-[14px] border border-white/[0.05] overflow-hidden"
           style={{ background: 'rgba(18,24,38,0.6)' }}
