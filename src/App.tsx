@@ -17,6 +17,8 @@ const ApplicationLocationDetailPage = React.lazy(() => import('./pages/Applicati
 const RuntimeTruthPage = React.lazy(() => import('./pages/RuntimeTruthPage').then(m => ({ default: m.RuntimeTruthPage })));
 const UsersPage = React.lazy(() => import('./pages/UsersPage').then(m => ({ default: m.UsersPage })));
 const AuditPage = React.lazy(() => import('./pages/AuditPage').then(m => ({ default: m.AuditPage })));
+const OntologyExplorerPage = React.lazy(() => import('./pages/OntologyExplorerPage').then(m => ({ default: m.OntologyExplorerPage })));
+
 
 function PageSkeleton() {
   return (
@@ -66,8 +68,10 @@ export default function App() {
             <Route path="runtime-truth" element={<Lazy><RuntimeTruthPage /></Lazy>} />
             <Route path="lob-view" element={<Lazy><LOBViewPage /></Lazy>} />
             <Route path="neighbourhood-view" element={<Lazy><NeighbourhoodViewPage /></Lazy>} />
+            <Route path="ontology-explorer" element={<Lazy><OntologyExplorerPage /></Lazy>} />
             <Route path="users" element={<Lazy><UsersPage /></Lazy>} />
             <Route path="audit" element={<Lazy><AuditPage /></Lazy>} />
+
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

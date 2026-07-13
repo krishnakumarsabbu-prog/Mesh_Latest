@@ -24,7 +24,9 @@ const operationsNavItems: NavItem[] = [
   { label: 'Runtime Truth', href: '/runtime-truth', icon: ShieldCheck, description: 'Can this app process transactions now?' },
   { label: 'LOB View', href: '/lob-view', icon: Layers, description: 'Lines of Business health & telemetry' },
   { label: 'Neighbourhood View', href: '/neighbourhood-view', icon: Network, description: 'Infrastructure to app mappings' },
+  { label: 'Ontology Explorer', href: '/ontology-explorer', icon: Network, description: 'Enterprise Knowledge Graph' },
 ];
+
 
 const adminNavItems: NavItem[] = [];
 
