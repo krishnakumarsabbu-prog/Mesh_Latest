@@ -1199,3 +1199,46 @@
 .stagger > *:nth-child(6) { animation-delay: 200ms; }
 .stagger > *:nth-child(7) { animation-delay: 240ms; }
 .stagger > *:nth-child(8) { animation-delay: 280ms; }
+
+/* ─── Executive Report print styles ─────────────────────────────────────── */
+@media print {
+  @page {
+    margin: 0.5in;
+    size: portrait;
+  }
+
+  /* Hide everything that is not part of the report */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the report container and its descendants */
+  .exec-report,
+  .exec-report * {
+    visibility: visible;
+  }
+
+  /* Anchor the report at the top of the page */
+  .exec-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Hide interactive-only elements */
+  .exec-no-print {
+    display: none !important;
+  }
+
+  /* Print-safe colors: force dark text on light backgrounds */
+  .exec-print-dark {
+    color: #1C2B3A !important;
+  }
+
+  /* Clean card borders for print */
+  .exec-report-section {
+    break-inside: avoid;
+    border-color: #D8DCE2 !important;
+  }
+}
