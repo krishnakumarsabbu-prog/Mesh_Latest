@@ -7,3 +7,4 @@
 export { DcExitRouter } from './DcExitRouter';
 export * from './pages';
 export * from './types';
+export * from './components';

@@ -4,4 +4,14 @@
  * Components barrel for the dc-exit module.
  */
 
+export { DcExitBreadcrumb } from './DcExitBreadcrumb';
+export type { DcExitCrumb } from './DcExitBreadcrumb';
+export { StatusPill } from './StatusPill';
+export type { DcExitPillStatus } from './StatusPill';
+export { ScoreBadge } from './ScoreBadge';
+export type { ScoreTone } from './ScoreBadge';
+export { PhaseStepper } from './PhaseStepper';
+export { DcExitSidebar } from './DcExitSidebar';
+export { DcExitHeader } from './DcExitHeader';
+export { DcExitLayout } from './DcExitLayout';
 export { ExitIntelligenceModal } from './ExitIntelligenceModal';

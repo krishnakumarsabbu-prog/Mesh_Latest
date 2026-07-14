@@ -1,15 +1,17 @@
 /**
  * Enterprise Digital Twin - DC Exit module.
  *
- * Analyze step page. Placeholder - title only, no business logic yet.
+ * Analyze step page. Content placeholder - no business logic yet.
+ * The layout (DcExitLayout) renders the breadcrumb, page header,
+ * and phase stepper; this page renders only the step body.
  */
-
-import { PageHeader } from '@/components/ui/PageHeader';
 
 export function AnalyzePage() {
   return (
-    <div className="p-6">
-      <PageHeader title="Analyze" subtitle="Assess impact, risk, and migration complexity for in-scope assets." />
+    <div className="flex items-center justify-center py-20">
+      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+        Analyze content goes here.
+      </p>
     </div>
   );
 }

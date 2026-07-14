@@ -1,15 +1,17 @@
 /**
  * Enterprise Digital Twin - DC Exit module.
  *
- * Module-level router. Defines the nested routes for the five
- * workflow steps under the /dc-exit/:sessionId/* path.
+ * Module-level router. Wraps the five workflow step routes in the
+ * DcExitLayout (sidebar + header + phase stepper). The layout's
+ * <Outlet /> renders the active step page.
  *
- * Mounted from App.tsx as a single lazy import.
+ * Mounted from App.tsx under /dc-exit/:sessionId/*.
  */
 
 import React, { Suspense } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { DcExitLayout } from './components/DcExitLayout';
 
 // Lazy-load step pages so each stays a separate bundle.
 const DiscoverPage = React.lazy(() =>
@@ -29,7 +31,12 @@ const ValidatePage = React.lazy(() =>
 );
 
 function StepSkeleton() {
-  return <div className="p-6 animate-pulse h-8 w-48 bg-white/10 rounded-xl" />;
+  return (
+    <div className="p-6 space-y-4 animate-pulse">
+      <div className="h-8 w-48 rounded-[6px] bg-[var(--app-bg-muted)]" />
+      <div className="h-32 rounded-[8px] bg-[var(--app-bg-muted)]" />
+    </div>
+  );
 }
 
 /**
@@ -55,8 +62,8 @@ function GuardedStep({ step }: { step: string }) {
 export function DcExitRouter() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={<StepSkeleton />}>
-        <Routes>
+      <Routes>
+        <Route element={<DcExitLayout />}>
           <Route index element={<Navigate to="discover" replace />} />
           <Route path="discover" element={<GuardedStep step="discover" />} />
           <Route path="analyze" element={<GuardedStep step="analyze" />} />
@@ -64,8 +71,8 @@ export function DcExitRouter() {
           <Route path="execute" element={<GuardedStep step="execute" />} />
           <Route path="validate" element={<GuardedStep step="validate" />} />
           <Route path="*" element={<Navigate to="discover" replace />} />
-        </Routes>
-      </Suspense>
+        </Route>
+      </Routes>
     </ErrorBoundary>
   );
 }
