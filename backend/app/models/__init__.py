@@ -11,6 +11,7 @@ from app.models.rbac import Permission, RolePermission, ScopedRoleAssignment
 from app.models.runtime import RuntimeDataCenter, RuntimeAsset, DataSourceImport, ApplicationIntent, SourceProposal, RuntimeAuditLog
 from app.models.ontology import OntologyNode, OntologyEdge
 from app.models.dc_exit_session import DCExitSession
+from app.models.migration import MigrationRun, MigrationWaveRecord, AppMigrationRecord, AdapterCallAudit
 
 __all__ = [
     "User", "UserRole", "UserRoleAssignment",
@@ -26,5 +27,10 @@ __all__ = [
     "RuntimeDataCenter", "RuntimeAsset", "DataSourceImport", "ApplicationIntent", "SourceProposal", "RuntimeAuditLog",
     "OntologyNode", "OntologyEdge",
     "DCExitSession",
+    "MigrationRun",
+    "MigrationWaveRecord",
+    "AppMigrationRecord",
+    "AdapterCallAudit",
 ]
+
 

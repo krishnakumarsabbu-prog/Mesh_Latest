@@ -14,6 +14,7 @@ import { AnalyzeTabBar, type AnalyzeTabDef } from '@/modules/dc-exit/components/
 import { ImpactAnalysisTab } from '@/modules/dc-exit/components/ImpactAnalysisTab';
 import { DependenciesTab } from '@/modules/dc-exit/components/DependenciesTab';
 import { BusinessImpactTab } from '@/modules/dc-exit/components/BusinessImpactTab';
+import { FailoverViewTab } from '@/modules/dc-exit/components/FailoverViewTab';
 import { DcExitLoading, DcExitError, DcExitEmpty } from '@/modules/dc-exit/components/DcExitStates';
 import { useDcExitSession } from '@/modules/dc-exit/hooks/useDcExitSession';
 import { useDcExitScope, useOntologyGraph } from '@/modules/dc-exit/hooks/useDcExitQueries';
@@ -34,7 +35,9 @@ const TABS: AnalyzeTabDef[] = [
   { id: 'impact', label: 'Impact Analysis' },
   { id: 'dependencies', label: 'Dependencies' },
   { id: 'business', label: 'Business Impact' },
+  { id: 'failover', label: 'Failover View (6-Layer)' },
 ];
+
 
 function statusToHealth(status: string): HealthState {
   const s = (status || '').toLowerCase();
@@ -46,17 +49,6 @@ function statusToHealth(status: string): HealthState {
 
 function mapDependencyBreakdown(scope: DcExitScopeResponse): DependencyBreakdown[] {
   const nodes = scope.impacted_nodes ?? [];
-  const groups: Record<string, { total: number; healthy: number; degraded: number; down: number }> = {};
-
-  for (const n of nodes) {
-    if (n.ontology_class === 'Application') continue;
-    const domainKey = n.domain;
-    if (!groups[domainKey]) groups[domainKey] = { total: 0, healthy: 0, degraded: 0, down: 0 };
-    const h = statusToHealth(n.status);
-    groups[domainKey].total++;
-    groups[domainKey][h]++;
-  }
-
   const typeMap: Record<string, DependencyType> = {
     messaging: 'mq',
     data: 'oracle',
@@ -64,8 +56,43 @@ function mapDependencyBreakdown(scope: DcExitScopeResponse): DependencyBreakdown
     network: 'dns',
   };
 
-  return Object.entries(groups).map(([domain, counts]) => {
-    const type = typeMap[domain] ?? 'mq';
+  const groups: Record<DependencyType, { total: number; healthy: number; degraded: number; down: number }> = {
+    mq: { total: 0, healthy: 0, degraded: 0, down: 0 },
+    kafka: { total: 0, healthy: 0, degraded: 0, down: 0 },
+    oracle: { total: 0, healthy: 0, degraded: 0, down: 0 },
+    mongo: { total: 0, healthy: 0, degraded: 0, down: 0 },
+    vip: { total: 0, healthy: 0, degraded: 0, down: 0 },
+    dns: { total: 0, healthy: 0, degraded: 0, down: 0 },
+  };
+
+  for (const n of nodes) {
+    if (n.ontology_class === 'Application') continue;
+    
+    let type: DependencyType = 'mq';
+    const tech = ((n.metadata?.tech_stack as string) || '').toLowerCase();
+    if (tech === 'oracle' || tech === 'mssql') {
+      type = 'oracle';
+    } else if (tech === 'mongodb') {
+      type = 'mongo';
+    } else if (tech === 'ibm_mq') {
+      type = 'mq';
+    } else if (tech === 'kafka') {
+      type = 'kafka';
+    } else if (tech === 'ocp' || tech === 'vm' || tech === 'avi_loadbalancer') {
+      type = 'vip';
+    } else if (tech === 'dns') {
+      type = 'dns';
+    } else {
+      type = typeMap[n.domain] ?? 'mq';
+    }
+
+    const h = statusToHealth(n.status);
+    groups[type].total++;
+    groups[type][h]++;
+  }
+
+  return (['mq', 'kafka', 'oracle', 'mongo', 'vip', 'dns'] as DependencyType[]).map((type) => {
+    const counts = groups[type];
     return {
       type,
       total: counts.total,
@@ -76,6 +103,7 @@ function mapDependencyBreakdown(scope: DcExitScopeResponse): DependencyBreakdown
     };
   });
 }
+
 
 function mapGraphToDepNodes(
   graph: OntologyGraphResponse,
@@ -232,6 +260,9 @@ export function AnalyzePage() {
       )}
       {activeTab === 'business' && (
         <BusinessImpactTab cards={bizCards} />
+      )}
+      {activeTab === 'failover' && (
+        <FailoverViewTab sourceDc={dcShort} />
       )}
 
       <div className="flex items-center justify-end pt-1">

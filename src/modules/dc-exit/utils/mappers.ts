@@ -101,6 +101,34 @@ function healthLabel(h: HealthState): string {
   return h.charAt(0).toUpperCase() + h.slice(1);
 }
 
+function getAppNodesInDc(graph: OntologyGraphResponse, dcShortName: string): OntologyNodeJson[] {
+  // 1. Get IDs of assets in this DC
+  const dcAssetIds = new Set(
+    graph.nodes
+      .filter(
+        (n) =>
+          n.domain !== 'applications' &&
+          n.domain !== 'runtime' &&
+          ((n.metadata as Record<string, unknown>)?.data_center === dcShortName ||
+           (n.metadata as Record<string, unknown>)?.data_center_short === dcShortName)
+      )
+      .map((n) => n.id)
+  );
+
+  // 2. Find application node IDs that own these assets
+  const appIdsInDc = new Set<string>();
+  for (const e of graph.edges) {
+    if (e.edge_type === 'owns' && dcAssetIds.has(e.target)) {
+      appIdsInDc.add(e.source);
+    }
+  }
+
+  // 3. Return the application nodes
+  return graph.nodes.filter(
+    (n) => n.domain === 'applications' && appIdsInDc.has(n.id)
+  );
+}
+
 export function mapDatacenter(
   dc: RuntimeDataCenter,
   readiness?: ReadinessResponse,
@@ -111,7 +139,8 @@ export function mapDatacenter(
         (n) =>
           n.domain !== 'applications' &&
           n.domain !== 'runtime' &&
-          (n.metadata as Record<string, unknown>)?.data_center === dc.short_name,
+          ((n.metadata as Record<string, unknown>)?.data_center === dc.short_name ||
+           (n.metadata as Record<string, unknown>)?.data_center_short === dc.short_name),
       )
     : [];
 
@@ -143,38 +172,97 @@ export function mapHierarchy(
   const dcNode = graph.nodes.find(
     (n) =>
       n.ontology_class === 'DataCenter' &&
-      (n.metadata as Record<string, unknown>)?.short_name === dcShortName,
+      ((n.metadata as Record<string, unknown>)?.short_name === dcShortName ||
+       (n.metadata as Record<string, unknown>)?.short_name === dcShortName),
   );
   if (!dcNode) return [];
 
-  const childrenMap = new Map<string, OntologyNodeJson[]>();
-  for (const e of graph.edges) {
-    if (e.edge_type === 'owns' || e.edge_type === 'runs_in' || e.edge_type === 'contains') {
-      const arr = childrenMap.get(e.source) ?? [];
-      const target = graph.nodes.find((n) => n.id === e.target);
-      if (target) arr.push(target);
-      childrenMap.set(e.source, arr);
+  // 1. Get all Assets in this datacenter
+  const dcAssets = graph.nodes.filter(
+    (n) =>
+      n.domain !== 'applications' &&
+      n.domain !== 'runtime' &&
+      ((n.metadata as Record<string, unknown>)?.data_center === dcShortName ||
+       (n.metadata as Record<string, unknown>)?.data_center_short === dcShortName),
+  );
+
+  // 2. Map Assets to their Application (via owns edges)
+  const appToAssets = new Map<string, OntologyNodeJson[]>();
+  const unownedAssets: OntologyNodeJson[] = [];
+
+  for (const asset of dcAssets) {
+    const ownsEdge = graph.edges.find(
+      (e) => e.edge_type === 'owns' && e.target === asset.id
+    );
+    if (ownsEdge) {
+      const arr = appToAssets.get(ownsEdge.source) ?? [];
+      arr.push(asset);
+      appToAssets.set(ownsEdge.source, arr);
+    } else {
+      unownedAssets.push(asset);
     }
   }
 
-  function buildNode(node: OntologyNodeJson, depth: number): HierarchyNodeView {
-    const children = childrenMap.get(node.id) ?? [];
-    const childViews = depth < 4 ? children.map((c) => buildNode(c, depth + 1)) : [];
-    const typeMap: Record<string, HierarchyNodeView['type']> = {
-      DataCenter: 'datacenter',
-      Application: 'application',
-    };
+  // 3. Get all Applications running in this DC
+  const appNodes = getAppNodesInDc(graph, dcShortName);
+
+  // 4. Build application child views
+  const appViews: HierarchyNodeView[] = appNodes.map((app) => {
+    const assets = appToAssets.get(app.id) ?? [];
+    const assetViews: HierarchyNodeView[] = assets.map((asset) => {
+      let type: HierarchyNodeView['type'] = 'namespace';
+      const c = asset.ontology_class.toLowerCase();
+      if (c.includes('database') || c.includes('oracle') || c.includes('mongo')) {
+        type = 'cluster';
+      }
+      return {
+        id: asset.id,
+        name: `${asset.label} (${(asset.metadata as any)?.tech_stack ?? 'asset'})`,
+        type,
+        status: statusToHealth(asset.status),
+        count: 0,
+      };
+    });
+
     return {
-      id: node.id,
-      name: node.label,
-      type: typeMap[node.ontology_class] ?? (depth === 1 ? 'cluster' : depth === 2 ? 'namespace' : 'application'),
-      status: statusToHealth(node.status),
-      count: childViews.length,
-      children: childViews.length > 0 ? childViews : undefined,
+      id: app.id,
+      name: app.label,
+      type: 'application',
+      status: statusToHealth(app.status),
+      count: assetViews.length,
+      children: assetViews.length > 0 ? assetViews : undefined,
     };
+  });
+
+  // 5. Build infrastructure/unowned assets group (e.g. MONGO_INFRA, MQ_INFRA)
+  if (unownedAssets.length > 0) {
+    const infraViews: HierarchyNodeView[] = unownedAssets.map((asset) => ({
+      id: asset.id,
+      name: `${asset.label} (${(asset.metadata as any)?.tech_stack ?? 'shared-infra'})`,
+      type: 'cluster',
+      status: statusToHealth(asset.status),
+      count: 0,
+    }));
+    appViews.push({
+      id: 'shared-infra',
+      name: 'Shared Infrastructure Platforms',
+      type: 'application',
+      status: 'healthy',
+      count: infraViews.length,
+      children: infraViews,
+    });
   }
 
-  return [buildNode(dcNode, 0)];
+  return [
+    {
+      id: dcNode.id,
+      name: `${dcNode.label} (${dcShortName})`,
+      type: 'datacenter',
+      status: statusToHealth(dcNode.status),
+      count: appViews.length,
+      children: appViews,
+    },
+  ];
 }
 
 export function mapInventory(
@@ -185,12 +273,11 @@ export function mapInventory(
     (n) =>
       n.domain !== 'applications' &&
       n.domain !== 'runtime' &&
-      (n.metadata as Record<string, unknown>)?.data_center === dcShortName,
+      ((n.metadata as Record<string, unknown>)?.data_center === dcShortName ||
+       (n.metadata as Record<string, unknown>)?.data_center_short === dcShortName),
   );
 
-  const appNodes = graph.nodes.filter(
-    (n) => n.domain === 'applications' && (n.metadata as Record<string, unknown>)?.data_center === dcShortName,
-  );
+  const appNodes = getAppNodesInDc(graph, dcShortName);
 
   const groups: Record<string, OntologyNodeJson[]> = {};
   for (const a of dcAssets) {
@@ -233,9 +320,7 @@ function makeInventoryCategory(key: string, nodes: OntologyNodeJson[]): Inventor
 }
 
 export function mapCapabilities(graph: OntologyGraphResponse, dcShortName: string): BusinessCapabilityView[] {
-  const appNodes = graph.nodes.filter(
-    (n) => n.domain === 'applications' && (n.metadata as Record<string, unknown>)?.data_center === dcShortName,
-  );
+  const appNodes = getAppNodesInDc(graph, dcShortName);
 
   const byApp: Record<string, OntologyNodeJson[]> = {};
   for (const a of appNodes) {
@@ -267,9 +352,7 @@ export function mapCapabilities(graph: OntologyGraphResponse, dcShortName: strin
 }
 
 export function mapOwnerTeams(graph: OntologyGraphResponse, dcShortName: string): OwnerTeamView[] {
-  const appNodes = graph.nodes.filter(
-    (n) => n.domain === 'applications' && (n.metadata as Record<string, unknown>)?.data_center === dcShortName,
-  );
+  const appNodes = getAppNodesInDc(graph, dcShortName);
 
   const byTeam: Record<string, OntologyNodeJson[]> = {};
   for (const a of appNodes) {

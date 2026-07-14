@@ -174,7 +174,14 @@ async def seed_reference_data() -> None:
             await _seed_proposals(session)
             await _seed_builtin_rules(session)
             await _seed_sample_components(session)
+            await _seed_runtime_assets(session)
             await session.commit()
+
+            # Rebuild ontology graph to populate it on startup/seed
+            from app.dc_exit.ontology_service import ontology_service
+            await ontology_service.build_graph(session)
+            await session.commit()
+
         logger.info("Runtime reference data seeded successfully")
     except Exception as exc:
         logger.error(f"Failed to seed runtime reference data: {exc}")
@@ -585,3 +592,127 @@ async def _seed_builtin_rules(session: AsyncSession) -> None:
 
     if seeded:
         logger.info(f"  [seed] {seeded} built-in health rules created")
+
+
+async def _seed_runtime_assets(session: AsyncSession) -> None:
+    """
+    Seed realistic RuntimeAsset rows for the DC Exit demo scenario.
+    Covers PCA, BILLING, and CLAIMS apps across IBB1 (primary) and SHV (standby).
+    Each app has Oracle/MQ/Kafka/OCP assets in both DCs so all dc-exit services
+    return live data from the database.
+    """
+    from app.models.runtime import RuntimeAsset
+
+    # Guard: skip if assets already exist
+    existing = await session.execute(select(RuntimeAsset).limit(1))
+    if existing.scalar_one_or_none():
+        logger.info("  [seed] RuntimeAssets already exist, skipping")
+        return
+
+    now = datetime.utcnow()
+
+    _ASSETS = [
+        # ── PCA: Patient Care Portal ───────────────────────────────────────────
+        # IBB1 — Primary
+        {"name": "PCA-ORACLE-IBB1-PRI", "tech_stack": "oracle", "dc": "IBB1", "env": "PRODUCTION",
+         "state": "ACTIVE", "role": "PRIMARY", "write_authority": True,  "data_source": "oracle_oem",
+         "app_id": "PCA", "app_name": "Patient Care Portal (PCA)",
+         "meta": {"application_id": "PCA", "application_name": "Patient Care Portal (PCA)", "active_connections": 142}},
+        {"name": "PCA-MONGO-IBB1-PRI", "tech_stack": "mongodb", "dc": "IBB1", "env": "PRODUCTION",
+         "state": "ACTIVE", "role": "PRIMARY", "write_authority": True, "data_source": "mongodb",
+         "app_id": "PCA", "app_name": "Patient Care Portal (PCA)",
+         "meta": {"application_id": "PCA", "application_name": "Patient Care Portal (PCA)", "active_connections": 34}},
+        {"name": "PCA-OCP-IBB1-POD",  "tech_stack": "ocp",    "dc": "IBB1", "env": "PRODUCTION",
+         "state": "ACTIVE", "role": None, "write_authority": False, "data_source": "openshift",
+         "app_id": "PCA", "app_name": "Patient Care Portal (PCA)",
+         "meta": {"application_id": "PCA", "application_name": "Patient Care Portal (PCA)", "replicas": 4}},
+        # SHV — Standby
+        {"name": "PCA-ORACLE-SHV-STB", "tech_stack": "oracle", "dc": "SHV", "env": "PRODUCTION",
+         "state": "STANDBY", "role": "PHYSICAL_STANDBY", "write_authority": False, "data_source": "oracle_oem",
+         "app_id": "PCA", "app_name": "Patient Care Portal (PCA)",
+         "meta": {"application_id": "PCA", "application_name": "Patient Care Portal (PCA)", "active_connections": 0}},
+        {"name": "PCA-MONGO-SHV-SEC", "tech_stack": "mongodb", "dc": "SHV", "env": "PRODUCTION",
+         "state": "STANDBY", "role": "SECONDARY", "write_authority": False, "data_source": "mongodb",
+         "app_id": "PCA", "app_name": "Patient Care Portal (PCA)",
+         "meta": {"application_id": "PCA", "application_name": "Patient Care Portal (PCA)", "active_connections": 0}},
+        {"name": "PCA-OCP-SHV-POD",  "tech_stack": "ocp",    "dc": "SHV", "env": "PRODUCTION",
+         "state": "STANDBY", "role": None, "write_authority": False, "data_source": "openshift",
+         "app_id": "PCA", "app_name": "Patient Care Portal (PCA)",
+         "meta": {"application_id": "PCA", "application_name": "Patient Care Portal (PCA)", "replicas": 0}},
+
+        # ── BILLING: Billing Operations ────────────────────────────────────────
+        # GA-PRD — Primary
+        {"name": "BILLING-MSSQL-GAPRD-PRI", "tech_stack": "mssql", "dc": "GA-PRD", "env": "PRODUCTION",
+         "state": "ACTIVE", "role": "PRIMARY", "write_authority": True, "data_source": "scom",
+         "app_id": "BILLING", "app_name": "Billing Operations (BILLING)",
+         "meta": {"application_id": "BILLING", "application_name": "Billing Operations (BILLING)", "active_connections": 88}},
+        {"name": "BILLING-MQ-GAPRD-LIVE", "tech_stack": "ibm_mq", "dc": "GA-PRD", "env": "PRODUCTION",
+         "state": "ACTIVE", "role": None, "write_authority": False, "data_source": "ibm_mq",
+         "app_id": "BILLING", "app_name": "Billing Operations (BILLING)",
+         "meta": {"application_id": "BILLING", "application_name": "Billing Operations (BILLING)", "active_connections": 21}},
+        {"name": "BILLING-OCP-GAPRD-POD", "tech_stack": "ocp", "dc": "GA-PRD", "env": "PRODUCTION",
+         "state": "ACTIVE", "role": None, "write_authority": False, "data_source": "openshift",
+         "app_id": "BILLING", "app_name": "Billing Operations (BILLING)",
+         "meta": {"application_id": "BILLING", "application_name": "Billing Operations (BILLING)", "replicas": 3}},
+        # MA-PRD — Standby
+        {"name": "BILLING-MSSQL-MAPRD-SEC", "tech_stack": "mssql", "dc": "MA-PRD", "env": "PRODUCTION",
+         "state": "STANDBY", "role": "SECONDARY", "write_authority": False, "data_source": "scom",
+         "app_id": "BILLING", "app_name": "Billing Operations (BILLING)",
+         "meta": {"application_id": "BILLING", "application_name": "Billing Operations (BILLING)", "active_connections": 0}},
+        {"name": "BILLING-MQ-MAPRD-STB", "tech_stack": "ibm_mq", "dc": "MA-PRD", "env": "PRODUCTION",
+         "state": "STANDBY", "role": None, "write_authority": False, "data_source": "ibm_mq",
+         "app_id": "BILLING", "app_name": "Billing Operations (BILLING)",
+         "meta": {"application_id": "BILLING", "application_name": "Billing Operations (BILLING)", "active_connections": 0}},
+
+        # ── CLAIMS: Claims Processing ──────────────────────────────────────────
+        # IBB1 — Primary
+        {"name": "CLAIMS-KAFKA-IBB1-BROKER", "tech_stack": "kafka", "dc": "IBB1", "env": "PRODUCTION",
+         "state": "ACTIVE", "role": "PRIMARY", "write_authority": True, "data_source": "kafka",
+         "app_id": "CLAIMS", "app_name": "Claims Processing (CLAIMS)",
+         "meta": {"application_id": "CLAIMS", "application_name": "Claims Processing (CLAIMS)", "active_connections": 67}},
+        {"name": "CLAIMS-OCP-IBB1-POD", "tech_stack": "ocp", "dc": "IBB1", "env": "PRODUCTION",
+         "state": "ACTIVE", "role": None, "write_authority": False, "data_source": "openshift",
+         "app_id": "CLAIMS", "app_name": "Claims Processing (CLAIMS)",
+         "meta": {"application_id": "CLAIMS", "application_name": "Claims Processing (CLAIMS)", "replicas": 6}},
+        {"name": "CLAIMS-MQ-IBB1-LIVE", "tech_stack": "ibm_mq", "dc": "IBB1", "env": "PRODUCTION",
+         "state": "ACTIVE", "role": None, "write_authority": False, "data_source": "ibm_mq",
+         "app_id": "CLAIMS", "app_name": "Claims Processing (CLAIMS)",
+         "meta": {"application_id": "CLAIMS", "application_name": "Claims Processing (CLAIMS)", "active_connections": 29}},
+        # SHV — Standby
+        {"name": "CLAIMS-KAFKA-SHV-MIRROR", "tech_stack": "kafka", "dc": "SHV", "env": "PRODUCTION",
+         "state": "STANDBY", "role": "SECONDARY", "write_authority": False, "data_source": "kafka",
+         "app_id": "CLAIMS", "app_name": "Claims Processing (CLAIMS)",
+         "meta": {"application_id": "CLAIMS", "application_name": "Claims Processing (CLAIMS)", "active_connections": 0}},
+        {"name": "CLAIMS-OCP-SHV-POD", "tech_stack": "ocp", "dc": "SHV", "env": "PRODUCTION",
+         "state": "STANDBY", "role": None, "write_authority": False, "data_source": "openshift",
+         "app_id": "CLAIMS", "app_name": "Claims Processing (CLAIMS)",
+         "meta": {"application_id": "CLAIMS", "application_name": "Claims Processing (CLAIMS)", "replicas": 0}},
+    ]
+
+    seeded = 0
+    _TECH_TO_ASSET_TYPE = {
+        "oracle": "ORACLE_DB", "mssql": "MSSQL_DB", "mongodb": "MONGO_NODE",
+        "ibm_mq": "MQ_QMGR", "kafka": "KAFKA_BROKER", "ocp": "OCP_POD",
+        "vm": "SERVER", "avi_loadbalancer": "LOAD_BALANCER", "dns": "DNS_ZONE",
+    }
+    for a in _ASSETS:
+        asset = RuntimeAsset(
+            id=str(uuid.uuid4()),
+            name=a["name"],
+            asset_type=_TECH_TO_ASSET_TYPE.get(a["tech_stack"], "SERVER"),
+            tech_stack=a["tech_stack"],
+            data_center_short=a["dc"],
+            environment=a["env"],
+            latest_operational_state=a["state"],
+            latest_replication_role=a.get("role"),
+            write_authority=a["write_authority"],
+            data_source=a["data_source"],
+            metadata_json=a["meta"],
+            last_seen_at=now,
+        )
+        session.add(asset)
+        seeded += 1
+
+    if seeded:
+        logger.info(f"  [seed] {seeded} RuntimeAsset rows created for DC Exit demo")
+

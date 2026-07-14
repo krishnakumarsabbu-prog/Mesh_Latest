@@ -27,3 +27,5 @@ export { ExecutionTab } from './ExecutionTab';
 export { TimelineTab } from './TimelineTab';
 export { ValidationTab } from './ValidationTab';
 export { ExecutiveReportTab } from './ExecutiveReportTab';
+export { FailoverViewTab } from './FailoverViewTab';
+

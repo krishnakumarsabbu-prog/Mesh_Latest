@@ -2086,6 +2086,14 @@ async def import_all_docs(db: AsyncSession = Depends(get_db)):
     db.add(audit)
     await db.commit()
     
+    # Rebuild ontology graph to stay in sync
+    try:
+        from app.dc_exit.ontology_service import ontology_service
+        await ontology_service.build_graph(db)
+        logger.info("Rebuilt ontology graph after bulk import")
+    except Exception as e:
+        logger.error(f"Failed to auto-rebuild ontology graph: {e}", exc_info=True)
+
     return {
         "status": "SUCCESS" if not errors else "PARTIAL",
         "message": f"Successfully processed {len(imported_files)} documentation files.",

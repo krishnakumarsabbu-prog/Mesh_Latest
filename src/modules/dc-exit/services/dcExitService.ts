@@ -319,6 +319,99 @@ export interface ValidationConfidenceResponse {
   overall_confidence: number;
 }
 
+export interface FailoverViewResponse {
+  source_dc: string;
+  target_dc: string;
+  summary: {
+    total_resident_apps: number;
+    total_dependent_apps: number;
+    total_compute_units: number;
+    total_storage_clusters: number;
+    total_integration_channels: number;
+    readiness_verdict: 'READY' | 'BLOCKED';
+  };
+  layer_1_apps: {
+    resident: {
+      app_id: string;
+      app_name: string;
+      tier: string;
+      asset_count: number;
+      tech_stacks: string[];
+    }[];
+    dependent: {
+      app_id: string;
+      app_name: string;
+      tier: string;
+      dependency_type: string;
+      impact_severity: string;
+    }[];
+  };
+  layer_2_compute: {
+    units: {
+      app_id: string;
+      asset_id: string;
+      name: string;
+      source_cluster: string;
+      source_namespace: string;
+      replicas: number;
+      target_cluster: string;
+      target_namespace: string;
+      cpu_cores_required: number;
+      memory_gb_required: number;
+      status: string;
+    }[];
+    capacity_check: {
+      required_cpu_cores: number;
+      required_memory_gb: number;
+      available_cpu_cores: number;
+      available_memory_gb: number;
+      status: string;
+      headroom_percent: number;
+    };
+  };
+  layer_3_storage: {
+    clusters: {
+      db_name: string;
+      tech_stack: string;
+      source_node: string;
+      source_role: string;
+      target_node: string;
+      target_role: string;
+      replication_lag_seconds: number;
+      status: string;
+      classification: 'PROMOTE_LOCAL' | 'FAILOVER' | 'BLOCKER';
+    }[];
+    blockers: string[];
+  };
+  layer_4_integration: {
+    channels: {
+      type: string;
+      name: string;
+      source_endpoint: string;
+      target_endpoint: string;
+      mirror_status: string;
+      consumer_group_lag: number;
+      status: string;
+    }[];
+  };
+  layer_5_config: {
+    items: {
+      app_id: string;
+      config_type: string;
+      property_key: string;
+      current_value: string;
+      proposed_value: string;
+      file_path: string;
+      remediation: string;
+    }[];
+  };
+  layer_6_waves: {
+    waves: MigrationWave[];
+    total_waves: number;
+  };
+  timestamp: string;
+}
+
 // ─── Service ─────────────────────────────────────────────────────────────────
 
 export const dcExitService = {
@@ -402,4 +495,91 @@ export const dcExitService = {
         params: { data_center: dataCenter },
       })
       .then((r) => r.data),
+
+  getFailoverView: (sourceDc: string, targetDc: string) =>
+    apiClient
+      .get<FailoverViewResponse>('/dc-exit/failover-view', {
+        params: { source_dc: sourceDc, target_dc: targetDc },
+      })
+      .then((r) => r.data),
+
+  startMigration: (body: { session_id: string; source_dc: string; target_dc: string; mode: string }) =>
+    apiClient.post<{ run_id: string; status: string }>('/dc-exit/migrate/start', null, { params: body }).then((r) => r.data),
+
+  getMigrationStatus: (runId: string) =>
+    apiClient.get<MigrationStatusResponse>(`/dc-exit/migrate/status/${runId}`).then((r) => r.data),
+
+  pauseMigration: (runId: string) =>
+    apiClient.post<{ success: boolean }>(`/dc-exit/migrate/pause/${runId}`).then((r) => r.data),
+
+  resumeMigration: (runId: string) =>
+    apiClient.post<{ success: boolean }>(`/dc-exit/migrate/resume/${runId}`).then((r) => r.data),
+
+  rollbackMigration: (runId: string) =>
+    apiClient.post<{ success: boolean }>(`/dc-exit/migrate/rollback/${runId}`).then((r) => r.data),
+
+  getResidualTraffic: (dataCenter: string) =>
+    apiClient
+      .get<ResidualTrafficResponse>('/dc-exit/validation/residual-traffic', {
+        params: { data_center: dataCenter },
+      })
+      .then((r) => r.data),
 };
+
+export interface MigrationWaveStatus {
+  id: string;
+  wave_number: number;
+  status: string;
+}
+
+export interface AppMigrationStatus {
+  app_id: string;
+  app_name: string;
+  status: string;
+  current_phase: string;
+  progress: number;
+  error?: string;
+  wave_id?: string;
+}
+
+export interface AdapterAuditLog {
+  id: string;
+  app_id?: string;
+  adapter_name: string;
+  operation: string;
+  target?: string;
+  status: string;
+  error_message?: string;
+  timestamp: string;
+}
+
+export interface MigrationStatusResponse {
+  run_id: string;
+  status: string;
+  mode: string;
+  source_dc: string;
+  target_dc: string;
+  start_time?: string;
+  end_time?: string;
+  waves: MigrationWaveStatus[];
+  apps: AppMigrationStatus[];
+  audit_logs: AdapterAuditLog[];
+}
+
+// ─── Phase 6: Residual Traffic (Post-Cutover Verification) ───────────────────
+
+export interface ResidualAsset {
+  id: string;
+  name: string;
+  tech_stack: string;
+  active_connections: number;
+  asset_type: string;
+}
+
+export interface ResidualTrafficResponse {
+  source_dc: string;
+  status: 'clean' | 'residual_detected';
+  residual_connection_count: number;
+  offending_assets: ResidualAsset[];
+  scanned_at: string;
+}

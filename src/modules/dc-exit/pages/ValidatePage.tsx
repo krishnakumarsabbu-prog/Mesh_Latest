@@ -10,7 +10,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowRight, CircleCheck, Gauge, ShieldCheck, Activity, Database, Network, Boxes } from 'lucide-react';
+import { ArrowRight, CircleCheck, Gauge, ShieldCheck, Activity, Database, Network, Boxes, Wifi, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { AnalyzeTabBar, type AnalyzeTabDef } from '@/modules/dc-exit/components/AnalyzeTabBar';
@@ -18,7 +18,7 @@ import { ValidationTab } from '@/modules/dc-exit/components/ValidationTab';
 import { ExecutiveReportTab } from '@/modules/dc-exit/components/ExecutiveReportTab';
 import { DcExitLoading, DcExitError, DcExitEmpty } from '@/modules/dc-exit/components/DcExitStates';
 import { useDcExitSession } from '@/modules/dc-exit/hooks/useDcExitSession';
-import { useValidation, useDecision } from '@/modules/dc-exit/hooks/useDcExitQueries';
+import { useValidation, useDecision, useResidualTraffic } from '@/modules/dc-exit/hooks/useDcExitQueries';
 import type {
   ChecklistItem,
   ConfidenceSignal,
@@ -35,7 +35,8 @@ import type {
 } from '@/modules/dc-exit/data/validateMockData';
 
 const TABS: AnalyzeTabDef[] = [
-  { id: 'validation', label: 'Validation' },
+  { id: 'validation', label: 'Validation Checklist' },
+  { id: 'residual', label: 'Residual Traffic Scan' },
   { id: 'report', label: 'Executive Report' },
 ];
 
@@ -135,6 +136,7 @@ export function ValidatePage() {
 
   const { data: validation, isLoading: valLoading, isError: valError } = useValidation(dcShort, targetDc);
   const { data: decision } = useDecision(dcShort);
+  const { data: residual, isLoading: residualLoading } = useResidualTraffic(dcShort);
 
   const checklist = useMemo(
     () => (validation ? mapChecklist(validation.checklist) : []),
@@ -248,6 +250,110 @@ export function ValidatePage() {
           alignmentChecks={alignmentChecks}
           syntheticTransactions={syntheticTransactions}
         />
+      )}
+      {activeTab === 'residual' && (
+        <div
+          className="rounded-[10px] p-6 flex flex-col gap-5"
+          style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-[6px]" style={{ background: 'rgba(0,176,116,0.1)', border: '1px solid rgba(0,176,116,0.2)' }}>
+              <Wifi className="w-5 h-5" style={{ color: '#00B074' }} />
+            </div>
+            <div>
+              <h3 className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>Residual Traffic Scanner</h3>
+              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                Scans the source datacenter for ghost connections that should have been drained during cutover.
+              </p>
+            </div>
+          </div>
+
+          {residualLoading ? (
+            <DcExitLoading label="Scanning source DC for residual connections…" />
+          ) : !residual ? (
+            <DcExitEmpty label="No residual traffic scan results available." />
+          ) : (
+            <>
+              {/* Summary Banner */}
+              <div
+                className="flex items-center gap-4 p-4 rounded-[8px]"
+                style={{
+                  background: residual.status === 'clean' ? 'rgba(0,176,116,0.08)' : 'rgba(255,0,60,0.08)',
+                  border: `1px solid ${residual.status === 'clean' ? 'rgba(0,176,116,0.25)' : 'rgba(255,0,60,0.25)'}`,
+                }}
+              >
+                {residual.status === 'clean' ? (
+                  <CheckCircle2 className="w-6 h-6 flex-shrink-0" style={{ color: '#00B074' }} />
+                ) : (
+                  <AlertTriangle className="w-6 h-6 flex-shrink-0 animate-pulse" style={{ color: '#FF003C' }} />
+                )}
+                <div className="flex flex-col">
+                  <span className="text-[13px] font-bold" style={{ color: residual.status === 'clean' ? '#00B074' : '#FF003C' }}>
+                    {residual.status === 'clean' ? 'Source DC Clean — Zero Residual Connections' : `Residual Traffic Detected — ${residual.residual_connection_count} Active Connections`}
+                  </span>
+                  <span className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    Scanned {dcShort} · {new Date(residual.scanned_at).toLocaleTimeString()}
+                  </span>
+                </div>
+                <div className="ml-auto flex flex-col items-end gap-1">
+                  <span className="text-[22px] font-mono font-bold tabular-nums" style={{ color: residual.status === 'clean' ? '#00B074' : '#FF003C' }}>
+                    {residual.residual_connection_count}
+                  </span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>connections</span>
+                </div>
+              </div>
+
+              {/* Offending Assets Table */}
+              {residual.offending_assets.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-[12px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                    Offending Assets ({residual.offending_assets.length})
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b" style={{ borderColor: 'var(--app-border)' }}>
+                          <th className="pb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Asset Name</th>
+                          <th className="pb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Type</th>
+                          <th className="pb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Tech Stack</th>
+                          <th className="pb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Active Connections</th>
+                          <th className="pb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Action Required</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {residual.offending_assets.map((asset) => (
+                          <tr key={asset.id} className="border-b text-[12px] hover:bg-[rgba(255,255,255,0.01)] transition-colors" style={{ borderColor: 'var(--app-border)' }}>
+                            <td className="py-2.5 font-semibold" style={{ color: 'var(--text-primary)' }}>{asset.name}</td>
+                            <td className="py-2.5 font-mono text-[11px]" style={{ color: 'var(--text-secondary)' }}>{asset.asset_type}</td>
+                            <td className="py-2.5">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold" style={{ background: 'var(--app-bg-muted)', color: 'var(--text-muted)', border: '1px solid var(--app-border)' }}>
+                                {asset.tech_stack}
+                              </span>
+                            </td>
+                            <td className="py-2.5">
+                              <span className="text-[13px] font-mono font-bold tabular-nums" style={{ color: '#FF003C' }}>
+                                {asset.active_connections}
+                              </span>
+                            </td>
+                            <td className="py-2.5 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                              Drain connections before decommissioning source DC
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {residual.status === 'clean' && (
+                <div className="text-center text-[12px] py-4" style={{ color: 'var(--text-muted)' }}>
+                  ✓ All connections successfully drained. Source DC is safe to decommission.
+                </div>
+              )}
+            </>
+          )}
+        </div>
       )}
       {activeTab === 'report' && executiveSummary && (
         <ExecutiveReportTab

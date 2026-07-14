@@ -189,11 +189,11 @@ function AppRow({ app, index }: { app: ExecApp; index: number }) {
   );
 }
 
-function StatusSection({ status, apps }: { status: ExecStatus; apps: ExecApp[] }) {
+function StatusSection({ status, apps = [] }: { status: ExecStatus; apps?: ExecApp[] }) {
   const meta = EXEC_STATUS_META[status];
   const [open, setOpen] = useState(true);
 
-  if (apps.length === 0) return null;
+  if (!apps || apps.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -235,8 +235,12 @@ function StatusSection({ status, apps }: { status: ExecStatus; apps: ExecApp[] }
 
 export function ExecutionTab({ apps: propApps }: { apps: ExecApp[] }) {
   const grouped = useMemo(() => {
-    const map: Record<ExecStatus, ExecApp[]> = { pending: [], running: [], verifying: [], completed: [] };
-    for (const a of propApps) map[a.status].push(a);
+    const map: Record<ExecStatus, ExecApp[]> = { pending: [], running: [], verifying: [], completed: [], failed: [] };
+    for (const a of propApps) {
+      if (map[a.status]) {
+        map[a.status].push(a);
+      }
+    }
     return map;
   }, [propApps]);
 

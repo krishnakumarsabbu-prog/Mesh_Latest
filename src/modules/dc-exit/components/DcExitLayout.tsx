@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { DcExitSidebar } from './DcExitSidebar';
 import { DcExitHeader } from './DcExitHeader';
 import { PhaseStepper } from './PhaseStepper';
+import { IncidentBanner } from './IncidentBanner';
 import { DC_EXIT_PHASES, type DcExitStepId } from '@/modules/dc-exit/types';
 import { getPhaseByPath } from '@/modules/dc-exit/utils';
 import { useDcExitSession } from '@/modules/dc-exit/hooks/useDcExitSession';
@@ -55,20 +56,23 @@ export function DcExitLayout() {
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Sticky header + stepper */}
         <div
-          className="sticky top-[52px] z-10 flex flex-col gap-4 pt-5 pb-4 px-1"
+          className="sticky top-[52px] z-10 flex flex-col"
           style={{
             background: 'var(--app-bg)',
             borderBottom: '1px solid var(--app-border)',
           }}
         >
-          <DcExitHeader
-            title={phase.label}
-            subtitle={phase.description}
-            breadcrumbs={breadcrumbs}
-            status="in-progress"
-            statusLabel="In Progress"
-          />
-          <PhaseStepper currentStep={currentStep} />
+          <IncidentBanner />
+          <div className="flex flex-col gap-4 pt-4 pb-4 px-1">
+            <DcExitHeader
+              title={phase.label}
+              subtitle={phase.description}
+              breadcrumbs={breadcrumbs}
+              status="in-progress"
+              statusLabel="In Progress"
+            />
+            <PhaseStepper currentStep={currentStep} />
+          </div>
         </div>
 
         {/* Step content outlet */}

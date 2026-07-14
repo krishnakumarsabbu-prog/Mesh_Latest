@@ -1,17 +1,14 @@
 import asyncio
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+from app.db.base import AsyncSessionLocal, init_db
 from app.api.v1.endpoints.runtime import get_applications
 
-DATABASE_URL = "sqlite+aiosqlite:///healthmesh.db"
-
 async def test():
-    engine = create_async_engine(DATABASE_URL, echo=True)
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    async with async_session() as session:
+    await init_db()
+    async with AsyncSessionLocal() as session:
         try:
             res = await get_applications(db=session)
-            print("RESULT:", res)
+            print("RESULT COUNT:", len(res))
+            print("FIRST APPLICATION:", res[0] if res else "None")
         except Exception as e:
             import traceback
             traceback.print_exc()

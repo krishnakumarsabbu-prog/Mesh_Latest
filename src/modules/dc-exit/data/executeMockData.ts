@@ -17,9 +17,9 @@ import {
 
 // ─── Execution status ────────────────────────────────────────────────────────
 
-export type ExecStatus = 'pending' | 'running' | 'verifying' | 'completed';
+export type ExecStatus = 'pending' | 'running' | 'verifying' | 'completed' | 'failed';
 
-export const EXEC_STATUS_ORDER: ExecStatus[] = ['pending', 'running', 'verifying', 'completed'];
+export const EXEC_STATUS_ORDER: ExecStatus[] = ['pending', 'running', 'verifying', 'completed', 'failed'];
 
 export interface ExecStatusMeta {
   label: string;
@@ -34,6 +34,7 @@ export const EXEC_STATUS_META: Record<ExecStatus, ExecStatusMeta> = {
   running:   { label: 'Running',   color: '#006CFF', bg: 'rgba(0,108,255,0.08)',   border: 'rgba(0,108,255,0.22)',   bar: '#006CFF' },
   verifying: { label: 'Verifying', color: '#FFB100', bg: 'rgba(255,177,0,0.08)',   border: 'rgba(255,177,0,0.22)',   bar: '#FFB100' },
   completed: { label: 'Completed', color: '#00B074', bg: 'rgba(0,176,116,0.08)',   border: 'rgba(0,176,116,0.22)',   bar: '#00B074' },
+  failed:    { label: 'Failed',    color: '#FF4D4D', bg: 'rgba(255,77,77,0.08)',    border: 'rgba(255,77,77,0.22)',    bar: '#FF4D4D' },
 };
 
 // ─── Application icons ───────────────────────────────────────────────────────

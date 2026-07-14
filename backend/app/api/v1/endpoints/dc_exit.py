@@ -24,15 +24,31 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.base import get_db
+from app.db.base import get_db, AsyncSessionLocal
 from app.dc_exit.ontology_service import ontology_service
 from app.dc_exit.traversal_service import traversal_service
 from app.dc_exit.readiness_service import readiness_service
 from app.dc_exit.decision_service import decision_service
 from app.dc_exit.validation_service import validation_service
+from app.dc_exit.failover_view_service import failover_view_service
+from app.dc_exit.orchestrator import saga_orchestrator
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/dc-exit", tags=["dc-exit"])
+
+
+# ─── Failover View ────────────────────────────────────────────────────────────
+
+@router.get("/failover-view", response_model=Dict[str, Any])
+async def get_failover_view(
+    source_dc: str = Query(..., description="Source DC short name"),
+    target_dc: str = Query(..., description="Target DC short name"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the 6-layer Failover View ontology projection from source_dc to target_dc."""
+    return await failover_view_service.get_failover_view(db, source_dc, target_dc)
+
 
 
 # ─── Ontology ─────────────────────────────────────────────────────────────────
@@ -197,3 +213,75 @@ async def get_validation_confidence(
 ):
     """Return per-source confidence signal breakdown."""
     return await validation_service.get_confidence_breakdown(db, data_center)
+
+
+@router.get("/validation/residual-traffic", response_model=Dict[str, Any])
+async def get_residual_traffic(
+    data_center: str = Query(..., description="Source DC short name"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Scan and verify that zero active connections remain on the source DC."""
+    return await validation_service.get_residual_traffic_report(db, data_center)
+
+
+# ─── Migration Orchestration ──────────────────────────────────────────────────
+
+@router.post("/migrate/start", response_model=Dict[str, Any])
+async def start_migration(
+    session_id: str = Query(..., description="DC Exit session ID"),
+    source_dc: str = Query(..., description="Source datacenter name"),
+    target_dc: str = Query(..., description="Target datacenter name"),
+    mode: str = Query("STAGED", description="Orchestration mode (DRY_RUN | STAGED | EXPRESS)"),
+):
+    """Start a stateful migration cutover."""
+    run = await saga_orchestrator.start_migration(AsyncSessionLocal, session_id, source_dc, target_dc, mode)
+    return {"run_id": run.id, "status": run.status, "message": "Migration run initiated successfully"}
+
+
+@router.get("/migrate/status/{run_id}", response_model=Dict[str, Any])
+async def get_migration_status(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve the status and audit logs of a migration run."""
+    status = await saga_orchestrator.get_run_status(db, run_id)
+    if "error" in status:
+        raise HTTPException(status_code=404, detail=status["error"])
+    return status
+
+
+@router.post("/migrate/pause/{run_id}", response_model=Dict[str, Any])
+async def pause_migration(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Pause a running migration execution."""
+    success = await saga_orchestrator.pause_migration(db, run_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Cannot pause migration (run not found or not running)")
+    return {"message": "Migration run paused successfully"}
+
+
+@router.post("/migrate/resume/{run_id}", response_model=Dict[str, Any])
+async def resume_migration(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Resume a paused migration execution."""
+    success = await saga_orchestrator.resume_migration(db, AsyncSessionLocal, run_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Cannot resume migration (run not found or not paused)")
+    return {"message": "Migration run resumed successfully"}
+
+
+@router.post("/migrate/rollback/{run_id}", response_model=Dict[str, Any])
+async def rollback_migration(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Roll back a migration run by executing compensating actions."""
+    success = await saga_orchestrator.rollback_migration(db, AsyncSessionLocal, run_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Cannot rollback migration")
+    return {"message": "Migration rollback initiated successfully"}
+

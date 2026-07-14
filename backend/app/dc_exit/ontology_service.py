@@ -7,6 +7,7 @@ to synthesize OntologyNode / OntologyEdge rows. No duplicate runtime logic;
 it delegates confidence scoring to confidence_service.
 """
 import logging
+import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -125,6 +126,7 @@ class OntologyService:
 
         for comp in components:
             node = OntologyNode(
+                id=str(uuid.uuid4()),
                 node_key=f"app:{comp.slug}",
                 label=comp.name,
                 domain="applications",
@@ -146,6 +148,7 @@ class OntologyService:
 
         for dc in dcs:
             node = OntologyNode(
+                id=str(uuid.uuid4()),
                 node_key=f"dc:{dc.short_name}",
                 label=dc.name,
                 domain="runtime",
@@ -183,6 +186,7 @@ class OntologyService:
                 domain = _TECH_DOMAIN.get(a.tech_stack, "compute")
                 cls = _TECH_CLASS.get(a.tech_stack, "RuntimeAsset")
                 asset_node = OntologyNode(
+                    id=str(uuid.uuid4()),
                     node_key=f"asset:{a.id}",
                     label=a.name,
                     domain=domain,
@@ -220,6 +224,7 @@ class OntologyService:
                 domain = _TECH_DOMAIN.get(a.tech_stack, "compute")
                 cls = _TECH_CLASS.get(a.tech_stack, "RuntimeAsset")
                 asset_node = OntologyNode(
+                    id=str(uuid.uuid4()),
                     node_key=f"asset:{a.id}",
                     label=a.name,
                     domain=domain,
@@ -250,6 +255,7 @@ class OntologyService:
         self, db: AsyncSession, source_id: str, target_id: str, edge_type: str, label: str, tenant_id: str
     ) -> OntologyEdge:
         edge = OntologyEdge(
+            id=str(uuid.uuid4()),
             source_node_id=source_id,
             target_node_id=target_id,
             edge_type=edge_type,

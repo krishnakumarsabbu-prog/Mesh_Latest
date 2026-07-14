@@ -26,7 +26,7 @@ import {
 import {
   detectSourceType,
 } from '@/lib/csvParser';
-import { runtimeApi } from '@/lib/api';
+import { runtimeApi, dcExitApi } from '@/lib/api';
 
 export type EnvironmentFilter = AssetEnvironment | 'ALL';
 export type TechStackFilter = TechStack | 'ALL';
@@ -181,6 +181,14 @@ interface RuntimeLocationState {
   // Failover / Failback operations
   executeFailover: (appId: string, failedDc: string, promotedDc: string, environment?: string) => Promise<void>;
   executeFailback: (appId: string, environment?: string) => Promise<void>;
+
+  // Dynamic Ontology
+  ontologyGraph: { nodes: any[]; edges: any[] };
+  ontologyDomains: any[];
+  isLoadingOntology: boolean;
+  loadOntologyGraph: (domain?: string) => Promise<void>;
+  loadOntologyDomains: () => Promise<void>;
+  buildOntologyGraph: () => Promise<void>;
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -206,6 +214,9 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
   confidenceFilters: [],
   freshnessFilters: [],
   statusFilters: [],
+  ontologyGraph: { nodes: [], edges: [] },
+  ontologyDomains: [],
+  isLoadingOntology: false,
 
   loadApplications: async () => {
     set({ isLoadingApplications: true });
@@ -502,6 +513,40 @@ export const useRuntimeLocationStore = create<RuntimeLocationState>((set, get) =
       await get().loadDetail(appId, env);
     } catch (err) {
       console.error('Failed to execute failback:', err);
+    }
+  },
+
+  loadOntologyGraph: async (domain?: string) => {
+    set({ isLoadingOntology: true });
+    try {
+      const res = await dcExitApi.getOntologyGraph(domain);
+      set({ ontologyGraph: res.data });
+    } catch (err) {
+      console.error('Failed to load ontology graph:', err);
+    } finally {
+      set({ isLoadingOntology: false });
+    }
+  },
+
+  loadOntologyDomains: async () => {
+    try {
+      const res = await dcExitApi.getOntologyDomains();
+      set({ ontologyDomains: res.data });
+    } catch (err) {
+      console.error('Failed to load ontology domains:', err);
+    }
+  },
+
+  buildOntologyGraph: async () => {
+    set({ isLoadingOntology: true });
+    try {
+      await dcExitApi.buildOntology();
+      await get().loadOntologyGraph();
+      await get().loadOntologyDomains();
+    } catch (err) {
+      console.error('Failed to build ontology graph:', err);
+    } finally {
+      set({ isLoadingOntology: false });
     }
   },
 }));

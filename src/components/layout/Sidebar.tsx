@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Building2, FolderOpen, Plug, Activity, MessageSquare,
   Settings, ChevronLeft, ChevronRight, Users, LogOut, Shield, FileText,
   UsersRound, LayoutTemplate, ShieldCheck, MapPin, Network, Eye,
-  ChartBar as BarChart2, Layers, Boxes,
+  ChartBar as BarChart2, Layers, Boxes, Milestone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/store/uiStore';
@@ -26,6 +26,7 @@ const operationsNavItems: NavItem[] = [
   { label: 'LOB View', href: '/lob-view', icon: Layers, description: 'Lines of Business health & telemetry' },
   { label: 'Neighbourhood View', href: '/neighbourhood-view', icon: Network, description: 'Infrastructure to app mappings' },
   { label: 'Ontology Explorer', href: '/ontology-explorer', icon: Network, description: 'Enterprise Knowledge Graph' },
+  { label: 'DC Exit', href: '/dc-exit/session-001/discover', icon: Milestone, description: 'Plan and simulate datacenter exit workflows' },
 ];
 
 

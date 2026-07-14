@@ -123,8 +123,20 @@ export const digitalTwinApi = {
   getApplications: () => apiClient.get('/digital-twin/applications'),
   getGraph: (appId: string, environment: string = 'PRODUCTION') =>
     apiClient.get('/digital-twin/graph', { params: { app_id: appId, environment } }),
+  getTopologySpecs: (appId: string, environment: string = 'PRODUCTION') =>
+    apiClient.get(`/digital-twin/topology-specs/${appId}`, { params: { environment } }),
   simulate: (data: { app_id: string; environment?: string; scenario: string; target?: string }) =>
     apiClient.post('/digital-twin/simulate', data),
   aiQuery: (data: { app_id: string; environment?: string; question: string }) =>
     apiClient.post('/digital-twin/ai-query', data),
 };
+
+export const dcExitApi = {
+  getOntologyGraph: (domain?: string) =>
+    apiClient.get('/dc-exit/ontology/graph', { params: { domain } }),
+  getOntologyDomains: () =>
+    apiClient.get('/dc-exit/ontology/domains'),
+  buildOntology: () =>
+    apiClient.post('/dc-exit/ontology/build'),
+};
+

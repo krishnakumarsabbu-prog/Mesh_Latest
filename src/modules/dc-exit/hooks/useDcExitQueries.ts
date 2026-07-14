@@ -27,6 +27,9 @@ import type {
   ValidationChecklistResponse,
   DriftReportResponse,
   ValidationConfidenceResponse,
+  FailoverViewResponse,
+  MigrationStatusResponse,
+  ResidualTrafficResponse,
 } from '@/modules/dc-exit/services/dcExitService';
 
 export const dcExitKeys = {
@@ -35,7 +38,9 @@ export const dcExitKeys = {
     all: ['dc-exit', 'ontology'] as const,
     graph: (domain?: string) => ['dc-exit', 'ontology', 'graph', domain ?? 'all'] as const,
     domains: () => ['dc-exit', 'ontology', 'domains'] as const,
+    failoverView: (sourceDc: string, targetDc: string) => ['dc-exit', 'ontology', 'failover', sourceDc, targetDc] as const,
   },
+
   traversal: {
     all: ['dc-exit', 'traversal'] as const,
     scope: (dc: string) => ['dc-exit', 'traversal', 'scope', dc] as const,
@@ -63,6 +68,7 @@ export const dcExitKeys = {
       ['dc-exit', 'validation', 'checklist', dc, targetDc ?? 'none'] as const,
     drift: (env: string) => ['dc-exit', 'validation', 'drift', env] as const,
     confidence: (dc: string) => ['dc-exit', 'validation', 'confidence', dc] as const,
+    residual: (dc: string) => ['dc-exit', 'validation', 'residual', dc] as const,
   },
 };
 
@@ -237,6 +243,68 @@ export function useValidationConfidence(
   return useQuery({
     queryKey: dcExitKeys.validation.confidence(dataCenter),
     queryFn: () => dcExitService.getValidationConfidence(dataCenter),
+    enabled: !!dataCenter,
+    ...options,
+  });
+}
+
+export function useFailoverView(
+  sourceDc: string,
+  targetDc: string,
+  options?: Omit<UseQueryOptions<FailoverViewResponse>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery({
+    queryKey: dcExitKeys.ontology.failoverView(sourceDc, targetDc),
+    queryFn: () => dcExitService.getFailoverView(sourceDc, targetDc),
+    enabled: !!sourceDc && !!targetDc,
+    ...options,
+  });
+}
+
+export function useMigrationStatus(
+  runId?: string,
+  options?: Omit<UseQueryOptions<MigrationStatusResponse>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery({
+    queryKey: ['dc-exit', 'migrate', 'status', runId],
+    queryFn: () => dcExitService.getMigrationStatus(runId!),
+    enabled: !!runId && runId !== 'undefined',
+    ...options,
+  });
+}
+
+export function useStartMigration() {
+  return useMutation({
+    mutationFn: (body: { session_id: string; source_dc: string; target_dc: string; mode: string }) =>
+      dcExitService.startMigration(body),
+  });
+}
+
+export function usePauseMigration() {
+  return useMutation({
+    mutationFn: (runId: string) => dcExitService.pauseMigration(runId),
+  });
+}
+
+export function useResumeMigration() {
+  return useMutation({
+    mutationFn: (runId: string) => dcExitService.resumeMigration(runId),
+  });
+}
+
+export function useRollbackMigration() {
+  return useMutation({
+    mutationFn: (runId: string) => dcExitService.rollbackMigration(runId),
+  });
+}
+
+export function useResidualTraffic(
+  dataCenter: string,
+  options?: Omit<UseQueryOptions<ResidualTrafficResponse>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery({
+    queryKey: dcExitKeys.validation.residual(dataCenter),
+    queryFn: () => dcExitService.getResidualTraffic(dataCenter),
     enabled: !!dataCenter,
     ...options,
   });

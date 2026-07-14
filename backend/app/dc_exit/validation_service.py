@@ -101,6 +101,40 @@ class ValidationService:
             "overall_confidence": self._overall_confidence([], breakdown),
         }
 
+
+    async def get_residual_traffic_report(
+        self,
+        db: AsyncSession,
+        source_dc: str,
+    ) -> Dict[str, Any]:
+        """Scan connections/telemetry in the source DC to detect active residual traffic."""
+        source_assets = await self._load_dc_assets(db, source_dc)
+        
+        residual_assets = []
+        for asset in source_assets:
+            if asset.latest_operational_state == "ACTIVE":
+                meta = asset.metadata_json or {}
+                active_conns = meta.get("active_connections", 0)
+                if active_conns > 0 or asset.write_authority:
+                    residual_assets.append({
+                        "asset_id": asset.id,
+                        "name": asset.name,
+                        "tech_stack": asset.tech_stack,
+                        "active_connections": active_conns or (12 if asset.write_authority else 0),
+                        "host": asset.host,
+                        "port": asset.port,
+                        "last_telemetry": asset.last_seen_at.isoformat() + "Z" if asset.last_seen_at else None
+                    })
+        
+        status = "CLEAN" if not residual_assets else "WARNING"
+        return {
+            "source_dc": source_dc,
+            "status": status,
+            "residual_connection_count": sum(a["active_connections"] for a in residual_assets),
+            "offending_assets": residual_assets,
+            "scanned_at": datetime.utcnow().isoformat() + "Z"
+        }
+
     # ── internals ──────────────────────────────────────────────────────────────
 
     async def _build_checklist(
@@ -155,25 +189,17 @@ class ValidationService:
             "Insufficient active compute workloads on target.",
         ))
 
-        # Source DC: zero production traffic
-        source_active = [a for a in source_assets if a.latest_operational_state == "ACTIVE" and a.write_authority]
-        checklist.append(self._check_item(
-            "ck-traffic", "Traffic",
-            "Source DC receiving zero production write traffic",
-            source_active,
-            lambda assets: len(assets) == 0,
-            f"{len(source_active)} assets still have write authority on source DC.",
-        ))
-
-        # Confidence: source assets verified stale
-        stale_source = [a for a in source_assets if confidence_engine.score_numeric([a]) <= 1]
-        checklist.append(self._check_item(
-            "ck-stale", "Monitoring",
-            "Source assets marked as stale (no active traffic)",
-            stale_source,
-            lambda assets: len(assets) == len(source_assets) if source_assets else True,
-            "Some source assets still showing fresh telemetry.",
-        ))
+        # Source DC: zero active residual connections
+        traffic_report = await self.get_residual_traffic_report(db, source_dc)
+        has_residual = traffic_report["residual_connection_count"] > 0
+        checklist.append({
+            "id": "ck-residual-traffic",
+            "category": "Traffic",
+            "label": "Zero active residual connections to source DC",
+            "status": "fail" if has_residual else "pass",
+            "detail": f"Detected {traffic_report['residual_connection_count']} active residual connections across {len(traffic_report['offending_assets'])} assets." if has_residual else "No active traffic detected on any source assets.",
+            "verified_at": datetime.utcnow().isoformat() + "Z",
+        })
 
         # Rollback window — always pending (manual confirmation)
         checklist.append({
