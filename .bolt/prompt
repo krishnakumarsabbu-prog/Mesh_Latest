@@ -1,0 +1,43 @@
+We are extending an existing enterprise application called LiveLens.
+
+IMPORTANT
+
+This is NOT a new project.
+
+This is NOT a redesign.
+
+This is NOT a migration.
+
+This is an additive feature.
+
+Rules
+
+• Never delete existing code.
+• Never rename existing components.
+• Never refactor existing modules.
+• Never replace existing pages.
+• Never introduce Supabase.
+• Never create Bolt Database.
+• Use only the existing FastAPI backend.
+• Use only the existing SQLite database.
+• Reuse existing services whenever possible.
+
+Before writing ANY code, inspect the project.
+
+Analyze
+
+1. Frontend structure
+2. Backend structure
+3. Existing Routes
+4. Existing Stores
+5. Existing APIs
+6. Existing Database Models
+7. Existing Runtime Location page
+8. Existing Runtime Truth page
+9. Existing Service Map
+10. Existing What-if Simulator
+11. Existing Confidence Engine
+
+Return a detailed report.
+
+DO NOT WRITE CODE.
