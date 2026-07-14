@@ -23,3 +23,5 @@ export { BusinessImpactTab } from './BusinessImpactTab';
 export { ReadinessTab } from './ReadinessTab';
 export { PrioritizationTab } from './PrioritizationTab';
 export { DecisionCenterTab } from './DecisionCenterTab';
+export { ExecutionTab } from './ExecutionTab';
+export { TimelineTab } from './TimelineTab';
