@@ -15,3 +15,8 @@ export { DcExitSidebar } from './DcExitSidebar';
 export { DcExitHeader } from './DcExitHeader';
 export { DcExitLayout } from './DcExitLayout';
 export { ExitIntelligenceModal } from './ExitIntelligenceModal';
+export { AnalyzeTabBar } from './AnalyzeTabBar';
+export type { AnalyzeTabDef } from './AnalyzeTabBar';
+export { ImpactAnalysisTab } from './ImpactAnalysisTab';
+export { DependenciesTab } from './DependenciesTab';
+export { BusinessImpactTab } from './BusinessImpactTab';
