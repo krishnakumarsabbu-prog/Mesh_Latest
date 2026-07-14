@@ -11,7 +11,6 @@ import React, { useMemo, useState } from 'react';
 import { ArrowUp, ArrowDown, ArrowUpDown, Boxes, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  priorityRows,
   type PriorityRow,
   type ComplexityLevel,
   type AppTier,
@@ -103,13 +102,13 @@ function SortHeader({
   );
 }
 
-export function PrioritizationTab() {
+export function PrioritizationTab({ rows }: { rows: PriorityRow[] }) {
   const [sortKey, setSortKey] = useState<SortKey>('tier');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   const sortedRows = useMemo(() => {
-    const rows = [...priorityRows];
-    rows.sort((a, b) => {
+    const rs = [...rows];
+    rs.sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
         case 'appName':
@@ -147,11 +146,11 @@ export function PrioritizationTab() {
 
   const waveCounts = useMemo(() => {
     const counts: Record<number, number> = {};
-    priorityRows.forEach((r) => {
+    rows.forEach((r) => {
       if (r.wave != null) counts[r.wave] = (counts[r.wave] ?? 0) + 1;
     });
     return counts;
-  }, []);
+  }, [rows]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -202,7 +201,7 @@ export function PrioritizationTab() {
             Priority Table
           </h4>
           <span className="text-[10px] font-mono" style={{ color: 'var(--text-disabled)' }}>
-            {priorityRows.length} applications
+            {rows.length} applications
           </span>
         </div>
         <div

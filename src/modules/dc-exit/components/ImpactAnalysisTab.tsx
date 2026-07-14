@@ -12,9 +12,9 @@ import React from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  impactMetrics,
-  dependencyBreakdown,
   DEPENDENCY_TYPE_META,
+  type ImpactMetric,
+  type DependencyBreakdown,
   type HealthState,
 } from '@/modules/dc-exit/data/analyzeMockData';
 
@@ -43,7 +43,7 @@ function TrendPill({ delta, deltaLabel }: { delta: number; deltaLabel: string })
   );
 }
 
-function ImpactMetricCard({ metric }: { metric: (typeof impactMetrics)[number] }) {
+function ImpactMetricCard({ metric }: { metric: ImpactMetric }) {
   const Icon = metric.icon;
   return (
     <div
@@ -91,7 +91,7 @@ function ImpactMetricCard({ metric }: { metric: (typeof impactMetrics)[number] }
   );
 }
 
-function DependencyBreakdownCard({ row }: { row: (typeof dependencyBreakdown)[number] }) {
+function DependencyBreakdownCard({ row }: { row: DependencyBreakdown }) {
   const meta = DEPENDENCY_TYPE_META[row.type];
   const Icon = meta.icon;
   const total = row.total || 1;
@@ -163,7 +163,12 @@ function DependencyBreakdownCard({ row }: { row: (typeof dependencyBreakdown)[nu
   );
 }
 
-export function ImpactAnalysisTab() {
+interface ImpactAnalysisTabProps {
+  metrics: ImpactMetric[];
+  dependencyBreakdown: DependencyBreakdown[];
+}
+
+export function ImpactAnalysisTab({ metrics, dependencyBreakdown }: ImpactAnalysisTabProps) {
   return (
     <div className="flex flex-col gap-6">
       {/* === Impact metrics === */}
@@ -173,11 +178,11 @@ export function ImpactAnalysisTab() {
             Impact
           </h4>
           <span className="text-[10px] font-mono" style={{ color: 'var(--text-disabled)' }}>
-            {impactMetrics.length} metrics
+            {metrics.length} metrics
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {impactMetrics.map((metric) => (
+          {metrics.map((metric) => (
             <ImpactMetricCard key={metric.id} metric={metric} />
           ))}
         </div>

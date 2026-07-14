@@ -20,6 +20,8 @@ export type DcExitStepStatus = 'pending' | 'in-progress' | 'complete';
 export interface DcExitSession {
   sessionId: string;
   currentStep: DcExitStepId;
+  dataCenterShort: string;
+  targetDataCenterShort?: string;
   createdAt: string;
   updatedAt: string;
 }

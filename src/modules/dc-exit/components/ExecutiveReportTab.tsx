@@ -18,14 +18,9 @@ import {
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import {
-  executiveSummary,
-  reportDatacenters,
-  reportApplications,
-  reportDowntime,
   DOWNTIME_IMPACT_META,
-  reportSignOffs,
   SYNTH_TX_STATUS_META,
-  VALIDATION_CONFIDENCE,
+  type ExecutiveSummary,
   type ReportDatacenter,
   type ReportApplication,
   type ReportDowntime,
@@ -60,8 +55,7 @@ function ReportMetaRow({ icon: Icon, label, value }: { icon: typeof Hash; label:
 
 // ─── Large Summary ───────────────────────────────────────────────────────────
 
-function LargeSummary() {
-  const s = executiveSummary;
+function LargeSummary({ summary: s }: { summary: ExecutiveSummary }) {
   const tone = scoreTone(s.overallConfidence);
   const radius = 48;
   const circ = 2 * Math.PI * radius;
@@ -249,11 +243,11 @@ function DowntimeRow({ dt, idx }: { dt: ReportDowntime; idx: number }) {
 
 // ─── Confidence summary ──────────────────────────────────────────────────────
 
-function ConfidenceSummary() {
-  const passed = reportApplications.filter((a) => a.status === 'success').length;
-  const degraded = reportApplications.filter((a) => a.status === 'degraded').length;
-  const failed = reportApplications.filter((a) => a.status === 'failed').length;
-  const tone = scoreTone(VALIDATION_CONFIDENCE);
+function ConfidenceSummary({ applications, score }: { applications: ReportApplication[]; score: number }) {
+  const passed = applications.filter((a) => a.status === 'success').length;
+  const degraded = applications.filter((a) => a.status === 'degraded').length;
+  const failed = applications.filter((a) => a.status === 'failed').length;
+  const tone = scoreTone(score);
 
   return (
     <div
@@ -267,7 +261,7 @@ function ConfidenceSummary() {
             Overall Confidence
           </span>
           <span className="text-[24px] font-bold leading-none tabular-nums tracking-tight" style={{ color: tone }}>
-            {VALIDATION_CONFIDENCE}<span className="text-[12px] font-mono" style={{ color: 'var(--text-disabled)' }}> /100</span>
+            {score}<span className="text-[12px] font-mono" style={{ color: 'var(--text-disabled)' }}> /100</span>
           </span>
         </div>
       </div>
@@ -329,8 +323,8 @@ function SignOffRow({ so, idx }: { so: ReportSignOff; idx: number }) {
   );
 }
 
-function SignOffPanel() {
-  const [localSignOffs, setLocalSignOffs] = useState<ReportSignOff[]>(reportSignOffs);
+function SignOffPanel({ signOffs: initialSignOffs }: { signOffs: ReportSignOff[] }) {
+  const [localSignOffs, setLocalSignOffs] = useState<ReportSignOff[]>(initialSignOffs);
   const signedCount = localSignOffs.filter((s) => s.status === 'signed').length;
 
   const handleSign = useCallback((id: string) => {
@@ -393,8 +387,8 @@ function SignOffPanel() {
 
 // ─── Download ────────────────────────────────────────────────────────────────
 
-function buildReportText(): string {
-  const s = executiveSummary;
+function buildReportText(data: ReportData): string {
+  const s = data.summary;
   const lines: string[] = [];
   const sep = '═'.repeat(70);
   const subsep = '─'.repeat(70);
@@ -418,7 +412,7 @@ function buildReportText(): string {
 
   lines.push('DATACENTERS');
   lines.push(subsep);
-  for (const dc of reportDatacenters) {
+  for (const dc of data.datacenters) {
     lines.push(`  ${dc.name}`);
     lines.push(`    Status: ${dc.status}  |  Migrated: ${dc.appsMigrated}  |  Remaining: ${dc.appsRemaining}`);
     lines.push(`    ${dc.detail}`);
@@ -427,7 +421,7 @@ function buildReportText(): string {
 
   lines.push('APPLICATIONS');
   lines.push(subsep);
-  for (const app of reportApplications) {
+  for (const app of data.applications) {
     lines.push(`  [${app.tier}] ${app.name} — ${app.status} (conf ${app.confidence})`);
     lines.push(`    ${app.detail}`);
   }
@@ -435,7 +429,7 @@ function buildReportText(): string {
 
   lines.push('DOWNTIME');
   lines.push(subsep);
-  for (const dt of reportDowntime) {
+  for (const dt of data.downtime) {
     lines.push(`  ${dt.application} — ${dt.duration} (${dt.window}) [impact: ${dt.impact}]`);
     lines.push(`    ${dt.detail}`);
   }
@@ -443,7 +437,7 @@ function buildReportText(): string {
 
   lines.push('SIGN-OFF');
   lines.push(subsep);
-  for (const so of reportSignOffs) {
+  for (const so of data.signOffs) {
     lines.push(`  ${so.role}: ${so.name} — ${so.status.toUpperCase()} (${so.signedAt})`);
     lines.push(`    ${so.comment}`);
   }
@@ -456,13 +450,21 @@ function buildReportText(): string {
   return lines.join('\n');
 }
 
-function downloadReport() {
-  const text = buildReportText();
+interface ReportData {
+  summary: ExecutiveSummary;
+  datacenters: ReportDatacenter[];
+  applications: ReportApplication[];
+  downtime: ReportDowntime[];
+  signOffs: ReportSignOff[];
+}
+
+function downloadReport(data: ReportData) {
+  const text = buildReportText(data);
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${executiveSummary.reportId}.txt`;
+  a.download = `${data.summary.reportId}.txt`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -471,7 +473,7 @@ function downloadReport() {
 
 // ─── Toolbar ─────────────────────────────────────────────────────────────────
 
-function ReportToolbar() {
+function ReportToolbar({ summary, reportData }: { summary: ExecutiveSummary; reportData: ReportData }) {
   return (
     <div className="exec-no-print flex items-center justify-between gap-3 flex-wrap">
       <div className="flex items-center gap-2">
@@ -480,14 +482,14 @@ function ReportToolbar() {
           Executive Report
         </span>
         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-[4px]" style={{ background: 'var(--app-bg-subtle)', color: 'var(--text-muted)', border: '1px solid var(--app-border)' }}>
-          {executiveSummary.reportId}
+          {summary.reportId}
         </span>
       </div>
       <div className="flex items-center gap-2">
         <Button variant="secondary" size="sm" icon={<Printer className="w-3.5 h-3.5" />} onClick={() => window.print()}>
           Print
         </Button>
-        <Button variant="primary" size="sm" icon={<Download className="w-3.5 h-3.5" />} onClick={downloadReport}>
+        <Button variant="primary" size="sm" icon={<Download className="w-3.5 h-3.5" />} onClick={() => downloadReport(reportData)}>
           Download Report
         </Button>
       </div>
@@ -497,14 +499,31 @@ function ReportToolbar() {
 
 // ─── Export ──────────────────────────────────────────────────────────────────
 
-export function ExecutiveReportTab() {
+export interface ExecutiveReportTabProps {
+  summary: ExecutiveSummary;
+  datacenters: ReportDatacenter[];
+  applications: ReportApplication[];
+  downtime: ReportDowntime[];
+  signOffs: ReportSignOff[];
+  confidenceScore: number;
+}
+
+export function ExecutiveReportTab({
+  summary,
+  datacenters,
+  applications,
+  downtime,
+  signOffs,
+  confidenceScore,
+}: ExecutiveReportTabProps) {
+  const reportData: ReportData = { summary, datacenters, applications, downtime, signOffs };
   return (
     <div className="flex flex-col gap-5">
-      <ReportToolbar />
+      <ReportToolbar summary={summary} reportData={reportData} />
 
       {/* Printable document container */}
       <div className="exec-report flex flex-col gap-5">
-        <LargeSummary />
+        <LargeSummary summary={summary} />
 
         {/* Datacenters */}
         <section className="flex flex-col gap-3 exec-report-section">
@@ -515,7 +534,7 @@ export function ExecutiveReportTab() {
             </h4>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {reportDatacenters.map((dc) => (
+            {datacenters.map((dc) => (
               <DatacenterCard key={dc.id} dc={dc} />
             ))}
           </div>
@@ -531,14 +550,14 @@ export function ExecutiveReportTab() {
               </h4>
             </div>
             <span className="text-[10px] font-mono exec-print-dark" style={{ color: 'var(--text-disabled)' }}>
-              {reportApplications.length} total
+              {applications.length} total
             </span>
           </div>
           <div
             className="rounded-[8px] flex flex-col overflow-hidden exec-print-dark"
             style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
           >
-            {reportApplications.map((app, idx) => (
+            {applications.map((app, idx) => (
               <ApplicationRow key={app.id} app={app} idx={idx} />
             ))}
           </div>
@@ -554,24 +573,24 @@ export function ExecutiveReportTab() {
               </h4>
             </div>
             <span className="text-[10px] font-mono exec-print-dark" style={{ color: 'var(--text-disabled)' }}>
-              {reportDowntime.length} events
+              {downtime.length} events
             </span>
           </div>
           <div
             className="rounded-[8px] flex flex-col overflow-hidden exec-print-dark"
             style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
           >
-            {reportDowntime.map((dt, idx) => (
+            {downtime.map((dt, idx) => (
               <DowntimeRow key={dt.id} dt={dt} idx={idx} />
             ))}
           </div>
         </section>
 
         {/* Confidence summary */}
-        <ConfidenceSummary />
+        <ConfidenceSummary applications={applications} score={confidenceScore} />
 
         {/* Sign-off */}
-        <SignOffPanel />
+        <SignOffPanel signOffs={signOffs} />
       </div>
     </div>
   );

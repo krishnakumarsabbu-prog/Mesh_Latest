@@ -19,22 +19,17 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  validationChecklist,
   CHECKLIST_STATUS_META,
   type ChecklistItem,
   type ChecklistStatus,
-  confidenceSignals,
-  VALIDATION_CONFIDENCE,
-  confidenceComparison,
-  driftItems,
+  type ConfidenceSignal,
+  type ConfidencePoint,
   DRIFT_SEVERITY_META,
   type DriftItem,
   type DriftSeverity,
-  alignmentChecks,
   ALIGNMENT_STATUS_META,
   type AlignmentCheck,
   type AlignmentStatus,
-  syntheticTransactions,
   SYNTH_TX_STATUS_META,
   type SyntheticTransaction,
   type SynthTxStatus,
@@ -117,16 +112,16 @@ function ChecklistRow({ item, idx }: { item: ChecklistItem; idx: number }) {
   );
 }
 
-function ChecklistSection() {
+function ChecklistSection({ checklist }: { checklist: ChecklistItem[] }) {
   const counts = useMemo(() => {
     const c: Record<ChecklistStatus, number> = { pass: 0, warn: 0, fail: 0, pending: 0 };
-    for (const item of validationChecklist) c[item.status]++;
+    for (const item of checklist) c[item.status]++;
     return c;
-  }, []);
+  }, [checklist]);
 
   return (
     <section className="flex flex-col gap-3">
-      <SectionHeader icon={CircleCheck} title="Cutover Checklist" count={`${validationChecklist.length} checks`} />
+      <SectionHeader icon={CircleCheck} title="Cutover Checklist" count={`${checklist.length} checks`} />
       <div className="flex items-center gap-2 flex-wrap">
         {(['pass', 'warn', 'fail', 'pending'] as ChecklistStatus[]).map((s) => {
           const meta = CHECKLIST_STATUS_META[s];
@@ -147,7 +142,7 @@ function ChecklistSection() {
         className="rounded-[8px] flex flex-col overflow-hidden"
         style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
       >
-        {validationChecklist.map((item, idx) => (
+        {checklist.map((item, idx) => (
           <ChecklistRow key={item.id} item={item} idx={idx} />
         ))}
       </div>
@@ -157,7 +152,7 @@ function ChecklistSection() {
 
 // ─── Confidence ──────────────────────────────────────────────────────────────
 
-function ConfidenceSignalRow({ signal, idx }: { signal: typeof confidenceSignals[number]; idx: number }) {
+function ConfidenceSignalRow({ signal, idx }: { signal: ConfidenceSignal; idx: number }) {
   const Icon = signal.icon;
   return (
     <motion.div
@@ -204,15 +199,15 @@ function ConfidenceSignalRow({ signal, idx }: { signal: typeof confidenceSignals
   );
 }
 
-function ConfidenceSection() {
+function ConfidenceSection({ signals, score }: { signals: ConfidenceSignal[]; score: number }) {
   const radius = 52;
   const circ = 2 * Math.PI * radius;
-  const offset = circ - (VALIDATION_CONFIDENCE / 100) * circ;
-  const tone = scoreTone(VALIDATION_CONFIDENCE);
+  const offset = circ - (score / 100) * circ;
+  const tone = scoreTone(score);
 
   return (
     <section className="flex flex-col gap-3">
-      <SectionHeader icon={Gauge} title="Confidence Breakdown" count={`${confidenceSignals.length} signals`} />
+      <SectionHeader icon={Gauge} title="Confidence Breakdown" count={`${signals.length} signals`} />
 
       <div
         className="rounded-[8px] p-5 flex items-center gap-5 flex-wrap"
@@ -229,7 +224,7 @@ function ConfidenceSection() {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-[34px] font-bold leading-none tabular-nums tracking-tight" style={{ color: tone }}>
-              {VALIDATION_CONFIDENCE}
+              {score}
             </span>
             <span className="text-[9px] font-mono mt-1" style={{ color: 'var(--text-disabled)' }}>/ 100</span>
           </div>
@@ -239,10 +234,10 @@ function ConfidenceSection() {
             Overall Validation Confidence
           </span>
           <span className="text-[20px] font-bold tracking-tight leading-tight" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-            {VALIDATION_CONFIDENCE >= 85 ? 'High Confidence' : VALIDATION_CONFIDENCE >= 60 ? 'Moderate Confidence' : 'Low Confidence'}
+            {score >= 85 ? 'High Confidence' : score >= 60 ? 'Moderate Confidence' : 'Low Confidence'}
           </span>
           <p className="text-[11.5px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-            Weighted aggregate across {confidenceSignals.length} verification signals. Scores below 60 indicate unresolved validation gaps.
+            Weighted aggregate across {signals.length} verification signals. Scores below 60 indicate unresolved validation gaps.
           </p>
         </div>
       </div>
@@ -251,7 +246,7 @@ function ConfidenceSection() {
         className="rounded-[8px] flex flex-col overflow-hidden"
         style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
       >
-        {confidenceSignals.map((signal, idx) => (
+        {signals.map((signal, idx) => (
           <ConfidenceSignalRow key={signal.id} signal={signal} idx={idx} />
         ))}
       </div>
@@ -261,14 +256,14 @@ function ConfidenceSection() {
 
 // ─── Confidence comparison chart ─────────────────────────────────────────────
 
-function ConfidenceComparisonSection() {
+function ConfidenceComparisonSection({ comparison }: { comparison: ConfidencePoint[] }) {
   const chartData = useMemo(
-    () => confidenceComparison.map((p) => ({
+    () => comparison.map((p) => ({
       label: p.label,
       Before: p.before,
       After: p.after,
     })),
-    [],
+    [comparison],
   );
 
   return (
@@ -364,16 +359,16 @@ function DriftRow({ item, idx }: { item: DriftItem; idx: number }) {
   );
 }
 
-function DriftSection() {
-  const driftCount = driftItems.filter((d) => d.expected !== d.actual).length;
+function DriftSection({ items }: { items: DriftItem[] }) {
+  const driftCount = items.filter((d) => d.expected !== d.actual).length;
   return (
     <section className="flex flex-col gap-3">
-      <SectionHeader icon={Activity} title="Drift Detection" count={`${driftCount} drifted · ${driftItems.length} checked`} />
+      <SectionHeader icon={Activity} title="Drift Detection" count={`${driftCount} drifted · ${items.length} checked`} />
       <div
         className="rounded-[8px] flex flex-col overflow-hidden"
         style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
       >
-        {driftItems.map((item, idx) => (
+        {items.map((item, idx) => (
           <DriftRow key={item.id} item={item} idx={idx} />
         ))}
       </div>
@@ -425,16 +420,16 @@ function AlignmentRow({ check, idx }: { check: AlignmentCheck; idx: number }) {
   );
 }
 
-function AlignmentSection() {
+function AlignmentSection({ checks }: { checks: AlignmentCheck[] }) {
   const counts = useMemo(() => {
     const c: Record<AlignmentStatus, number> = { aligned: 0, partial: 0, misaligned: 0 };
-    for (const check of alignmentChecks) c[check.status]++;
+    for (const check of checks) c[check.status]++;
     return c;
-  }, []);
+  }, [checks]);
 
   return (
     <section className="flex flex-col gap-3">
-      <SectionHeader icon={ShieldCheck} title="Intent vs Actual Alignment" count={`${alignmentChecks.length} checks`} />
+      <SectionHeader icon={ShieldCheck} title="Intent vs Actual Alignment" count={`${checks.length} checks`} />
       <div className="flex items-center gap-2 flex-wrap">
         {(['aligned', 'partial', 'misaligned'] as AlignmentStatus[]).map((s) => {
           const meta = ALIGNMENT_STATUS_META[s];
@@ -453,7 +448,7 @@ function AlignmentSection() {
         className="rounded-[8px] flex flex-col overflow-hidden"
         style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
       >
-        {alignmentChecks.map((check, idx) => (
+        {checks.map((check, idx) => (
           <AlignmentRow key={check.id} check={check} idx={idx} />
         ))}
       </div>
@@ -523,9 +518,9 @@ function SyntheticTxRow({ tx, idx }: { tx: SyntheticTransaction; idx: number }) 
   );
 }
 
-function SyntheticTransactionSection() {
-  const passed = syntheticTransactions.filter((t) => t.status === 'success').length;
-  const total = syntheticTransactions.length;
+function SyntheticTransactionSection({ transactions }: { transactions: SyntheticTransaction[] }) {
+  const passed = transactions.filter((t) => t.status === 'success').length;
+  const total = transactions.length;
   return (
     <section className="flex flex-col gap-3">
       <SectionHeader icon={FlaskConical} title="Synthetic Transactions" count={`${passed}/${total} passing`} />
@@ -533,7 +528,7 @@ function SyntheticTransactionSection() {
         className="rounded-[8px] flex flex-col overflow-hidden"
         style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
       >
-        {syntheticTransactions.map((tx, idx) => (
+        {transactions.map((tx, idx) => (
           <SyntheticTxRow key={tx.id} tx={tx} idx={idx} />
         ))}
       </div>
@@ -543,15 +538,33 @@ function SyntheticTransactionSection() {
 
 // ─── Export ──────────────────────────────────────────────────────────────────
 
-export function ValidationTab() {
+export interface ValidationTabProps {
+  checklist: ChecklistItem[];
+  confidenceSignals: ConfidenceSignal[];
+  confidenceScore: number;
+  confidenceComparison: ConfidencePoint[];
+  driftItems: DriftItem[];
+  alignmentChecks: AlignmentCheck[];
+  syntheticTransactions: SyntheticTransaction[];
+}
+
+export function ValidationTab({
+  checklist,
+  confidenceSignals,
+  confidenceScore,
+  confidenceComparison,
+  driftItems,
+  alignmentChecks,
+  syntheticTransactions,
+}: ValidationTabProps) {
   return (
     <div className="flex flex-col gap-6">
-      <ChecklistSection />
-      <ConfidenceSection />
-      <ConfidenceComparisonSection />
-      <DriftSection />
-      <AlignmentSection />
-      <SyntheticTransactionSection />
+      <ChecklistSection checklist={checklist} />
+      <ConfidenceSection signals={confidenceSignals} score={confidenceScore} />
+      <ConfidenceComparisonSection comparison={confidenceComparison} />
+      <DriftSection items={driftItems} />
+      <AlignmentSection checks={alignmentChecks} />
+      <SyntheticTransactionSection transactions={syntheticTransactions} />
     </div>
   );
 }

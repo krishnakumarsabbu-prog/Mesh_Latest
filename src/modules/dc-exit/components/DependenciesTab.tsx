@@ -27,13 +27,13 @@ import { Filter, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import {
-  depGraphNodes,
-  depGraphEdges,
   DEPENDENCY_TYPE_META,
   DEPENDENCY_TYPE_ORDER,
   type DependencyType,
   type HealthState,
   type DepGraphNodeData,
+  type DepGraphNode,
+  type DepGraphEdge,
 } from '@/modules/dc-exit/data/analyzeMockData';
 
 const HEALTH_COLOR: Record<HealthState, string> = {
@@ -173,7 +173,7 @@ function FilterChip({
 
 // ─── Tab body ────────────────────────────────────────────────────────────────
 
-function DependenciesGraph() {
+function DependenciesGraph({ nodes: propNodes, edges: propEdges }: { nodes: DepGraphNode[]; edges: DepGraphEdge[] }) {
   const [activeTypes, setActiveTypes] = useState<Set<DependencyType>>(
     () => new Set(DEPENDENCY_TYPE_ORDER),
   );
@@ -196,14 +196,14 @@ function DependenciesGraph() {
     const counts: Record<DependencyType, number> = {
       mq: 0, kafka: 0, oracle: 0, mongo: 0, vip: 0, dns: 0,
     };
-    for (const e of depGraphEdges) counts[e.depType] += 1;
+    for (const e of propEdges) counts[e.depType] += 1;
     return counts;
-  }, []);
+  }, [propEdges]);
 
   // Service node ids that should remain visible given the active filters.
   const visibleServiceIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const n of depGraphNodes) {
+    for (const n of propNodes) {
       if (n.type !== 'depService') continue;
       if (activeTypes.has(n.data.nodeType as DependencyType)) ids.add(n.id);
     }
@@ -213,7 +213,7 @@ function DependenciesGraph() {
   // App node ids that have at least one visible edge.
   const visibleAppIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const e of depGraphEdges) {
+    for (const e of propEdges) {
       if (!activeTypes.has(e.depType)) continue;
       if (visibleServiceIds.has(e.target)) ids.add(e.source);
     }
@@ -222,7 +222,7 @@ function DependenciesGraph() {
 
   const nodes: Node[] = useMemo(
     () =>
-      depGraphNodes
+      propNodes
         .filter((n) => {
           if (n.type === 'depApp') return visibleAppIds.has(n.id);
           return visibleServiceIds.has(n.id);
@@ -238,7 +238,7 @@ function DependenciesGraph() {
 
   const edges: Edge[] = useMemo(
     () =>
-      depGraphEdges
+      propEdges
         .filter((e) => activeTypes.has(e.depType))
         .map((e) => {
           const meta = DEPENDENCY_TYPE_META[e.depType];
@@ -349,6 +349,6 @@ function DependenciesGraph() {
   );
 }
 
-export function DependenciesTab() {
-  return <DependenciesGraph />;
+export function DependenciesTab({ nodes, edges }: { nodes: DepGraphNode[]; edges: DepGraphEdge[] }) {
+  return <DependenciesGraph nodes={nodes} edges={edges} />;
 }

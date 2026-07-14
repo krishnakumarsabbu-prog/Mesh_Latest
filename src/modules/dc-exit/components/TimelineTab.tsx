@@ -11,8 +11,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
-  TIMELINE_HOURS,
-  timelineActual,
   EXEC_STATUS_META,
   type TimelineActual,
 } from '@/modules/dc-exit/data/executeMockData';
@@ -122,8 +120,8 @@ function MilestoneBar({
   );
 }
 
-function HourColumn({ hour }: { hour: number }) {
-  const planned = timelineActual.filter((m) => m.hour === hour);
+function HourColumn({ hour, timeline }: { hour: number; timeline: TimelineActual[] }) {
+  const planned = timeline.filter((m) => m.hour === hour);
 
   return (
     <div className="flex flex-col gap-2">
@@ -177,10 +175,10 @@ function HourColumn({ hour }: { hour: number }) {
   );
 }
 
-export function TimelineTab() {
-  const completed = timelineActual.filter((m) => m.actualStatus === 'completed').length;
-  const inFlight = timelineActual.filter((m) => m.actualStatus === 'running' || m.actualStatus === 'verifying').length;
-  const pending = timelineActual.filter((m) => m.actualStatus === 'pending').length;
+export function TimelineTab({ timeline, hours }: { timeline: TimelineActual[]; hours: number[] }) {
+  const completed = timeline.filter((m) => m.actualStatus === 'completed').length;
+  const inFlight = timeline.filter((m) => m.actualStatus === 'running' || m.actualStatus === 'verifying').length;
+  const pending = timeline.filter((m) => m.actualStatus === 'pending').length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -243,10 +241,10 @@ export function TimelineTab() {
           className="rounded-[8px] p-4 flex flex-col gap-4"
           style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
         >
-          {TIMELINE_HOURS.map((hour, i) => (
+          {hours.map((hour, i) => (
             <React.Fragment key={hour}>
-              <HourColumn hour={hour} />
-              {i < TIMELINE_HOURS.length - 1 && (
+              <HourColumn hour={hour} timeline={timeline} />
+              {i < hours.length - 1 && (
                 <div className="h-px" style={{ background: 'var(--app-border)' }} />
               )}
             </React.Fragment>

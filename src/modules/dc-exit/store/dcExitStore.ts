@@ -2,7 +2,6 @@
  * Enterprise Digital Twin - DC Exit module.
  *
  * Zustand store for the dc-exit workflow session state.
- * Placeholder only - no business logic yet.
  */
 
 import { create } from 'zustand';
@@ -13,6 +12,7 @@ interface DcExitStore {
   activeStep: DcExitStepId;
   setSession: (session: DcExitSession | null) => void;
   setActiveStep: (step: DcExitStepId) => void;
+  updateSession: (patch: Partial<DcExitSession>) => void;
 }
 
 export const useDcExitStore = create<DcExitStore>((set) => ({
@@ -20,4 +20,10 @@ export const useDcExitStore = create<DcExitStore>((set) => ({
   activeStep: 'discover',
   setSession: (session) => set({ session }),
   setActiveStep: (step) => set({ activeStep: step }),
+  updateSession: (patch) =>
+    set((state) =>
+      state.session
+        ? { session: { ...state.session, ...patch, updatedAt: new Date().toISOString() } }
+        : state,
+    ),
 }));

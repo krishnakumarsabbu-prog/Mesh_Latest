@@ -13,7 +13,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  execApps,
   EXEC_STATUS_ORDER,
   EXEC_STATUS_META,
   APP_TECH_ICON,
@@ -234,14 +233,14 @@ function StatusSection({ status, apps }: { status: ExecStatus; apps: ExecApp[] }
   );
 }
 
-export function ExecutionTab() {
+export function ExecutionTab({ apps: propApps }: { apps: ExecApp[] }) {
   const grouped = useMemo(() => {
     const map: Record<ExecStatus, ExecApp[]> = { pending: [], running: [], verifying: [], completed: [] };
-    for (const a of execApps) map[a.status].push(a);
+    for (const a of propApps) map[a.status].push(a);
     return map;
-  }, []);
+  }, [propApps]);
 
-  const totalApps = execApps.length;
+  const totalApps = propApps.length;
   const completedApps = grouped.completed.length;
 
   const [liveConfidence, setLiveConfidence] = useState(0);

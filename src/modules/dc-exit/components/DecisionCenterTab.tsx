@@ -14,14 +14,11 @@ import { ArrowRight, ShieldCheck, TriangleAlert as AlertTriangle, Ban, Scale, Fi
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import {
-  decisionVerdict,
-  reasoningTimeline,
-  decisionEvidence,
-  decisionBusinessImpact,
   type Verdict,
   type ReasoningStep,
   type DecisionEvidence,
   type DecisionBusinessImpact,
+  type DecisionVerdict,
 } from '@/modules/dc-exit/data/decideMockData';
 
 const VERDICT_META: Record<
@@ -73,8 +70,7 @@ const RISK_META: Record<DecisionBusinessImpact['risk'], { color: string; bg: str
   high:   { color: '#FF003C', bg: 'rgba(255,0,60,0.08)',   border: 'rgba(255,0,60,0.22)' },
 };
 
-function LargeVerdictBanner() {
-  const v = decisionVerdict;
+function LargeVerdictBanner({ verdict: v }: { verdict: DecisionVerdict }) {
   const meta = VERDICT_META[v.verdict];
   const Icon = meta.Icon;
   const radius = 38;
@@ -264,7 +260,14 @@ function Panel({
   );
 }
 
-export function DecisionCenterTab() {
+export interface DecisionCenterTabProps {
+  verdict: DecisionVerdict;
+  reasoningTimeline: ReasoningStep[];
+  evidence: DecisionEvidence[];
+  businessImpact: DecisionBusinessImpact[];
+}
+
+export function DecisionCenterTab({ verdict: v, reasoningTimeline, evidence, businessImpact }: DecisionCenterTabProps) {
   const navigate = useNavigate();
   const { sessionId } = useParams<{ sessionId: string }>();
 
@@ -272,7 +275,6 @@ export function DecisionCenterTab() {
     if (sessionId) navigate(`/dc-exit/${sessionId}/execute`);
   };
 
-  const v = decisionVerdict;
   const meta = VERDICT_META[v.verdict];
 
   return (
@@ -282,7 +284,7 @@ export function DecisionCenterTab() {
         <h4 className="text-[13px] font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
           Verdict
         </h4>
-        <LargeVerdictBanner />
+        <LargeVerdictBanner verdict={v} />
       </section>
 
       {/* === Reasoning timeline + Evidence === */}
@@ -314,8 +316,8 @@ export function DecisionCenterTab() {
         </div>
 
         {/* Evidence */}
-        <Panel icon={FileText} title="Evidence" count={decisionEvidence.length}>
-          {decisionEvidence.map((e, idx) => (
+        <Panel icon={FileText} title="Evidence" count={evidence.length}>
+          {evidence.map((e, idx) => (
             <EvidenceRow key={e.id} evidence={e} idx={idx} />
           ))}
         </Panel>
@@ -328,14 +330,14 @@ export function DecisionCenterTab() {
             Business Impact
           </h4>
           <span className="text-[10px] font-mono" style={{ color: 'var(--text-disabled)' }}>
-            {decisionBusinessImpact.length} capabilities
+            {businessImpact.length} capabilities
           </span>
         </div>
         <div
           className="rounded-[8px] flex flex-col overflow-hidden"
           style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)' }}
         >
-          {decisionBusinessImpact.map((impact, idx) => (
+          {businessImpact.map((impact, idx) => (
             <BusinessImpactRow key={impact.capability} impact={impact} idx={idx} />
           ))}
         </div>

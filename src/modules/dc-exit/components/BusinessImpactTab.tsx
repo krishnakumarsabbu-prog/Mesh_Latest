@@ -10,7 +10,9 @@
 import React from 'react';
 import { Users, TrendingUp, TrendingDown, Minus, TriangleAlert as AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { businessImpactCards, type BusinessImpactCard } from '@/modules/dc-exit/data/analyzeMockData';
+import {
+  type BusinessImpactCard,
+} from '@/modules/dc-exit/data/analyzeMockData';
 
 const HEALTH_META = {
   healthy:  { color: '#00B074', bg: 'rgba(0,176,116,0.08)',  border: 'rgba(0,176,116,0.22)',  label: 'Healthy' },
@@ -129,7 +131,7 @@ function BusinessCard({ card }: { card: BusinessImpactCard }) {
   );
 }
 
-export function BusinessImpactTab() {
+export function BusinessImpactTab({ cards }: { cards: BusinessImpactCard[] }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -137,11 +139,11 @@ export function BusinessImpactTab() {
           Business Impact
         </h4>
         <span className="text-[10px] font-mono" style={{ color: 'var(--text-disabled)' }}>
-          {businessImpactCards.length} capabilities
+          {cards.length} capabilities
         </span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {businessImpactCards.map((card) => (
+        {cards.map((card) => (
           <BusinessCard key={card.id} card={card} />
         ))}
       </div>

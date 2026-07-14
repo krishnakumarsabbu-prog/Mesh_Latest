@@ -21,7 +21,7 @@ function extractErrorMessage(error: AxiosError): string {
 
 const BASE_URL = '/api/v1';
 
-const apiClient: AxiosInstance = axios.create({
+export const apiClient: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 30000,

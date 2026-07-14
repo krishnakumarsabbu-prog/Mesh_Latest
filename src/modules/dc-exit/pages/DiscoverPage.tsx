@@ -1,34 +1,34 @@
 /**
  * Enterprise Digital Twin - DC Exit module.
  *
- * Discover step page. The operator selects a Datacenter; the
- * entire datacenter becomes visible — header summary (name,
- * health, capacity, readiness), a large hierarchy tree
- * (Datacenter > Cluster > Namespace > Application), an inventory
- * card grid (Applications, Pods, Namespaces, Oracle, Mongo, MQ,
- * Kafka, Firewall, VIP, DNS, Certificates, Storage), and a bottom
- * section listing business capabilities and owner teams. A Continue
- * button advances to the Analyze phase.
- *
- * Mock data only — no backend.
+ * Discover step page. Fetches data center info, ontology graph,
+ * and readiness from the backend API. Renders the datacenter
+ * summary, hierarchy tree, inventory cards, business capabilities,
+ * and owner teams. A Continue button advances to the Analyze phase.
  */
 
-import React, { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Users, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { StatusPill, type DcExitPillStatus } from '@/modules/dc-exit/components/StatusPill';
 import { DiscoverHierarchyTree } from '@/modules/dc-exit/components/DiscoverHierarchyTree';
 import { DiscoverInventoryCard } from '@/modules/dc-exit/components/DiscoverInventoryCard';
+import { DcExitLoading, DcExitError, DcExitEmpty } from '@/modules/dc-exit/components/DcExitStates';
+import { useDcExitSession } from '@/modules/dc-exit/hooks/useDcExitSession';
+import { useOntologyGraph, useReadiness } from '@/modules/dc-exit/hooks/useDcExitQueries';
+import { runtimeApi } from '@/lib/api';
 import {
-  discoverDatacenter,
-  discoverHierarchy,
-  discoverInventory,
-  discoverCapabilities,
-  discoverOwnerTeams,
-  type HealthState,
-} from '@/modules/dc-exit/data/discoverMockData';
+  mapDatacenter,
+  mapHierarchy,
+  mapInventory,
+  mapCapabilities,
+  mapOwnerTeams,
+} from '@/modules/dc-exit/utils/mappers';
+import type { HealthState } from '@/modules/dc-exit/data/discoverMockData';
+import type { RuntimeDataCenter } from '@/types';
 
 const HEALTH_TO_PILL: Record<HealthState, DcExitPillStatus> = {
   healthy: 'complete',
@@ -81,14 +81,60 @@ function MetricBar({ label, value, color }: { label: string; value: number; colo
 
 export function DiscoverPage() {
   const navigate = useNavigate();
-  const { sessionId } = useParams<{ sessionId: string }>();
-  const [selectedDc] = useState(discoverDatacenter);
+  const { sessionId, session } = useDcExitSession();
+  const dcShort = session?.dataCenterShort ?? '';
 
-  const totalApps = useMemo(() => discoverInventory.find((c) => c.key === 'applications')?.total ?? 0, []);
+  const { data: dcsRes } = useQuery({
+    queryKey: ['dc-exit', 'datacenters'],
+    queryFn: () => runtimeApi.getDataCenters(),
+  });
+
+  const { data: graph, isLoading: graphLoading, isError: graphError } = useOntologyGraph();
+  const { data: readiness } = useReadiness(dcShort, { enabled: !!dcShort });
+
+  const dc = useMemo<RuntimeDataCenter | undefined>(() => {
+    const dcs = dcsRes?.data;
+    if (!dcs || dcs.length === 0) return undefined;
+    return dcs.find((d: RuntimeDataCenter) => d.short_name === dcShort) ?? dcs[0];
+  }, [dcsRes, dcShort]);
+
+  const selectedDc = useMemo(
+    () => (dc ? mapDatacenter(dc, readiness, graph) : null),
+    [dc, readiness, graph],
+  );
+
+  const hierarchy = useMemo(
+    () => (graph && dc ? mapHierarchy(graph, dc.short_name ?? dc.name) : []),
+    [graph, dc],
+  );
+
+  const inventory = useMemo(
+    () => (graph && dc ? mapInventory(graph, dc.short_name ?? dc.name) : []),
+    [graph, dc],
+  );
+
+  const capabilities = useMemo(
+    () => (graph && dc ? mapCapabilities(graph, dc.short_name ?? dc.name) : []),
+    [graph, dc],
+  );
+
+  const ownerTeams = useMemo(
+    () => (graph && dc ? mapOwnerTeams(graph, dc.short_name ?? dc.name) : []),
+    [graph, dc],
+  );
+
+  const totalApps = useMemo(
+    () => inventory.find((c) => c.key === 'applications')?.total ?? 0,
+    [inventory],
+  );
 
   const handleContinue = () => {
     if (sessionId) navigate(`/dc-exit/${sessionId}/analyze`);
   };
+
+  if (graphLoading) return <DcExitLoading label="Loading datacenter inventory…" />;
+  if (graphError) return <DcExitError message="Failed to load ontology graph. Check backend connection." />;
+  if (!dc || !selectedDc) return <DcExitEmpty label="No data center selected" />;
 
   return (
     <div className="flex flex-col gap-6">
@@ -163,10 +209,14 @@ export function DiscoverPage() {
             Resource Hierarchy
           </h4>
           <span className="text-[10px] font-mono" style={{ color: 'var(--text-disabled)' }}>
-            {discoverHierarchy.length} datacenter
+            {hierarchy.length} datacenter
           </span>
         </div>
-        <DiscoverHierarchyTree nodes={discoverHierarchy} />
+        {hierarchy.length > 0 ? (
+          <DiscoverHierarchyTree nodes={hierarchy} />
+        ) : (
+          <DcExitEmpty label="No hierarchy data. Build the ontology graph first." />
+        )}
       </section>
 
       {/* === Inventory cards === */}
@@ -176,11 +226,11 @@ export function DiscoverPage() {
             Inventory
           </h4>
           <span className="text-[10px] font-mono" style={{ color: 'var(--text-disabled)' }}>
-            {discoverInventory.length} categories
+            {inventory.length} categories
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-          {discoverInventory.map((category) => (
+          {inventory.map((category) => (
             <DiscoverInventoryCard key={category.key} category={category} />
           ))}
         </div>
@@ -199,43 +249,49 @@ export function DiscoverPage() {
               Business Capabilities
             </h4>
             <span className="ml-auto text-[10px] font-mono" style={{ color: 'var(--text-disabled)' }}>
-              {discoverCapabilities.length}
+              {capabilities.length}
             </span>
           </div>
           <div className="flex flex-col">
-            {discoverCapabilities.map((cap, idx) => {
-              const crit = CRITICALITY_STYLES[cap.criticality];
-              const health = HEALTH_STYLES[cap.health];
-              return (
-                <div
-                  key={cap.id}
-                  className={cn('flex items-center gap-3 px-4 py-2.5 transition-colors')}
-                  style={{ borderTop: idx === 0 ? 'none' : '1px solid var(--app-border)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--app-surface-hover)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
-                >
-                  <HealthDot state={cap.health} />
-                  <span className="text-[12px] font-medium truncate flex-1 min-w-0" style={{ color: 'var(--text-primary)' }}>
-                    {cap.name}
-                  </span>
-                  <span className="text-[10px] font-mono flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
-                    {cap.applications} apps
-                  </span>
-                  <span
-                    className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] flex-shrink-0"
-                    style={{ background: crit.bg, color: crit.color, border: `1px solid ${crit.border}` }}
+            {capabilities.length === 0 ? (
+              <div className="px-4 py-6 text-center text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                No capabilities found
+              </div>
+            ) : (
+              capabilities.map((cap, idx) => {
+                const crit = CRITICALITY_STYLES[cap.criticality];
+                const health = HEALTH_STYLES[cap.health];
+                return (
+                  <div
+                    key={cap.id}
+                    className={cn('flex items-center gap-3 px-4 py-2.5 transition-colors')}
+                    style={{ borderTop: idx === 0 ? 'none' : '1px solid var(--app-border)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--app-surface-hover)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
                   >
-                    {cap.criticality}
-                  </span>
-                  <span
-                    className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] flex-shrink-0"
-                    style={{ background: health.bg, color: health.color, border: `1px solid ${health.border}` }}
-                  >
-                    {health.label}
-                  </span>
-                </div>
-              );
-            })}
+                    <HealthDot state={cap.health} />
+                    <span className="text-[12px] font-medium truncate flex-1 min-w-0" style={{ color: 'var(--text-primary)' }}>
+                      {cap.name}
+                    </span>
+                    <span className="text-[10px] font-mono flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+                      {cap.applications} apps
+                    </span>
+                    <span
+                      className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] flex-shrink-0"
+                      style={{ background: crit.bg, color: crit.color, border: `1px solid ${crit.border}` }}
+                    >
+                      {cap.criticality}
+                    </span>
+                    <span
+                      className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] flex-shrink-0"
+                      style={{ background: health.bg, color: health.color, border: `1px solid ${health.border}` }}
+                    >
+                      {health.label}
+                    </span>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -250,36 +306,42 @@ export function DiscoverPage() {
               Owner Teams
             </h4>
             <span className="ml-auto text-[10px] font-mono" style={{ color: 'var(--text-disabled)' }}>
-              {discoverOwnerTeams.length}
+              {ownerTeams.length}
             </span>
           </div>
           <div className="flex flex-col">
-            {discoverOwnerTeams.map((team, idx) => {
-              const health = HEALTH_STYLES[team.health];
-              return (
-                <div
-                  key={team.id}
-                  className="flex items-center gap-3 px-4 py-2.5"
-                  style={{ borderTop: idx === 0 ? 'none' : '1px solid var(--app-border)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--app-surface-hover)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
-                >
-                  <HealthDot state={team.health} />
-                  <span className="text-[12px] font-medium truncate flex-1 min-w-0" style={{ color: 'var(--text-primary)' }}>
-                    {team.name}
-                  </span>
-                  <span className="text-[10px] font-mono flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
-                    {team.applications} apps / {team.services} svc
-                  </span>
-                  <span
-                    className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] flex-shrink-0"
-                    style={{ background: health.bg, color: health.color, border: `1px solid ${health.border}` }}
+            {ownerTeams.length === 0 ? (
+              <div className="px-4 py-6 text-center text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                No owner teams found
+              </div>
+            ) : (
+              ownerTeams.map((team, idx) => {
+                const health = HEALTH_STYLES[team.health];
+                return (
+                  <div
+                    key={team.id}
+                    className="flex items-center gap-3 px-4 py-2.5"
+                    style={{ borderTop: idx === 0 ? 'none' : '1px solid var(--app-border)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--app-surface-hover)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
                   >
-                    {health.label}
-                  </span>
-                </div>
-              );
-            })}
+                    <HealthDot state={team.health} />
+                    <span className="text-[12px] font-medium truncate flex-1 min-w-0" style={{ color: 'var(--text-primary)' }}>
+                      {team.name}
+                    </span>
+                    <span className="text-[10px] font-mono flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+                      {team.applications} apps / {team.services} svc
+                    </span>
+                    <span
+                      className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] flex-shrink-0"
+                      style={{ background: health.bg, color: health.color, border: `1px solid ${health.border}` }}
+                    >
+                      {health.label}
+                    </span>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </section>

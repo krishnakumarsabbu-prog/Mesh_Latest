@@ -12,10 +12,6 @@ import React from 'react';
 import { TriangleAlert as AlertTriangle, CircleCheck, CircleAlert, Ban, CalendarClock, CircleUser as UserCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  READINESS_SCORE,
-  READINESS_SCORE_LABEL,
-  readinessCategories,
-  readinessBlockers,
   type ReadinessCategory,
   type ReadinessStatus,
   type ReadinessBlocker,
@@ -36,7 +32,7 @@ function scoreTone(score: number): { color: string; bg: string; border: string }
   return { color: '#FF003C', bg: 'rgba(255,0,60,0.08)',  border: 'rgba(255,0,60,0.22)' };
 }
 
-function LargeScoreCard({ score, label }: { score: number; label: string }) {
+function LargeScoreCard({ score, label, categories }: { score: number; label: string; categories: ReadinessCategory[] }) {
   const tone = scoreTone(score);
   const radius = 52;
   const circ = 2 * Math.PI * radius;
@@ -85,7 +81,7 @@ function LargeScoreCard({ score, label }: { score: number; label: string }) {
         </span>
         <div className="flex items-center gap-2 flex-wrap mt-1">
           {(['pass', 'warn', 'fail'] as ReadinessStatus[]).map((s) => {
-            const count = readinessCategories.filter((c) => c.status === s).length;
+            const count = categories.filter((c) => c.status === s).length;
             const meta = STATUS_META[s];
             return (
               <span
@@ -219,8 +215,14 @@ function BlockerRow({ blocker, idx }: { blocker: ReadinessBlocker; idx: number }
   );
 }
 
-export function ReadinessTab() {
-  const blockers = readinessBlockers;
+export interface ReadinessTabProps {
+  score: number;
+  scoreLabel: string;
+  categories: ReadinessCategory[];
+  blockers: ReadinessBlocker[];
+}
+
+export function ReadinessTab({ score, scoreLabel, categories, blockers }: ReadinessTabProps) {
 
   return (
     <div className="flex flex-col gap-6">
@@ -229,7 +231,7 @@ export function ReadinessTab() {
         <h4 className="text-[13px] font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
           Readiness Score
         </h4>
-        <LargeScoreCard score={READINESS_SCORE} label={READINESS_SCORE_LABEL} />
+        <LargeScoreCard score={score} label={scoreLabel} categories={categories} />
       </section>
 
       {/* === Category checks === */}
@@ -239,11 +241,11 @@ export function ReadinessTab() {
             Category Checks
           </h4>
           <span className="text-[10px] font-mono" style={{ color: 'var(--text-disabled)' }}>
-            {readinessCategories.length} categories
+            {categories.length} categories
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-          {readinessCategories.map((category) => (
+          {categories.map((category) => (
             <CategoryCheckCard key={category.id} category={category} />
           ))}
         </div>
