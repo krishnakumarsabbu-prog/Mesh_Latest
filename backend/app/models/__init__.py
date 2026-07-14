@@ -9,6 +9,8 @@ from app.models.connector_catalog import ConnectorCatalogEntry, CatalogConnector
 from app.models.team import Team, TeamMember, TeamProject
 from app.models.rbac import Permission, RolePermission, ScopedRoleAssignment
 from app.models.runtime import RuntimeDataCenter, RuntimeAsset, DataSourceImport, ApplicationIntent, SourceProposal, RuntimeAuditLog
+from app.models.ontology import OntologyNode, OntologyEdge
+from app.models.dc_exit_session import DCExitSession
 
 __all__ = [
     "User", "UserRole", "UserRoleAssignment",
@@ -22,5 +24,7 @@ __all__ = [
     "Team", "TeamMember", "TeamProject",
     "Permission", "RolePermission", "ScopedRoleAssignment",
     "RuntimeDataCenter", "RuntimeAsset", "DataSourceImport", "ApplicationIntent", "SourceProposal", "RuntimeAuditLog",
+    "OntologyNode", "OntologyEdge",
+    "DCExitSession",
 ]
 
