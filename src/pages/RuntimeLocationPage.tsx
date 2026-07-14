@@ -18,6 +18,8 @@ import { getAppTechStacks } from '@/lib/runtimeLocationMock';
 import { IncidentModePanel } from '@/components/runtime/IncidentModePanel';
 import { DataDiscoveryPanel } from '@/components/runtime/DataDiscoveryPanel';
 import { PortalGuidePanel } from '@/components/runtime/PortalGuidePanel';
+import { ExitIntelligenceModal } from '@/modules/dc-exit/components/ExitIntelligenceModal';
+import { Button } from '@/components/ui/Button';
 import { detectSourceType } from '@/lib/csvParser';
 import type { ApplicationLocationSummary, DataSourceName, TechStack } from '@/types';
 
@@ -928,6 +930,7 @@ export function RuntimeLocationPage() {
   const [showDiscovery, setShowDiscovery] = useState(false);
   const [showGuide,     setShowGuide]     = useState(false);
   const [showHistory,   setShowHistory]   = useState(false);
+  const [showExitIntel, setShowExitIntel] = useState(false);
 
   // Simulation states
   const [isSimulating, setIsSimulating] = useState(false);
@@ -1774,6 +1777,14 @@ export function RuntimeLocationPage() {
               <Upload className="w-3.5 h-3.5" />
               Import CSV
             </button>
+            <Button
+              variant="primary"
+              size="md"
+              icon={<Zap className="w-3.5 h-3.5" />}
+              onClick={() => setShowExitIntel(true)}
+            >
+              Exit Intelligence
+            </Button>
 
             {/* Profile SRE Team Tag */}
             <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl border select-none" style={{ borderColor: 'var(--app-border)', background: 'var(--app-surface-raised)' }}>
@@ -2558,6 +2569,7 @@ export function RuntimeLocationPage() {
         {showImport    && <ImportModal        onClose={() => setShowImport(false)} />}
         {showIncident  && <IncidentModePanel  onClose={() => setShowIncident(false)} />}
         {showDiscovery && <DataDiscoveryPanel onClose={() => setShowDiscovery(false)} />}
+        {showExitIntel && <ExitIntelligenceModal open onClose={() => setShowExitIntel(false)} />}
       </AnimatePresence>
 
       {/* Portal Guide (renders over everything) */}
