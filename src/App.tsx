@@ -20,6 +20,9 @@ const AuditPage = React.lazy(() => import('./pages/AuditPage').then(m => ({ defa
 const OntologyExplorerPage = React.lazy(() => import('./pages/OntologyExplorerPage').then(m => ({ default: m.OntologyExplorerPage })));
 const DigitalTwinExplorerPage = React.lazy(() => import('./pages/DigitalTwinExplorerPage').then(m => ({ default: m.DigitalTwinExplorerPage })));
 
+// Enterprise Digital Twin - DC Exit module (additive, lazy-loaded)
+const DcExitRouter = React.lazy(() => import('./modules/dc-exit/DcExitRouter').then(m => ({ default: m.DcExitRouter })));
+
 
 function PageSkeleton() {
   return (
@@ -73,6 +76,9 @@ export default function App() {
             <Route path="digital-twin" element={<Lazy><DigitalTwinExplorerPage /></Lazy>} />
             <Route path="users" element={<Lazy><UsersPage /></Lazy>} />
             <Route path="audit" element={<Lazy><AuditPage /></Lazy>} />
+
+            {/* Enterprise Digital Twin - DC Exit module (additive) */}
+            <Route path="dc-exit/:sessionId/*" element={<Lazy><DcExitRouter /></Lazy>} />
 
           </Route>
           <Route path="*" element={<NotFoundPage />} />
