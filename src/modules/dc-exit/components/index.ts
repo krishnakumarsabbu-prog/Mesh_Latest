@@ -20,3 +20,6 @@ export type { AnalyzeTabDef } from './AnalyzeTabBar';
 export { ImpactAnalysisTab } from './ImpactAnalysisTab';
 export { DependenciesTab } from './DependenciesTab';
 export { BusinessImpactTab } from './BusinessImpactTab';
+export { ReadinessTab } from './ReadinessTab';
+export { PrioritizationTab } from './PrioritizationTab';
+export { DecisionCenterTab } from './DecisionCenterTab';
